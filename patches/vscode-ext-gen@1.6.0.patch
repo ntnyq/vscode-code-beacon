@@ -1,0 +1,34 @@
+diff --git a/dist/markdown-B7F5Lp8i.mjs b/dist/markdown-B7F5Lp8i.mjs
+index 9d21cf35c2b26fd2d5a22e6f1219f5af47dbac4b..9d4c9300f2ca9d9934abfe7ed60e5811d5201b07 100644
+--- a/dist/markdown-B7F5Lp8i.mjs
++++ b/dist/markdown-B7F5Lp8i.mjs
+@@ -155,15 +155,14 @@ function formatTable(table) {
+ 			colChars[idx] = Math.max(colChars[idx], col?.length || 0);
+ 		});
+ 	});
+-	table.forEach((row, rowIdx) => {
+-		row.forEach((col, colIdx) => {
+-			table[rowIdx][colIdx] = col?.padEnd(colChars[colIdx], " ") || "";
+-		});
++	const formattedTable = table.map((row) => {
++		return row.map((col, colIdx) => col?.padEnd(colChars[colIdx], " ") || "");
+ 	});
++	const [formattedHeader, ...formattedBody] = formattedTable;
+ 	return [
+-		`| ${header.join(" | ")} |`,
++		`| ${formattedHeader.join(" | ")} |`,
+ 		`| ${colChars.map((w) => "-".repeat(w)).join(" | ")} |`,
+-		...body.map((row) => `| ${row.join(" | ")} |`)
++		...formattedBody.map((row) => `| ${row.join(" | ")} |`)
+ 	].join("\n");
+ }
+ function commentBlock(text, padding = 0) {
+@@ -177,7 +176,7 @@ function commentBlock(text, padding = 0) {
+ 	];
+ }
+ function markdownEscape(text) {
+-	return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("|", "&vert;");
++	return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("|", "&vert;").replaceAll("*", "\\*");
+ }
+ function formatList(data) {
+ 	if (!data.length || data.length === 1) return "**No data**";

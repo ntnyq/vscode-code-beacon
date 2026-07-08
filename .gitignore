@@ -1,0 +1,14 @@
+.DS_Store
+node_modules
+*.log*
+*.local
+
+/dist
+.vscode-test
+.worktrees
+*.vsix
+
+*.tgz
+
+# pnpm
+**/.pnpm-store/**

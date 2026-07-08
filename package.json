@@ -1,0 +1,124 @@
+{
+  "name": "vscode-code-beacon",
+  "displayName": "Code Beacon",
+  "version": "0.0.0",
+  "private": true,
+  "description": "",
+  "categories": [
+    "Other"
+  ],
+  "keywords": [],
+  "homepage": "https://github.com/ntnyq/vscode-code-beacon",
+  "bugs": {
+    "url": "https://github.com/ntnyq/vscode-code-beacon/issues/new"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "ntnyq",
+    "email": "ntnyq13@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ntnyq/vscode-code-beacon.git"
+  },
+  "publisher": "ntnyq",
+  "files": [
+    "LICENSE",
+    "dist/*",
+    "res/*"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "browser": "./dist/index.js",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "generate:meta": "vscode-ext-gen --output src/meta.ts --scope=code-beacon",
+    "lint": "oxlint",
+    "pack": "vsce package --no-dependencies",
+    "prepare": "husky",
+    "release": "run-s release:check release:version release:publish",
+    "release:build": "run-s generate:meta build",
+    "release:check": "run-s format:check lint typecheck test",
+    "release:publish": "vsce publish --no-dependencies",
+    "release:version": "bumpp --all --execute='pnpm release:build'",
+    "test": "run-p test:unit test:e2e",
+    "test:e2e": "pnpm build && node tests/e2e/run.ts",
+    "test:unit": "vitest",
+    "typecheck": "tsgo --noEmit",
+    "vscode:prepublish": "pnpm run build"
+  },
+  "dependencies": {
+    "@ntnyq/utils": "^0.16.0",
+    "reactive-vscode": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/vscode": "^1.125.0",
+    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+    "@vscode/test-electron": "^3.0.0",
+    "@vscode/vsce": "^3.9.2",
+    "bumpp": "^11.1.0",
+    "husky": "^9.1.7",
+    "nano-staged": "^1.0.2",
+    "npm-run-all2": "^9.0.2",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
+    "tsdown": "^0.22.3",
+    "vitest": "^4.1.10",
+    "vscode-ext-gen": "^1.6.0"
+  },
+  "nano-staged": {
+    "*.{js,ts,mjs,tsx}": "oxlint --fix --no-error-on-unmatched-pattern",
+    "*": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "contributes": {
+    "configuration": {
+      "title": "Code Beacon",
+      "properties": {
+        "code-beacon.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable code beacon."
+        },
+        "code-beacon.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging."
+        }
+      }
+    },
+    "commands": [
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.enable",
+        "title": "Enable Code Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.disable",
+        "title": "Disable Code Beacon"
+      }
+    ]
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "icon": "./res/icon.png",
+  "preview": true,
+  "engines": {
+    "vscode": "^1.125.0"
+  },
+  "packageManager": "pnpm@11.10.0",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "restrictedConfigurations": []
+    },
+    "virtualWorkspaces": {
+      "supported": true
+    }
+  }
+}

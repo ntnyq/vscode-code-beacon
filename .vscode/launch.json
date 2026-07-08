@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--disable-extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "${workspaceFolder}/playground"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**",
+        "**/resources/app/out/vs/**",
+        "**/.vscode-insiders/extensions/",
+        "**/.vscode/extensions/"
+      ],
+      "sourceMaps": true,
+      "env": {
+        "VSCODE_DEBUG_MODE": "true"
+      },
+      "preLaunchTask": "npm: dev"
+    }
+  ]
+}

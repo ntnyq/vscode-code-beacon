@@ -1,0 +1,56 @@
+{
+  "oxc.enable": true,
+  "eslint.enable": false,
+  "prettier.enable": false,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "oxc.oxc-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit",
+    "source.organizeImports": "never",
+    "source.sortImports": "never"
+  },
+  "js/ts.experimental.useTsgo": true,
+  "cSpell.useGitignore": true,
+  "cSpell.allowCompoundWords": true,
+  "cSpell.words": [
+    "ARGB",
+    "bumpp",
+    "changelogithub",
+    "delinearization",
+    "esbuild",
+    "gainsboro",
+    "laba",
+    "lcha",
+    "naumovs",
+    "npmrc",
+    "ofetch",
+    "oklab",
+    "oklaba",
+    "oklch",
+    "oklcha",
+    "oxfmt",
+    "oxfmtrc",
+    "oxlint",
+    "oxlintrc",
+    "pnpm",
+    "rgba",
+    "RRGGBB",
+    "RRGGBBAA",
+    "srgb",
+    "styl",
+    "tsdown",
+    "tsgo",
+    "unrs",
+    "Vitest",
+    "WCAG"
+  ],
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "package.json",
+        "cmd": "pnpm run generate:meta",
+        "isAsync": true
+      }
+    ]
+  }
+}

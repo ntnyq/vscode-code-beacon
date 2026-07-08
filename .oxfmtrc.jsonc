@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "arrowParens": "avoid",
+  "bracketSameLine": false,
+  "bracketSpacing": true,
+  "embeddedLanguageFormatting": "auto",
+  "endOfLine": "lf",
+  "sortImports": {
+    "newlinesBetween": false,
+  },
+  "sortPackageJson": {
+    "sortScripts": true,
+  },
+  "htmlWhitespaceSensitivity": "css",
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "pnpm-lock.yaml",
+    "**/*.min.*",
+    "**/dist/**",
+    "**/fixtures/**",
+    "src/meta.ts",
+  ],
+  "insertFinalNewline": true,
+  "jsxSingleQuote": true,
+  "objectWrap": "preserve",
+  "overrides": [
+    {
+      "files": ["**/*.{css,scss}"],
+      "options": {
+        "singleQuote": false,
+      },
+    },
+    {
+      "files": ["**/*.html"],
+      "options": {
+        "singleAttributePerLine": false,
+      },
+    },
+  ],
+  "printWidth": 80,
+  "proseWrap": "preserve",
+  "quoteProps": "as-needed",
+  "semi": false,
+  "singleAttributePerLine": true,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "useTabs": false,
+  "vueIndentScriptAndStyle": false,
+}

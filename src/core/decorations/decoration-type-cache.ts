@@ -7,8 +7,14 @@ import {
 } from 'vscode'
 import type { BeaconStyleConfig } from '../../types/annotation'
 
+/**
+ * Fully resolved decoration style used as the decoration cache input.
+ */
 type DecorationStyle = Required<BeaconStyleConfig>
 
+/**
+ * Builds a stable cache key for a resolved decoration style.
+ */
 export function decorationStyleKey(style: DecorationStyle): string {
   return JSON.stringify({
     backgroundColor: style.backgroundColor,
@@ -20,6 +26,9 @@ export function decorationStyleKey(style: DecorationStyle): string {
   })
 }
 
+/**
+ * Converts a beacon style into VS Code decoration render options.
+ */
 export function createDecorationRenderOptions(
   style: DecorationStyle,
 ): DecorationRenderOptions {
@@ -34,9 +43,18 @@ export function createDecorationRenderOptions(
   }
 }
 
+/**
+ * Caches VS Code decoration types and disposes styles that are no longer used.
+ */
 export class DecorationTypeCache {
+  /**
+   * Decoration types keyed by stable serialized style.
+   */
   private readonly decorationTypes = new Map<string, TextEditorDecorationType>()
 
+  /**
+   * Returns an existing decoration type or creates one for the given style.
+   */
   public get(style: DecorationStyle): TextEditorDecorationType {
     const key = decorationStyleKey(style)
     const existing = this.decorationTypes.get(key)
@@ -53,6 +71,9 @@ export class DecorationTypeCache {
     return decorationType
   }
 
+  /**
+   * Disposes cached decoration types whose keys are absent from the active set.
+   */
   public disposeStale(activeKeys: readonly string[]) {
     const activeKeySet = new Set(activeKeys)
 
@@ -64,6 +85,9 @@ export class DecorationTypeCache {
     }
   }
 
+  /**
+   * Disposes every cached decoration type.
+   */
   public disposeAll() {
     for (const decorationType of this.decorationTypes.values()) {
       decorationType.dispose()

@@ -5,6 +5,9 @@ import { toVscodeRange } from '../../utils/ranges'
 import { decorationStyleKey } from './decoration-type-cache'
 import type { DecorationTypeCache } from './decoration-type-cache'
 
+/**
+ * Applies grouped beacon decorations to a visible text editor.
+ */
 export function applyBeaconDecorations(
   editor: TextEditor,
   annotations: readonly BeaconAnnotation[],

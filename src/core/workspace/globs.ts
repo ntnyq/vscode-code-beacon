@@ -1,7 +1,16 @@
+/**
+ * Value shape used by VS Code files.exclude and search.exclude settings.
+ */
 export type VscodeExcludeValue = boolean | { readonly when?: string }
 
+/**
+ * VS Code exclude map keyed by glob pattern.
+ */
 export type VscodeExcludeConfig = Record<string, VscodeExcludeValue>
 
+/**
+ * Converts multiple glob patterns into a single brace-union glob.
+ */
 export function toGlobUnion(
   patterns: readonly string[],
   fallback?: string,
@@ -21,6 +30,9 @@ export function toGlobUnion(
   return `{${normalizedPatterns.join(',')}}`
 }
 
+/**
+ * Extracts enabled exclude patterns from a VS Code exclude configuration map.
+ */
 export function enabledExcludePatterns(
   config: VscodeExcludeConfig | undefined,
 ): string[] {

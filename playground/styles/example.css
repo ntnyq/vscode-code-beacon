@@ -1,0 +1,9 @@
+.notice {
+  /* NOTE: CSS block comments should be scanned */
+  border: 1px solid currentColor;
+}
+
+.danger {
+  /* BUG: contrast is too low in high contrast themes */
+  color: #b42318;
+}

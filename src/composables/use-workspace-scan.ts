@@ -18,6 +18,9 @@ import { commands } from '../meta'
 import type { BeaconRuleConfig } from '../types/annotation'
 import { logger } from '../utils/logger'
 
+/**
+ * Builds the effective workspace exclude patterns from Code Beacon and VS Code settings.
+ */
 function workspaceExcludePatterns(): string[] {
   const patterns = [...config.exclude]
 
@@ -44,7 +47,13 @@ function workspaceExcludePatterns(): string[] {
   return patterns
 }
 
+/**
+ * Registers the workspace scan command.
+ */
 export function useWorkspaceScan() {
+  /**
+   * Scans workspace files with progress and stores discovered annotations.
+   */
   const scanWorkspace = () =>
     window.withProgress(
       {

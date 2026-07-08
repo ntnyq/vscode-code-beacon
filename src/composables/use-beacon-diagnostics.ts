@@ -4,9 +4,15 @@ import { config } from '../config'
 import { createBeaconDiagnostic } from '../core/diagnostics/beacon-diagnostics'
 import { annotationStore } from '../core/store/annotation-store'
 
+/**
+ * Registers and keeps the Code Beacon diagnostic collection in sync.
+ */
 export function useBeaconDiagnostics() {
   const collection = languages.createDiagnosticCollection('code-beacon')
 
+  /**
+   * Republishes diagnostics from the current annotation store contents.
+   */
   const publish = () => {
     collection.clear()
 

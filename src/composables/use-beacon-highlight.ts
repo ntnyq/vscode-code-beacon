@@ -6,11 +6,18 @@ import { applyBeaconDecorations } from '../core/decorations/apply-decorations'
 import { DecorationTypeCache } from '../core/decorations/decoration-type-cache'
 import { normalizeRules } from '../core/rules/normalize'
 import { scanDocument } from '../core/scanner/scan-document'
+import {
+  automaticDocumentChangeScope,
+  initialScanTarget,
+} from '../core/scanner/scan-mode'
 import { annotationStore } from '../core/store/annotation-store'
 import { commands } from '../meta'
-import type { BeaconRuleConfig } from '../types/annotation'
+import type { BeaconAnnotation, BeaconRuleConfig } from '../types/annotation'
 import { logger } from '../utils/logger'
 
+/**
+ * Checks whether a language id is allowed by the current language filters.
+ */
 function isLanguageEnabled(languageId: string): boolean {
   const languages = config.languages
 
@@ -36,22 +43,44 @@ function isLanguageEnabled(languageId: string): boolean {
   )
 }
 
+/**
+ * Checks whether a document can be scanned by the current runtime.
+ */
 function isScannableDocument(document: TextDocument): boolean {
   return (
     document.uri.scheme === 'file' && isLanguageEnabled(document.languageId)
   )
 }
 
+/**
+ * Finds the visible editor instance for a document, if one exists.
+ */
+function visibleEditorForDocument(
+  document: TextDocument,
+): TextEditor | undefined {
+  return window.visibleTextEditors.find(
+    visibleEditor => visibleEditor.document === document,
+  )
+}
+
+/**
+ * Registers editor scanning, scan commands, and decoration updates.
+ */
 export function useBeaconHighlight() {
   const decorationCache = new DecorationTypeCache()
 
-  const scanTextEditor = (editor: TextEditor) => {
-    const { document } = editor
+  /**
+   * Scans a text document and updates the annotation store for its URI.
+   */
+  const scanTextDocument = (
+    document: TextDocument,
+    source: BeaconAnnotation['source'],
+  ): readonly BeaconAnnotation[] => {
     const uri = document.uri.toString()
 
     if (!config.enable || !isScannableDocument(document)) {
       annotationStore.setForUri(uri, [])
-      return
+      return []
     }
 
     const normalizedRules = normalizeRules(
@@ -67,46 +96,128 @@ export function useBeaconHighlight() {
       languageId: document.languageId,
       maxFileSize: config.maxFileSize,
       rules: normalizedRules.rules,
-      source: 'visibleEditor',
+      source,
       text: document.getText(),
       uri,
     })
 
     annotationStore.setForUri(uri, result.annotations)
 
+    return result.annotations
+  }
+
+  /**
+   * Scans a visible editor and applies decorations for its annotations.
+   */
+  const scanTextEditor = (
+    editor: TextEditor,
+    source: BeaconAnnotation['source'] = 'visibleEditor',
+  ) => {
+    const annotations = scanTextDocument(editor.document, source)
+
     if (config.decorations.enabled) {
-      applyBeaconDecorations(editor, result.annotations, decorationCache)
+      applyBeaconDecorations(editor, annotations, decorationCache)
     }
   }
 
+  /**
+   * Scans every currently visible text editor.
+   */
   const refreshVisibleEditors = () => {
     for (const editor of window.visibleTextEditors) {
       scanTextEditor(editor)
     }
   }
 
+  /**
+   * Scans every open text document known to the VS Code workspace.
+   */
+  const scanOpenEditors = () => {
+    for (const document of workspace.textDocuments) {
+      const editor = visibleEditorForDocument(document)
+
+      if (editor) {
+        scanTextEditor(editor, 'openEditor')
+      } else {
+        scanTextDocument(document, 'openEditor')
+      }
+    }
+  }
+
+  /**
+   * Scans the active editor when one is available.
+   */
   const scanActiveFile = () => {
     if (window.activeTextEditor) {
       scanTextEditor(window.activeTextEditor)
     }
   }
 
+  /**
+   * Runs the initial or refresh scan selected by code-beacon.scanMode.
+   */
+  const scanByConfiguredMode = () => {
+    const target = initialScanTarget(config.scanMode)
+
+    if (target === 'visibleEditors') {
+      refreshVisibleEditors()
+      return
+    }
+
+    if (target === 'openEditors') {
+      scanOpenEditors()
+      return
+    }
+
+    if (target === 'workspace') {
+      vscodeCommands.executeCommand(commands.scanWorkspace)
+    }
+  }
+
   useDisposable(
     workspace.onDidChangeTextDocument(event => {
-      const editor = window.visibleTextEditors.find(
-        visibleEditor => visibleEditor.document === event.document,
-      )
+      const scope = automaticDocumentChangeScope(config.scanMode)
+
+      if (scope === 'none') {
+        return
+      }
+
+      const editor = visibleEditorForDocument(event.document)
+
+      if (scope === 'visibleEditors') {
+        if (editor) {
+          scanTextEditor(editor)
+        }
+        return
+      }
 
       if (editor) {
-        scanTextEditor(editor)
+        scanTextEditor(editor, 'openEditor')
+      } else {
+        scanTextDocument(event.document, 'openEditor')
       }
     }),
   )
-  useDisposable(window.onDidChangeVisibleTextEditors(refreshVisibleEditors))
+  useDisposable(
+    window.onDidChangeVisibleTextEditors(() => {
+      const scope = automaticDocumentChangeScope(config.scanMode)
+
+      if (scope === 'visibleEditors') {
+        refreshVisibleEditors()
+        return
+      }
+
+      if (scope === 'openEditors') {
+        for (const editor of window.visibleTextEditors) {
+          scanTextEditor(editor, 'openEditor')
+        }
+      }
+    }),
+  )
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('code-beacon')) {
-        refreshVisibleEditors()
+        scanByConfiguredMode()
       }
     }),
   )
@@ -117,23 +228,23 @@ export function useBeaconHighlight() {
   })
 
   useDisposable(
-    vscodeCommands.registerCommand(commands.refresh, refreshVisibleEditors),
+    vscodeCommands.registerCommand(commands.refresh, scanByConfiguredMode),
   )
   useDisposable(
     vscodeCommands.registerCommand(commands.scanActiveFile, scanActiveFile),
   )
   useDisposable(
-    vscodeCommands.registerCommand(
-      commands.scanOpenEditors,
-      refreshVisibleEditors,
-    ),
+    vscodeCommands.registerCommand(commands.scanOpenEditors, scanOpenEditors),
   )
 
-  refreshVisibleEditors()
+  scanByConfiguredMode()
 
   return {
     refreshVisibleEditors,
     scanActiveFile,
+    scanByConfiguredMode,
+    scanOpenEditors,
+    scanTextDocument,
     scanTextEditor,
   }
 }

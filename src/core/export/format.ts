@@ -1,7 +1,13 @@
 import type { BeaconAnnotation } from '../../types/annotation'
 
+/**
+ * Export formats supported by Code Beacon commands.
+ */
 export type BeaconExportFormat = 'markdown' | 'json' | 'csv'
 
+/**
+ * Stable serialized annotation shape used by JSON and CSV exports.
+ */
 interface ExportableAnnotation {
   readonly category: string
   readonly column: number
@@ -14,6 +20,9 @@ interface ExportableAnnotation {
   readonly uri: string
 }
 
+/**
+ * Converts a runtime annotation into a one-based export record.
+ */
 function toExportableAnnotation(
   annotation: BeaconAnnotation,
 ): ExportableAnnotation {
@@ -30,6 +39,9 @@ function toExportableAnnotation(
   }
 }
 
+/**
+ * Escapes a single CSV cell value according to common CSV rules.
+ */
 function escapeCsvValue(value: string | number): string {
   const stringValue = String(value)
 
@@ -40,10 +52,16 @@ function escapeCsvValue(value: string | number): string {
   return `"${stringValue.replaceAll('"', '""')}"`
 }
 
+/**
+ * Formats a one-based annotation location for human-readable exports.
+ */
 function formatAnnotationLink(annotation: BeaconAnnotation): string {
   return `${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`
 }
 
+/**
+ * Formats annotations as a compact Markdown report.
+ */
 export function formatAnnotationsAsMarkdown(
   annotations: readonly BeaconAnnotation[],
 ): string {
@@ -62,12 +80,18 @@ export function formatAnnotationsAsMarkdown(
   ].join('\n')
 }
 
+/**
+ * Formats annotations as pretty-printed JSON with one-based positions.
+ */
 export function formatAnnotationsAsJson(
   annotations: readonly BeaconAnnotation[],
 ): string {
   return `${JSON.stringify(annotations.map(toExportableAnnotation), null, 2)}\n`
 }
 
+/**
+ * Formats annotations as CSV with escaped values and one-based positions.
+ */
 export function formatAnnotationsAsCsv(
   annotations: readonly BeaconAnnotation[],
 ): string {
@@ -102,6 +126,9 @@ export function formatAnnotationsAsCsv(
   return `${[headers.join(','), ...rows].join('\n')}\n`
 }
 
+/**
+ * Dispatches annotation export formatting by requested format.
+ */
 export function formatAnnotations(
   annotations: readonly BeaconAnnotation[],
   format: BeaconExportFormat,

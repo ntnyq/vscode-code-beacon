@@ -11,6 +11,9 @@ import { commands } from '../../meta'
 import type { BeaconAnnotation } from '../../types/annotation'
 import { formatBeaconLink } from '../../utils/ranges'
 
+/**
+ * Supported TreeView grouping modes for beacon annotations.
+ */
 export type BeaconExplorerGroupBy =
   | 'file'
   | 'rule'
@@ -19,6 +22,9 @@ export type BeaconExplorerGroupBy =
   | 'owner'
   | 'flat'
 
+/**
+ * Tree element representing a group of annotations.
+ */
 export interface BeaconGroupTreeElement {
   readonly type: 'group'
   readonly id: string
@@ -26,15 +32,27 @@ export interface BeaconGroupTreeElement {
   readonly annotations: readonly BeaconAnnotation[]
 }
 
+/**
+ * Tree element representing a single annotation leaf.
+ */
 export interface BeaconLeafTreeElement {
   readonly type: 'beacon'
   readonly annotation: BeaconAnnotation
 }
 
+/**
+ * Union of all Code Beacon TreeView element variants.
+ */
 export type BeaconTreeElement = BeaconGroupTreeElement | BeaconLeafTreeElement
 
+/**
+ * Reader used by the TreeView provider to access current annotations.
+ */
 export type GetBeaconAnnotations = () => readonly BeaconAnnotation[]
 
+/**
+ * Selects the display label for an annotation and grouping mode.
+ */
 function groupLabel(
   annotation: BeaconAnnotation,
   groupBy: BeaconExplorerGroupBy,
@@ -51,6 +69,9 @@ function groupLabel(
   return labels[groupBy]
 }
 
+/**
+ * Selects a VS Code theme icon for an annotation severity.
+ */
 function beaconIcon(annotation: BeaconAnnotation): ThemeIcon {
   const iconIds = {
     error: 'error',
@@ -62,21 +83,42 @@ function beaconIcon(annotation: BeaconAnnotation): ThemeIcon {
   return new ThemeIcon(iconIds[annotation.severity])
 }
 
+/**
+ * VS Code TreeDataProvider backed by the annotation store.
+ */
 export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElement> {
+  /**
+   * VS Code emitter used to notify TreeView refreshes.
+   */
   // oxlint-disable-next-line unicorn/prefer-event-target -- VS Code TreeDataProvider requires vscode.EventEmitter.
   private readonly changeEmitter = new EventEmitter<
     BeaconTreeElement | undefined
   >()
 
+  /**
+   * Reader for the current annotation list.
+   */
   private readonly getAnnotations: GetBeaconAnnotations
 
+  /**
+   * Reader for the current grouping mode.
+   */
   private readonly getGroupBy: () => BeaconExplorerGroupBy
 
+  /**
+   * VS Code event fired when TreeView data should refresh.
+   */
   public readonly onDidChangeTreeData: Event<BeaconTreeElement | undefined> =
     this.changeEmitter.event
 
+  /**
+   * VS Code callback that converts a tree element into a TreeItem.
+   */
   public readonly getTreeItem = BeaconTreeDataProvider.createTreeItem
 
+  /**
+   * Creates a provider from annotation and grouping readers.
+   */
   public constructor(
     getAnnotations: GetBeaconAnnotations,
     getGroupBy: () => BeaconExplorerGroupBy = () => 'file',
@@ -85,11 +127,17 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
     this.getGroupBy = getGroupBy
   }
 
+  /**
+   * Notifies VS Code that all TreeView data should be refreshed.
+   */
   public refresh() {
     // oxlint-disable-next-line unicorn/no-useless-undefined -- vscode.EventEmitter.fire expects the typed payload argument.
     this.changeEmitter.fire(undefined)
   }
 
+  /**
+   * Returns root groups or annotation leaves for a group element.
+   */
   public getChildren(
     element?: BeaconTreeElement,
   ): BeaconTreeElement[] | Promise<BeaconTreeElement[]> {
@@ -122,6 +170,9 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
       }))
   }
 
+  /**
+   * Converts a group or annotation leaf into a VS Code TreeItem.
+   */
   private static createTreeItem(element: BeaconTreeElement): TreeItem {
     if (element.type === 'group') {
       const item = new TreeItem(

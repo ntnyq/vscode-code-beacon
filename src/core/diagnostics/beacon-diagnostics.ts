@@ -2,8 +2,14 @@ import { Diagnostic, DiagnosticSeverity } from 'vscode'
 import type { BeaconAnnotation, BeaconSeverity } from '../../types/annotation'
 import { toVscodeRange } from '../../utils/ranges'
 
+/**
+ * Diagnostic source label shown in the VS Code Problems panel.
+ */
 const DIAGNOSTIC_SOURCE = 'Code Beacon'
 
+/**
+ * Maps Code Beacon severity values to VS Code diagnostic severities.
+ */
 export function diagnosticSeverityForBeacon(
   severity: BeaconSeverity,
 ): DiagnosticSeverity {
@@ -17,6 +23,9 @@ export function diagnosticSeverityForBeacon(
   return severities[severity]
 }
 
+/**
+ * Creates a VS Code diagnostic for one beacon annotation.
+ */
 export function createBeaconDiagnostic(
   annotation: BeaconAnnotation,
 ): Diagnostic {

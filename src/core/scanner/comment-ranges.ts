@@ -1,14 +1,23 @@
+/**
+ * Offset range within a document that should be scanned for annotations.
+ */
 export interface OffsetRange {
   readonly start: number
   readonly end: number
   readonly fallback?: boolean
 }
 
+/**
+ * Comment delimiters supported for a VS Code language id.
+ */
 interface CommentSyntax {
   readonly line?: readonly string[]
   readonly block?: readonly [string, string][]
 }
 
+/**
+ * Comment syntax table for languages supported by the lightweight scanner.
+ */
 const COMMENT_SYNTAX: Record<string, CommentSyntax> = {
   c: { block: [['/*', '*/']], line: ['//'] },
   cpp: { block: [['/*', '*/']], line: ['//'] },
@@ -31,6 +40,9 @@ const COMMENT_SYNTAX: Record<string, CommentSyntax> = {
   yaml: { line: ['#'] },
 }
 
+/**
+ * Finds line-comment ranges for every line containing one of the provided tokens.
+ */
 function findLineCommentRanges(
   text: string,
   tokens: readonly string[],
@@ -63,6 +75,9 @@ function findLineCommentRanges(
   return ranges
 }
 
+/**
+ * Finds block-comment ranges for every configured open/close delimiter pair.
+ */
 function findBlockCommentRanges(
   text: string,
   pairs: readonly [string, string][],
@@ -87,6 +102,9 @@ function findBlockCommentRanges(
   return ranges
 }
 
+/**
+ * Returns comment ranges for a language, or a full-document fallback if unknown.
+ */
 export function getCommentRanges(
   text: string,
   languageId: string,

@@ -16,10 +16,16 @@ import { annotationStore } from '../core/store/annotation-store'
 import { commands, extensionId } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
 
+/**
+ * Updates the global extension enabled flag.
+ */
 async function updateEnabled(value: boolean) {
   await config.update('enable', value, ConfigurationTarget.Global)
 }
 
+/**
+ * Opens an untitled editor containing exported annotation content.
+ */
 async function openExportDocument(format: BeaconExportFormat, content: string) {
   const extensionByFormat = {
     csv: 'csv',
@@ -34,7 +40,13 @@ async function openExportDocument(format: BeaconExportFormat, content: string) {
   await window.showTextDocument(document)
 }
 
+/**
+ * Registers user-facing Code Beacon commands.
+ */
 export function useBeaconCommands() {
+  /**
+   * Exports current store contents in the requested format.
+   */
   const exportAnnotations = async (format: BeaconExportFormat) => {
     await openExportDocument(
       format,

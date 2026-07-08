@@ -14,8 +14,14 @@ import { commands } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
 import { formatBeaconLink, toVscodeRange } from '../utils/ranges'
 
+/**
+ * Stable VS Code view id for the Code Beacon annotations view.
+ */
 const BEACON_VIEW_ID = 'codeBeacon.annotations'
 
+/**
+ * Opens the document for an annotation and selects its matched range.
+ */
 async function revealAnnotation(annotation: BeaconAnnotation) {
   const document = await workspace.openTextDocument(Uri.parse(annotation.uri))
   const editor = await window.showTextDocument(document)
@@ -25,6 +31,9 @@ async function revealAnnotation(annotation: BeaconAnnotation) {
   editor.revealRange(range)
 }
 
+/**
+ * Registers the Code Beacon TreeView and related navigation commands.
+ */
 export function useBeaconExplorer() {
   const provider = new BeaconTreeDataProvider(
     () => annotationStore.getAll(),

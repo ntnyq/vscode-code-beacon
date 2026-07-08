@@ -1,7 +1,13 @@
 import type { BeaconRuleConfig, BeaconStyleConfig } from '../types/annotation'
 
+/**
+ * Default workspace include pattern used by workspace scans.
+ */
 export const DEFAULT_INCLUDE = ['**/*'] as const
 
+/**
+ * Default workspace exclude patterns that avoid dependencies and generated files.
+ */
 export const DEFAULT_EXCLUDE = [
   '**/node_modules/**',
   '**/bower_components/**',
@@ -20,6 +26,9 @@ export const DEFAULT_EXCLUDE = [
   '**/yarn.lock',
 ] as const
 
+/**
+ * Baseline decoration style merged into every normalized beacon rule.
+ */
 export const DEFAULT_STYLE: Required<BeaconStyleConfig> = {
   backgroundColor: '#6f42c1',
   border: '1px solid transparent',
@@ -29,6 +38,9 @@ export const DEFAULT_STYLE: Required<BeaconStyleConfig> = {
   overviewRulerColor: '#6f42c1',
 }
 
+/**
+ * Built-in beacon rules available before any user configuration overrides.
+ */
 export const DEFAULT_BEACON_RULES: readonly BeaconRuleConfig[] = [
   {
     category: 'todo',

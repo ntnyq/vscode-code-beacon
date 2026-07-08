@@ -7,16 +7,25 @@ import type {
   NormalizedRuleResult,
 } from '../../types/annotation'
 
+/**
+ * Default message extraction behavior for built-in and custom rules.
+ */
 const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
   group: 'message',
   mode: 'lineRest',
   trim: true,
 }
 
+/**
+ * Escapes literal matcher text so it can be embedded inside a RegExp source.
+ */
 function escapeRegExp(value: string): string {
   return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`)
 }
 
+/**
+ * Builds the RegExp source for a text matcher rule.
+ */
 function buildTextPattern(rule: BeaconRuleConfig): string {
   if (rule.matcher.type !== 'text') {
     throw new Error('Expected text matcher')
@@ -36,6 +45,9 @@ function buildTextPattern(rule: BeaconRuleConfig): string {
   return `${prefix}${escaped}:?`
 }
 
+/**
+ * Ensures compiled matchers always advance through every match in a document.
+ */
 function ensureGlobalFlag(flags: string | undefined): string {
   if (!flags) {
     return 'g'
@@ -44,6 +56,9 @@ function ensureGlobalFlag(flags: string | undefined): string {
   return flags.includes('g') ? flags : `${flags}g`
 }
 
+/**
+ * Compiles one rule into a runtime matcher with resolved defaults.
+ */
 function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
   let flags: string | undefined
 
@@ -80,6 +95,9 @@ function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
   }
 }
 
+/**
+ * Merges built-in rules with custom rules and reports invalid matchers.
+ */
 export function normalizeRules(
   customRules: readonly BeaconRuleConfig[],
 ): NormalizedRuleResult {

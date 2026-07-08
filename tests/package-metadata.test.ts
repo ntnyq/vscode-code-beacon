@@ -82,7 +82,7 @@ describe('package metadata', () => {
   })
 
   it('declares the Code Beacon TreeView contribution', () => {
-    expect(pkg.activationEvents).toContain('onView:codeBeacon.annotations')
+    expect(pkg.activationEvents).toStrictEqual(['onStartupFinished'])
     expect(pkg.contributes.viewsContainers?.activitybar).toStrictEqual([
       {
         id: 'codeBeacon',

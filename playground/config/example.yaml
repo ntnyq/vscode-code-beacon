@@ -1,0 +1,7 @@
+name: code-beacon-playground
+
+# TODO: try excluding this folder with code-beacon.exclude
+features:
+  # REVIEW: confirm YAML comments appear in TreeView grouping
+  hover: true
+  diagnostics: false

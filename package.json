@@ -3,11 +3,25 @@
   "displayName": "Code Beacon",
   "version": "0.0.0",
   "private": true,
-  "description": "",
+  "description": "Highlight, list, diagnose, and export code annotations such as TODO, FIXME, BUG, NOTE, REVIEW, SECURITY, and PERF.",
   "categories": [
-    "Other"
+    "Linters",
+    "Other",
+    "Visualization"
   ],
-  "keywords": [],
+  "keywords": [
+    "annotation",
+    "code beacon",
+    "codelens",
+    "comments",
+    "fixme",
+    "github.dev",
+    "highlight",
+    "problems",
+    "todo",
+    "tree view",
+    "vscode web"
+  ],
   "homepage": "https://github.com/ntnyq/vscode-code-beacon",
   "bugs": {
     "url": "https://github.com/ntnyq/vscode-code-beacon/issues/new"
@@ -87,6 +101,286 @@
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging."
+        },
+        "code-beacon.languages": {
+          "type": "array",
+          "default": [
+            "*"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Language IDs where annotations are scanned. Use '*' for all languages and prefix with '!' to exclude."
+        },
+        "code-beacon.rules": {
+          "type": "array",
+          "default": [],
+          "description": "Custom annotation rules. Built-in rules are enabled unless a custom rule with the same id overrides them.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label",
+              "category",
+              "matcher",
+              "severity"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "todo",
+                  "fixme",
+                  "bug",
+                  "hack",
+                  "note",
+                  "review",
+                  "security",
+                  "perf",
+                  "question",
+                  "custom"
+                ]
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "matcher": {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "text",
+                      "regex"
+                    ]
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "flags": {
+                    "type": "string"
+                  },
+                  "caseSensitive": {
+                    "type": "boolean"
+                  },
+                  "wholeWord": {
+                    "type": "boolean"
+                  },
+                  "colon": {
+                    "type": "string",
+                    "enum": [
+                      "required",
+                      "optional",
+                      "forbidden"
+                    ]
+                  }
+                }
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "hint",
+                  "information",
+                  "warning",
+                  "error"
+                ]
+              },
+              "commentOnly": {
+                "type": "boolean"
+              },
+              "languages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "style": {
+                "type": "object",
+                "properties": {
+                  "marker": {
+                    "type": "string",
+                    "enum": [
+                      "keyword",
+                      "message",
+                      "line"
+                    ]
+                  },
+                  "color": {
+                    "type": "string"
+                  },
+                  "backgroundColor": {
+                    "type": "string"
+                  },
+                  "border": {
+                    "type": "string"
+                  },
+                  "borderRadius": {
+                    "type": "string"
+                  },
+                  "overviewRulerColor": {
+                    "type": "string"
+                  }
+                }
+              },
+              "diagnostics": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": [
+                      "hint",
+                      "information",
+                      "warning",
+                      "error"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "code-beacon.include": {
+          "type": "array",
+          "default": [
+            "**/*"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "scope": "resource",
+          "description": "Glob patterns that define files to scan."
+        },
+        "code-beacon.exclude": {
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/bower_components/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/.git/**",
+            "**/.vscode/**",
+            "**/.vscode-test/**",
+            "**/.github/**",
+            "**/.next/**",
+            "**/coverage/**",
+            "**/*.min.*",
+            "**/*.map",
+            "**/pnpm-lock.yaml",
+            "**/package-lock.json",
+            "**/yarn.lock"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "scope": "resource",
+          "description": "Glob patterns that define files and folders to exclude from workspace scans."
+        },
+        "code-beacon.respectFilesExclude": {
+          "type": "boolean",
+          "default": true,
+          "description": "Respect VS Code files.exclude during workspace scans."
+        },
+        "code-beacon.respectSearchExclude": {
+          "type": "boolean",
+          "default": true,
+          "description": "Respect VS Code search.exclude during workspace scans."
+        },
+        "code-beacon.maxFileSize": {
+          "type": "number",
+          "default": 1000000,
+          "minimum": 0,
+          "description": "Maximum document text length, in characters, to scan. Set to 0 to disable this size limit."
+        },
+        "code-beacon.maxFilesForSearch": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1,
+          "description": "Maximum number of files to scan during workspace scans."
+        },
+        "code-beacon.scanMode": {
+          "type": "string",
+          "default": "visibleEditors",
+          "enum": [
+            "visibleEditors",
+            "openEditors",
+            "workspace",
+            "manual"
+          ],
+          "description": "Default scan mode for Code Beacon."
+        },
+        "code-beacon.commentOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefer scanning comments only when Code Beacon knows the language comment syntax."
+        },
+        "code-beacon.decorations.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show editor decorations for annotations."
+        },
+        "code-beacon.diagnostics.mode": {
+          "type": "string",
+          "default": "off",
+          "enum": [
+            "off",
+            "openFiles",
+            "workspace"
+          ],
+          "description": "Controls Problems integration."
+        },
+        "code-beacon.explorer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Code Beacon TreeView."
+        },
+        "code-beacon.explorer.groupBy": {
+          "type": "string",
+          "default": "file",
+          "enum": [
+            "file",
+            "rule",
+            "category",
+            "severity",
+            "owner",
+            "flat"
+          ],
+          "description": "Default grouping mode for the Code Beacon TreeView."
+        },
+        "code-beacon.codelens.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable CodeLens actions above annotation lines."
+        },
+        "code-beacon.hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable hover details for annotations."
+        },
+        "code-beacon.export.defaultFormat": {
+          "type": "string",
+          "default": "markdown",
+          "enum": [
+            "markdown",
+            "json",
+            "csv"
+          ],
+          "description": "Default export format."
         }
       }
     },
@@ -100,11 +394,132 @@
         "category": "Code Beacon",
         "command": "code-beacon.disable",
         "title": "Disable Code Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.toggle",
+        "title": "Toggle Code Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.refresh",
+        "title": "Refresh Beacons"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.scanWorkspace",
+        "title": "Scan Workspace for Beacons"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.scanActiveFile",
+        "title": "Scan Active File for Beacons"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.scanOpenEditors",
+        "title": "Scan Open Editors for Beacons"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.focusExplorer",
+        "title": "Focus Code Beacon Explorer"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.reveal",
+        "title": "Reveal Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.copyLink",
+        "title": "Copy Beacon Link"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.copyMarkdown",
+        "title": "Copy Beacon as Markdown"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.exportMarkdown",
+        "title": "Export Beacons as Markdown"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.exportJson",
+        "title": "Export Beacons as JSON"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.exportCsv",
+        "title": "Export Beacons as CSV"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.openSettings",
+        "title": "Open Code Beacon Settings"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.clearCache",
+        "title": "Clear Code Beacon Cache"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "codeBeacon",
+          "title": "Code Beacon",
+          "icon": "./res/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "codeBeacon": [
+        {
+          "id": "codeBeacon.annotations",
+          "name": "Beacons",
+          "when": "config.code-beacon.explorer.enabled"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "code-beacon.refresh",
+          "when": "view == codeBeacon.annotations",
+          "group": "navigation"
+        },
+        {
+          "command": "code-beacon.scanWorkspace",
+          "when": "view == codeBeacon.annotations",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "code-beacon.reveal",
+          "when": "view == codeBeacon.annotations && viewItem == beacon",
+          "group": "inline"
+        },
+        {
+          "command": "code-beacon.copyLink",
+          "when": "view == codeBeacon.annotations && viewItem == beacon",
+          "group": "inline"
+        }
+      ]
+    }
   },
   "activationEvents": [
-    "onStartupFinished"
+    "onCommand:code-beacon.focusExplorer",
+    "onCommand:code-beacon.scanWorkspace",
+    "onStartupFinished",
+    "onView:codeBeacon.annotations"
+  ],
+  "extensionKind": [
+    "ui",
+    "workspace"
   ],
   "icon": "./res/icon.png",
   "preview": true,
@@ -114,7 +529,7 @@
   "packageManager": "pnpm@11.10.0",
   "capabilities": {
     "untrustedWorkspaces": {
-      "supported": true,
+      "supported": "limited",
       "restrictedConfigurations": []
     },
     "virtualWorkspaces": {

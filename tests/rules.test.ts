@@ -71,6 +71,30 @@ describe('rule normalization', () => {
     ])
   })
 
+  it('reports matchers that can produce zero-length matches', () => {
+    const result = normalizeRules([
+      {
+        id: 'empty',
+        label: 'Empty',
+        category: 'custom',
+        enabled: true,
+        matcher: {
+          type: 'regex',
+          pattern: '^',
+        },
+        severity: 'information',
+      },
+    ])
+
+    expect(result.rules.some(rule => rule.id === 'empty')).toBe(false)
+    expect(result.errors).toStrictEqual([
+      {
+        ruleId: 'empty',
+        message: 'Matcher for rule "empty" must consume at least one character',
+      },
+    ])
+  })
+
   it('drops disabled custom rules', () => {
     const result = normalizeRules([
       {

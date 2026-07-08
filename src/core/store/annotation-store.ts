@@ -15,6 +15,14 @@ export interface AnnotationStore {
   setForUri: (uri: string, annotations: readonly BeaconAnnotation[]) => void
 
   /**
+   * Replaces annotations owned by one source while preserving other sources.
+   */
+  replaceForSource: (
+    source: BeaconAnnotation['source'],
+    annotationsByUri: ReadonlyMap<string, readonly BeaconAnnotation[]>,
+  ) => void
+
+  /**
    * Returns annotations for one URI.
    */
   getForUri: (uri: string) => readonly BeaconAnnotation[]
@@ -86,6 +94,36 @@ export function createAnnotationStore(): AnnotationStore {
      */
     setForUri(uri, annotations) {
       annotationsByUri.set(uri, [...annotations])
+      notify()
+    },
+
+    /**
+     * Replaces annotations owned by one source while preserving other sources.
+     */
+    replaceForSource(source, replacementByUri) {
+      for (const [uri, existingAnnotations] of annotationsByUri) {
+        const retainedAnnotations = existingAnnotations.filter(
+          annotation => annotation.source !== source,
+        )
+        const replacementAnnotations = replacementByUri.get(uri) ?? []
+        const nextAnnotations = [
+          ...retainedAnnotations,
+          ...replacementAnnotations,
+        ]
+
+        if (nextAnnotations.length > 0) {
+          annotationsByUri.set(uri, nextAnnotations)
+        } else {
+          annotationsByUri.delete(uri)
+        }
+      }
+
+      for (const [uri, replacementAnnotations] of replacementByUri) {
+        if (!annotationsByUri.has(uri) && replacementAnnotations.length > 0) {
+          annotationsByUri.set(uri, [...replacementAnnotations])
+        }
+      }
+
       notify()
     },
 

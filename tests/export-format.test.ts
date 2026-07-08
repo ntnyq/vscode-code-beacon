@@ -62,4 +62,14 @@ describe('export formatters', () => {
       ]),
     ).toContain('"ship, ""it"""')
   })
+
+  it('neutralizes formula-leading csv values', () => {
+    expect(
+      formatAnnotationsAsCsv([
+        createAnnotation({
+          message: '=HYPERLINK("https://example.com")',
+        }),
+      ]),
+    ).toContain("'=HYPERLINK")
+  })
 })

@@ -1,11 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
+import { applyBeaconDecorations } from '../src/core/decorations/apply-decorations'
 import {
   DecorationTypeCache,
   createDecorationRenderOptions,
   decorationStyleKey,
 } from '../src/core/decorations/decoration-type-cache'
-import type { BeaconStyleConfig } from '../src/types/annotation'
+import type {
+  BeaconAnnotation,
+  BeaconStyleConfig,
+} from '../src/types/annotation'
 
 const { createTextEditorDecorationType, dispose } = vi.hoisted(() => {
   const disposeMock = vi.fn<() => void>()
@@ -29,6 +33,24 @@ vi.mock(
       OverviewRulerLane: {
         Right: 4,
       },
+      Range: class Range {
+        public readonly startLine: number
+        public readonly startCharacter: number
+        public readonly endLine: number
+        public readonly endCharacter: number
+
+        public constructor(
+          startLine: number,
+          startCharacter: number,
+          endLine: number,
+          endCharacter: number,
+        ) {
+          this.startLine = startLine
+          this.startCharacter = startCharacter
+          this.endLine = endLine
+          this.endCharacter = endCharacter
+        }
+      },
       window: {
         createTextEditorDecorationType,
       },
@@ -43,6 +65,31 @@ const style = {
   marker: 'keyword',
   overviewRulerColor: '#0969da',
 } satisfies Required<BeaconStyleConfig>
+
+function createAnnotation(): BeaconAnnotation {
+  return {
+    category: 'todo',
+    column: 3,
+    id: 'a',
+    keyword: 'TODO:',
+    keywordRange: {
+      end: { character: 8, line: 1 },
+      start: { character: 3, line: 1 },
+    },
+    languageId: 'typescript',
+    line: 1,
+    message: 'ship it',
+    range: {
+      end: { character: 8, line: 1 },
+      start: { character: 3, line: 1 },
+    },
+    ruleId: 'todo',
+    severity: 'information',
+    source: 'visibleEditor',
+    style,
+    uri: 'file:///workspace/src/a.ts',
+  }
+}
 
 describe(DecorationTypeCache, () => {
   it('reuses decoration types for identical styles', () => {
@@ -77,5 +124,19 @@ describe(DecorationTypeCache, () => {
       overviewRulerLane: 4,
       rangeBehavior: 0,
     })
+  })
+
+  it('clears stale editor decorations before disposing their types', () => {
+    const cache = new DecorationTypeCache()
+    const setDecorations = vi.fn<Vscode.TextEditor['setDecorations']>()
+    const editor = {
+      setDecorations,
+    } as unknown as Vscode.TextEditor
+
+    applyBeaconDecorations(editor, [createAnnotation()], cache)
+    const decorationType = createTextEditorDecorationType.mock.results[0]?.value
+    applyBeaconDecorations(editor, [], cache)
+
+    expect(setDecorations).toHaveBeenLastCalledWith(decorationType, [])
   })
 })

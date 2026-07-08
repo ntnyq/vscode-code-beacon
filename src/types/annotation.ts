@@ -153,6 +153,7 @@ export interface BeaconAnnotation {
   readonly range: SerializedRange
   readonly keywordRange: SerializedRange
   readonly messageRange?: SerializedRange
+  readonly diagnostics?: BeaconDiagnosticsConfig
   readonly line: number
   readonly column: number
   readonly keyword: string

@@ -1,7 +1,7 @@
 import { useDisposable } from 'reactive-vscode'
 import { Uri, languages, workspace } from 'vscode'
 import { config } from '../config'
-import { createBeaconDiagnostic } from '../core/diagnostics/beacon-diagnostics'
+import { diagnosticsByUriForAnnotations } from '../core/diagnostics/beacon-diagnostics'
 import { annotationStore } from '../core/store/annotation-store'
 
 /**
@@ -16,21 +16,14 @@ export function useBeaconDiagnostics() {
   const publish = () => {
     collection.clear()
 
-    if (config.diagnostics.mode === 'off') {
-      return
-    }
-
-    const diagnosticsByUri = new Map<
-      string,
-      ReturnType<typeof createBeaconDiagnostic>[]
-    >()
-
-    for (const annotation of annotationStore.getAll()) {
-      diagnosticsByUri.set(annotation.uri, [
-        ...(diagnosticsByUri.get(annotation.uri) ?? []),
-        createBeaconDiagnostic(annotation),
-      ])
-    }
+    const openUris = new Set(
+      workspace.textDocuments.map(document => document.uri.toString()),
+    )
+    const diagnosticsByUri = diagnosticsByUriForAnnotations(
+      annotationStore.getAll(),
+      config.diagnostics.mode,
+      openUris,
+    )
 
     for (const [uri, diagnostics] of diagnosticsByUri) {
       collection.set(Uri.parse(uri), diagnostics)
@@ -48,6 +41,8 @@ export function useBeaconDiagnostics() {
       }
     }),
   )
+  useDisposable(workspace.onDidOpenTextDocument(publish))
+  useDisposable(workspace.onDidCloseTextDocument(publish))
 
   publish()
 

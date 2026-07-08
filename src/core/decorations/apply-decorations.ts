@@ -32,5 +32,5 @@ export function applyBeaconDecorations(
     )
   }
 
-  cache.disposeStale([...annotationsByStyle.keys()])
+  cache.disposeStale([...annotationsByStyle.keys()], editor)
 }

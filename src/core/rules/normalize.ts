@@ -17,6 +17,13 @@ const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
 }
 
 /**
+ * Error raised when a matcher is valid JavaScript but unsafe for scanning.
+ */
+class BeaconRuleCompileError extends Error {
+  public override readonly name = 'BeaconRuleCompileError'
+}
+
+/**
  * Escapes literal matcher text so it can be embedded inside a RegExp source.
  */
 function escapeRegExp(value: string): string {
@@ -57,6 +64,17 @@ function ensureGlobalFlag(flags: string | undefined): string {
 }
 
 /**
+ * Checks common inputs for zero-length matches that would stall RegExp.exec.
+ */
+function canMatchWithoutConsuming(regex: RegExp): boolean {
+  const flags = regex.flags.replaceAll('g', '')
+  const probeRegex = new RegExp(regex.source, flags)
+  const samples = ['', 'x', 'TODO', '// TODO: message']
+
+  return samples.some(sample => probeRegex.exec(sample)?.[0] === '')
+}
+
+/**
  * Compiles one rule into a runtime matcher with resolved defaults.
  */
 function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
@@ -75,6 +93,12 @@ function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
       ? rule.matcher.pattern
       : buildTextPattern(rule)
   const matcherRegex = new RegExp(source, ensureGlobalFlag(flags))
+
+  if (canMatchWithoutConsuming(matcherRegex)) {
+    throw new BeaconRuleCompileError(
+      `Matcher for rule "${rule.id}" must consume at least one character`,
+    )
+  }
 
   return {
     ...rule,
@@ -121,7 +145,15 @@ export function normalizeRules(
 
     try {
       rules.push(compileRule(rule))
-    } catch {
+    } catch (error) {
+      if (error instanceof BeaconRuleCompileError) {
+        errors.push({
+          message: error.message,
+          ruleId: rule.id,
+        })
+        continue
+      }
+
       const matcherValue =
         rule.matcher.type === 'regex'
           ? rule.matcher.pattern

@@ -84,6 +84,45 @@ describe('annotation store', () => {
     expect(store.getAll()).toStrictEqual([])
   })
 
+  it('replaces annotations for one source without dropping other sources', () => {
+    const store = createAnnotationStore()
+    store.setForUri('file:///workspace/src/a.ts', [
+      createAnnotation('visible-a'),
+      {
+        ...createAnnotation('workspace-a'),
+        source: 'workspace',
+      },
+    ])
+    store.setForUri('file:///workspace/src/old.ts', [
+      {
+        ...createAnnotation('workspace-old', 'file:///workspace/src/old.ts'),
+        source: 'workspace',
+      },
+    ])
+
+    store.replaceForSource(
+      'workspace',
+      new Map([
+        [
+          'file:///workspace/src/b.ts',
+          [
+            {
+              ...createAnnotation('workspace-b', 'file:///workspace/src/b.ts'),
+              source: 'workspace',
+            },
+          ],
+        ],
+      ]),
+    )
+
+    expect(
+      store
+        .getAll()
+        .map(annotation => annotation.id)
+        .sort(),
+    ).toStrictEqual(['visible-a', 'workspace-b'])
+  })
+
   it('formats file links with one-based line and column numbers', async () => {
     const { formatBeaconLink } = await import('../src/utils/ranges')
 

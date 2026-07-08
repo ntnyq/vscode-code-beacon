@@ -15,7 +15,7 @@ import {
   type VscodeExcludeConfig,
 } from '../core/workspace/globs'
 import { commands } from '../meta'
-import type { BeaconRuleConfig } from '../types/annotation'
+import type { BeaconAnnotation, BeaconRuleConfig } from '../types/annotation'
 import { logger } from '../utils/logger'
 
 /**
@@ -76,6 +76,7 @@ export function useWorkspaceScan() {
         )
 
         let scanned = 0
+        const annotationsByUri = new Map<string, readonly BeaconAnnotation[]>()
 
         for (const uri of files) {
           scanned += 1
@@ -95,7 +96,7 @@ export function useWorkspaceScan() {
               uri: uri.toString(),
             })
 
-            annotationStore.setForUri(uri.toString(), result.annotations)
+            annotationsByUri.set(uri.toString(), result.annotations)
           } catch (error) {
             logger.warn(
               `Failed to scan ${uri.toString()}: ${
@@ -105,6 +106,7 @@ export function useWorkspaceScan() {
           }
         }
 
+        annotationStore.replaceForSource('workspace', annotationsByUri)
         logger.info(`Workspace scan completed: ${scanned} files`)
       },
     )

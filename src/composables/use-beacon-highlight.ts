@@ -70,6 +70,24 @@ export function useBeaconHighlight() {
   const decorationCache = new DecorationTypeCache()
 
   /**
+   * Re-applies visible editor decorations from the current store contents.
+   */
+  const refreshVisibleDecorations = () => {
+    for (const editor of window.visibleTextEditors) {
+      if (!config.decorations.enabled) {
+        decorationCache.clearForEditor(editor)
+        continue
+      }
+
+      applyBeaconDecorations(
+        editor,
+        annotationStore.getForUri(editor.document.uri.toString()),
+        decorationCache,
+      )
+    }
+  }
+
+  /**
    * Scans a text document and updates the annotation store for its URI.
    */
   const scanTextDocument = (
@@ -113,11 +131,7 @@ export function useBeaconHighlight() {
     editor: TextEditor,
     source: BeaconAnnotation['source'] = 'visibleEditor',
   ) => {
-    const annotations = scanTextDocument(editor.document, source)
-
-    if (config.decorations.enabled) {
-      applyBeaconDecorations(editor, annotations, decorationCache)
-    }
+    scanTextDocument(editor.document, source)
   }
 
   /**
@@ -218,9 +232,13 @@ export function useBeaconHighlight() {
     workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('code-beacon')) {
         scanByConfiguredMode()
+        refreshVisibleDecorations()
       }
     }),
   )
+  useDisposable({
+    dispose: annotationStore.subscribe(refreshVisibleDecorations),
+  })
   useDisposable({
     dispose() {
       decorationCache.disposeAll()

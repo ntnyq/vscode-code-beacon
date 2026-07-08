@@ -47,4 +47,71 @@ describe('document scanner', () => {
       reason: 'maxFileSize',
     })
   })
+
+  it('honors rule language filters', () => {
+    const filteredRules = normalizeRules([
+      {
+        category: 'custom',
+        enabled: true,
+        id: 'python-only',
+        label: 'PYONLY',
+        languages: ['python'],
+        matcher: {
+          type: 'text',
+          value: 'PYONLY',
+        },
+        severity: 'information',
+      },
+    ]).rules
+    const result = scanDocument({
+      commentOnly: false,
+      languageId: 'typescript',
+      maxFileSize: 1_000_000,
+      rules: filteredRules,
+      source: 'visibleEditor',
+      text: '// PYONLY: not for typescript',
+      uri: 'file:///workspace/src/example.ts',
+    })
+
+    expect(
+      result.annotations.some(
+        annotation => annotation.ruleId === 'python-only',
+      ),
+    ).toBe(false)
+  })
+
+  it('honors per-rule comment-only scanning', () => {
+    const commentOnlyRules = normalizeRules([
+      {
+        category: 'custom',
+        commentOnly: true,
+        enabled: true,
+        id: 'review-comment-only',
+        label: 'REVIEWME',
+        matcher: {
+          type: 'text',
+          value: 'REVIEWME',
+        },
+        severity: 'information',
+      },
+    ]).rules
+    const result = scanDocument({
+      commentOnly: false,
+      languageId: 'typescript',
+      maxFileSize: 1_000_000,
+      rules: commentOnlyRules,
+      source: 'visibleEditor',
+      text: [
+        'const value = "REVIEWME: not a comment"',
+        '// REVIEWME: comment',
+      ].join('\n'),
+      uri: 'file:///workspace/src/example.ts',
+    })
+
+    expect(
+      result.annotations
+        .filter(annotation => annotation.ruleId === 'review-comment-only')
+        .map(annotation => annotation.message),
+    ).toStrictEqual(['comment'])
+  })
 })

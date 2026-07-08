@@ -43,7 +43,8 @@ function toExportableAnnotation(
  * Escapes a single CSV cell value according to common CSV rules.
  */
 function escapeCsvValue(value: string | number): string {
-  const stringValue = String(value)
+  const rawValue = String(value)
+  const stringValue = /^[\t\r=+\-@]/u.test(rawValue) ? `'${rawValue}` : rawValue
 
   if (!/[",\n]/u.test(stringValue)) {
     return stringValue

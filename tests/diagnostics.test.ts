@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import {
   createBeaconDiagnostic,
+  diagnosticsByUriForAnnotations,
   diagnosticSeverityForBeacon,
 } from '../src/core/diagnostics/beacon-diagnostics'
 import type { BeaconAnnotation } from '../src/types/annotation'
@@ -90,5 +91,47 @@ describe('beacon diagnostics', () => {
     expect(diagnostic.message).toBe('TODO: ship it')
     expect(diagnostic.severity).toBe(2)
     expect(diagnostic.source).toBe('Code Beacon')
+  })
+
+  it('filters diagnostics by mode and open document URIs', () => {
+    const diagnostics = diagnosticsByUriForAnnotations(
+      [
+        createAnnotation(),
+        createAnnotation({
+          id: 'workspace',
+          source: 'workspace',
+          uri: 'file:///workspace/src/closed.ts',
+        }),
+      ],
+      'openFiles',
+      new Set(['file:///workspace/src/a.ts']),
+    )
+
+    expect([...diagnostics.keys()]).toStrictEqual([
+      'file:///workspace/src/a.ts',
+    ])
+  })
+
+  it('honors per-rule diagnostic settings', () => {
+    const diagnostics = diagnosticsByUriForAnnotations(
+      [
+        createAnnotation({
+          diagnostics: {
+            enabled: false,
+          },
+        }),
+        createAnnotation({
+          diagnostics: {
+            severity: 'error',
+          },
+          id: 'error',
+          uri: 'file:///workspace/src/b.ts',
+        }),
+      ],
+      'workspace',
+    )
+
+    expect(diagnostics.get('file:///workspace/src/a.ts')).toBeUndefined()
+    expect(diagnostics.get('file:///workspace/src/b.ts')?.[0]?.severity).toBe(0)
   })
 })

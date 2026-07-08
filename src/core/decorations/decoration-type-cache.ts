@@ -3,6 +3,7 @@ import {
   OverviewRulerLane,
   window,
   type DecorationRenderOptions,
+  type TextEditor,
   type TextEditorDecorationType,
 } from 'vscode'
 import type { BeaconStyleConfig } from '../../types/annotation'
@@ -74,15 +75,27 @@ export class DecorationTypeCache {
   /**
    * Disposes cached decoration types whose keys are absent from the active set.
    */
-  public disposeStale(activeKeys: readonly string[]) {
+  public disposeStale(activeKeys: readonly string[], editor?: TextEditor) {
     const activeKeySet = new Set(activeKeys)
 
     for (const [key, decorationType] of this.decorationTypes) {
       if (!activeKeySet.has(key)) {
+        editor?.setDecorations(decorationType, [])
         decorationType.dispose()
         this.decorationTypes.delete(key)
       }
     }
+  }
+
+  /**
+   * Clears every cached decoration from one editor and disposes all types.
+   */
+  public clearForEditor(editor: TextEditor) {
+    for (const decorationType of this.decorationTypes.values()) {
+      editor.setDecorations(decorationType, [])
+    }
+
+    this.disposeAll()
   }
 
   /**

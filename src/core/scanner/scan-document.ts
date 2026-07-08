@@ -108,6 +108,38 @@ function annotationId(
 }
 
 /**
+ * Checks whether a rule is enabled for the current VS Code language id.
+ */
+function isRuleEnabledForLanguage(
+  rule: CompiledBeaconRule,
+  languageId: string,
+): boolean {
+  const languages = rule.languages
+
+  if (!languages || languages.length === 0) {
+    return true
+  }
+
+  const excluded = new Set(
+    languages
+      .filter(language => language.startsWith('!'))
+      .map(language => language.slice(1)),
+  )
+
+  if (excluded.has(languageId) || excluded.has('*')) {
+    return false
+  }
+
+  const included = languages.filter(language => !language.startsWith('!'))
+
+  return (
+    included.length === 0 ||
+    included.includes('*') ||
+    included.includes(languageId)
+  )
+}
+
+/**
  * Scans one offset range with every compiled rule.
  */
 function scanRange(
@@ -119,12 +151,25 @@ function scanRange(
   const segment = text.slice(range.start, range.end)
 
   for (const rule of options.rules) {
+    if (!isRuleEnabledForLanguage(rule, options.languageId)) {
+      continue
+    }
+
     rule.matcherRegex.lastIndex = 0
     let match: RegExpExecArray | null
 
     while ((match = rule.matcherRegex.exec(segment))) {
       const start = range.start + match.index
       const keyword = match[0]
+
+      if (keyword.length === 0) {
+        if (rule.matcherRegex.lastIndex >= segment.length) {
+          break
+        }
+        rule.matcherRegex.lastIndex += 1
+        continue
+      }
+
       const end = start + keyword.length
       const message = extractMessage(text, match, end, rule)
       const keywordRange = rangeAt(text, start, end)
@@ -141,6 +186,7 @@ function scanRange(
         line: keywordRange.start.line,
         message,
         messageRange,
+        diagnostics: rule.diagnostics,
         range:
           rule.style.marker === 'line'
             ? rangeAt(text, start, messageEnd)
@@ -176,14 +222,23 @@ export function scanDocument(options: ScanDocumentOptions): BeaconScanResult {
     }
   }
 
-  const ranges = options.commentOnly
-    ? getCommentRanges(options.text, options.languageId)
-    : [{ end: options.text.length, start: 0 }]
+  const fullDocumentRanges = [{ end: options.text.length, start: 0 }]
+  const commentRanges = getCommentRanges(options.text, options.languageId)
 
   return {
-    annotations: ranges.flatMap(range =>
-      scanRange(options.text, range, options),
-    ),
+    annotations: options.rules.flatMap(rule => {
+      const ranges =
+        options.commentOnly || rule.commentOnly
+          ? commentRanges
+          : fullDocumentRanges
+
+      return ranges.flatMap(range =>
+        scanRange(options.text, range, {
+          ...options,
+          rules: [rule],
+        }),
+      )
+    }),
     durationMs: Date.now() - startedAt,
     languageId: options.languageId,
     uri: options.uri,

@@ -1,0 +1,91 @@
+import { describe, expect, it } from 'vitest'
+import { DEFAULT_BEACON_RULES } from '../src/constants/defaults'
+import { normalizeRules } from '../src/core/rules/normalize'
+import type { BeaconRuleConfig } from '../src/types/annotation'
+
+describe('normalizeRules', () => {
+  it('returns enabled built-in rules when no custom rules are provided', () => {
+    const result = normalizeRules([])
+
+    expect(result.errors).toStrictEqual([])
+    expect(result.rules.map(rule => rule.id)).toStrictEqual(
+      DEFAULT_BEACON_RULES.map(rule => rule.id),
+    )
+    expect(
+      result.rules.find(rule => rule.id === 'todo')?.matcherRegex.source,
+    ).toBe('\\bTODO:?')
+  })
+
+  it('overrides a built-in rule by id', () => {
+    const customRules: BeaconRuleConfig[] = [
+      {
+        id: 'todo',
+        label: 'Work Item',
+        category: 'todo',
+        enabled: true,
+        matcher: {
+          type: 'text',
+          value: 'WORK',
+          wholeWord: true,
+          colon: 'optional',
+          caseSensitive: false,
+        },
+        severity: 'warning',
+      },
+    ]
+
+    const result = normalizeRules(customRules)
+
+    expect(result.errors).toStrictEqual([])
+    expect(result.rules.find(rule => rule.id === 'todo')).toMatchObject({
+      id: 'todo',
+      label: 'Work Item',
+      severity: 'warning',
+    })
+    expect(
+      result.rules.find(rule => rule.id === 'todo')?.matcherRegex.source,
+    ).toBe('\\bWORK:?')
+  })
+
+  it('reports invalid regex rules without throwing', () => {
+    const result = normalizeRules([
+      {
+        id: 'broken',
+        label: 'Broken',
+        category: 'custom',
+        enabled: true,
+        matcher: {
+          type: 'regex',
+          pattern: '(',
+        },
+        severity: 'information',
+      },
+    ])
+
+    expect(result.rules.some(rule => rule.id === 'broken')).toBe(false)
+    expect(result.errors).toStrictEqual([
+      {
+        ruleId: 'broken',
+        message: 'Invalid regular expression for rule "broken": (',
+      },
+    ])
+  })
+
+  it('drops disabled custom rules', () => {
+    const result = normalizeRules([
+      {
+        id: 'skip',
+        label: 'Skip',
+        category: 'custom',
+        enabled: false,
+        matcher: {
+          type: 'text',
+          value: 'SKIP',
+        },
+        severity: 'hint',
+      },
+    ])
+
+    expect(result.rules.some(rule => rule.id === 'skip')).toBe(false)
+  })
+})

@@ -95,7 +95,9 @@ describe(BeaconTreeDataProvider, () => {
     const provider = new BeaconTreeDataProvider(() => [annotation])
     const [group] = (await provider.getChildren()) as BeaconTreeElement[]
 
-    expect(await provider.getChildren(group)).toStrictEqual([
+    await expect(
+      Promise.resolve(provider.getChildren(group)),
+    ).resolves.toStrictEqual([
       {
         annotation,
         type: 'beacon',

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { access, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../..')
@@ -13,7 +13,17 @@ function assert(condition: boolean, message: string) {
   }
 }
 
-const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path)
+
+    return true
+  } catch {
+    return false
+  }
+}
+
+const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8')) as {
   readonly contributes?: {
     readonly commands?: readonly { readonly command: string }[]
     readonly views?: Record<string, readonly { readonly id: string }[]>
@@ -29,9 +39,9 @@ assert(
   packageJson.displayName === 'Code Beacon',
   'displayName must be Code Beacon',
 )
-assert(existsSync(distPath), 'dist/index.js must exist after build')
-assert(existsSync(readmePath), 'README.md must exist')
-assert(existsSync(changelogPath), 'CHANGELOG.md must exist')
+assert(await pathExists(distPath), 'dist/index.js must exist after build')
+assert(await pathExists(readmePath), 'README.md must exist')
+assert(await pathExists(changelogPath), 'CHANGELOG.md must exist')
 assert(
   commands.has('code-beacon.scanWorkspace'),
   'scanWorkspace command missing',
@@ -44,5 +54,3 @@ assert(
   views.some(view => view.id === 'codeBeacon.annotations'),
   'Code Beacon annotations view missing',
 )
-
-console.log('Code Beacon package smoke passed')

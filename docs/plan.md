@@ -676,13 +676,7 @@ const { activate, deactivate } = defineExtension(() => {
 ### 9.1 activationEvents
 
 ```jsonc
-[
-  "onStartupFinished",
-  "onView:codeBeacon.annotations",
-  "onCommand:code-beacon.scanWorkspace",
-  "onCommand:code-beacon.focusExplorer",
-  "onCommand:code-beacon.explain",
-]
+["onStartupFinished"]
 ```
 
 ### 9.2 views

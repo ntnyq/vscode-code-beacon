@@ -480,6 +480,7 @@
     "views": {
       "codeBeacon": [
         {
+          "icon": "./res/icon.png",
           "id": "codeBeacon.annotations",
           "name": "Beacons",
           "when": "config.code-beacon.explorer.enabled"
@@ -514,10 +515,7 @@
     }
   },
   "activationEvents": [
-    "onCommand:code-beacon.focusExplorer",
-    "onCommand:code-beacon.scanWorkspace",
-    "onStartupFinished",
-    "onView:codeBeacon.annotations"
+    "onStartupFinished"
   ],
   "extensionKind": [
     "ui",

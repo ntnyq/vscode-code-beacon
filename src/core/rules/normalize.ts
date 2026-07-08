@@ -14,7 +14,7 @@ const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`)
 }
 
 function buildTextPattern(rule: BeaconRuleConfig): string {
@@ -23,7 +23,7 @@ function buildTextPattern(rule: BeaconRuleConfig): string {
   }
 
   const escaped = escapeRegExp(rule.matcher.value)
-  const prefix = (rule.matcher.wholeWord ?? true) ? '\\b' : ''
+  const prefix = (rule.matcher.wholeWord ?? true) ? String.raw`\b` : ''
 
   if (rule.matcher.colon === 'required') {
     return `${prefix}${escaped}:`
@@ -45,12 +45,16 @@ function ensureGlobalFlag(flags: string | undefined): string {
 }
 
 function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
-  const flags =
-    rule.matcher.type === 'regex'
-      ? rule.matcher.flags
-      : rule.matcher.caseSensitive
-        ? 'g'
-        : 'gi'
+  let flags: string | undefined
+
+  if (rule.matcher.type === 'regex') {
+    flags = rule.matcher.flags
+  } else if (rule.matcher.caseSensitive) {
+    flags = 'g'
+  } else {
+    flags = 'gi'
+  }
+
   const source =
     rule.matcher.type === 'regex'
       ? rule.matcher.pattern
@@ -100,12 +104,13 @@ export function normalizeRules(
     try {
       rules.push(compileRule(rule))
     } catch {
+      const matcherValue =
+        rule.matcher.type === 'regex'
+          ? rule.matcher.pattern
+          : rule.matcher.value
+
       errors.push({
-        message: `Invalid regular expression for rule "${rule.id}": ${
-          rule.matcher.type === 'regex'
-            ? rule.matcher.pattern
-            : rule.matcher.value
-        }`,
+        message: `Invalid regular expression for rule "${rule.id}": ${matcherValue}`,
         ruleId: rule.id,
       })
     }

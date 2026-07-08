@@ -4,7 +4,7 @@ import { scanDocument } from '../src/core/scanner/scan-document'
 
 const rules = normalizeRules([]).rules
 
-describe('scanDocument', () => {
+describe('document scanner', () => {
   it('scans comments and ignores string literals by default', () => {
     const result = scanDocument({
       commentOnly: true,

@@ -63,6 +63,7 @@ function beaconIcon(annotation: BeaconAnnotation): ThemeIcon {
 }
 
 export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElement> {
+  // oxlint-disable-next-line unicorn/prefer-event-target -- VS Code TreeDataProvider requires vscode.EventEmitter.
   private readonly changeEmitter = new EventEmitter<
     BeaconTreeElement | undefined
   >()
@@ -74,6 +75,8 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   public readonly onDidChangeTreeData: Event<BeaconTreeElement | undefined> =
     this.changeEmitter.event
 
+  public readonly getTreeItem = BeaconTreeDataProvider.createTreeItem
+
   public constructor(
     getAnnotations: GetBeaconAnnotations,
     getGroupBy: () => BeaconExplorerGroupBy = () => 'file',
@@ -83,6 +86,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   }
 
   public refresh() {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- vscode.EventEmitter.fire expects the typed payload argument.
     this.changeEmitter.fire(undefined)
   }
 
@@ -118,7 +122,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
       }))
   }
 
-  public getTreeItem(element: BeaconTreeElement): TreeItem {
+  private static createTreeItem(element: BeaconTreeElement): TreeItem {
     if (element.type === 'group') {
       const item = new TreeItem(
         element.label,

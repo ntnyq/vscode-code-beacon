@@ -550,12 +550,7 @@ Update activation and capabilities:
 
 ```jsonc
 {
-  "activationEvents": [
-    "onStartupFinished",
-    "onView:codeBeacon.annotations",
-    "onCommand:code-beacon.scanWorkspace",
-    "onCommand:code-beacon.focusExplorer",
-  ],
+  "activationEvents": ["onStartupFinished"],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",

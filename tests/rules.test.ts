@@ -3,7 +3,7 @@ import { DEFAULT_BEACON_RULES } from '../src/constants/defaults'
 import { normalizeRules } from '../src/core/rules/normalize'
 import type { BeaconRuleConfig } from '../src/types/annotation'
 
-describe('normalizeRules', () => {
+describe('rule normalization', () => {
   it('returns enabled built-in rules when no custom rules are provided', () => {
     const result = normalizeRules([])
 
@@ -13,7 +13,7 @@ describe('normalizeRules', () => {
     )
     expect(
       result.rules.find(rule => rule.id === 'todo')?.matcherRegex.source,
-    ).toBe('\\bTODO:?')
+    ).toBe(String.raw`\bTODO:?`)
   })
 
   it('overrides a built-in rule by id', () => {
@@ -44,7 +44,7 @@ describe('normalizeRules', () => {
     })
     expect(
       result.rules.find(rule => rule.id === 'todo')?.matcherRegex.source,
-    ).toBe('\\bWORK:?')
+    ).toBe(String.raw`\bWORK:?`)
   })
 
   it('reports invalid regex rules without throwing', () => {

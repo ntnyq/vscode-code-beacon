@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
 
-const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
   activationEvents: string[]
   categories: string[]
   keywords: string[]
@@ -92,6 +92,7 @@ describe('package metadata', () => {
     ])
     expect(pkg.contributes.views?.codeBeacon).toStrictEqual([
       {
+        icon: './res/icon.png',
         id: 'codeBeacon.annotations',
         name: 'Beacons',
         when: 'config.code-beacon.explorer.enabled',

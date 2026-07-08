@@ -41,9 +41,10 @@ describe('export formatters', () => {
   })
 
   it('formats annotations as json', () => {
-    expect(
-      JSON.parse(formatAnnotationsAsJson([createAnnotation()])),
-    ).toMatchObject([
+    const json = formatAnnotationsAsJson([createAnnotation()])
+    const annotations = JSON.parse(json)
+
+    expect(annotations).toMatchObject([
       {
         keyword: 'TODO:',
         line: 2,

@@ -121,6 +121,7 @@ function scanRange(
         ruleId: rule.id,
         severity: rule.severity,
         source: options.source,
+        style: rule.style,
         uri: options.uri,
       })
     }

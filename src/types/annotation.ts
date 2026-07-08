@@ -99,6 +99,7 @@ export interface BeaconAnnotation {
   readonly ruleId: string
   readonly category: BeaconCategory
   readonly severity: BeaconSeverity
+  readonly style?: Required<BeaconStyleConfig>
   readonly uri: string
   readonly languageId: string
   readonly range: SerializedRange

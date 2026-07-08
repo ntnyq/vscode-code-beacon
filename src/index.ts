@@ -3,6 +3,7 @@ import { version } from '../package.json'
 import { useBeaconDiagnostics } from './composables/use-beacon-diagnostics'
 import { useBeaconExplorer } from './composables/use-beacon-explorer'
 import { useBeaconHighlight } from './composables/use-beacon-highlight'
+import { useWorkspaceScan } from './composables/use-workspace-scan'
 import { logger } from './utils/logger'
 
 /**
@@ -12,6 +13,7 @@ const { activate, deactivate } = defineExtension(() => {
   useBeaconDiagnostics()
   useBeaconExplorer()
   useBeaconHighlight()
+  useWorkspaceScan()
 
   logger.info(`✅ Activated, version: ${version} `)
 })

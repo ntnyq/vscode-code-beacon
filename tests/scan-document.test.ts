@@ -114,4 +114,50 @@ describe('document scanner', () => {
         .map(annotation => annotation.message),
     ).toStrictEqual(['comment'])
   })
+
+  it('captures annotation owners from common TODO owner syntaxes', () => {
+    const result = scanDocument({
+      commentOnly: true,
+      languageId: 'typescript',
+      maxFileSize: 1_000_000,
+      rules,
+      source: 'visibleEditor',
+      text: [
+        '// TODO(alice): parenthesized owner',
+        '// FIXME @bob: mention owner',
+        '// BUG [owner=carol]: bracket owner',
+      ].join('\n'),
+      uri: 'file:///workspace/src/owners.ts',
+    })
+
+    expect(
+      result.annotations.map(annotation => annotation.owner),
+    ).toStrictEqual(['alice', 'bob', 'carol'])
+    expect(
+      result.annotations.map(annotation => annotation.message),
+    ).toStrictEqual(['parenthesized owner', 'mention owner', 'bracket owner'])
+  })
+
+  it('merges indented follow-up comment lines into multiline annotations', () => {
+    const result = scanDocument({
+      commentOnly: true,
+      languageId: 'typescript',
+      maxFileSize: 1_000_000,
+      rules,
+      source: 'visibleEditor',
+      text: [
+        '// TODO: write docs',
+        '//   include configuration examples',
+        '//   include screenshots',
+        'const done = false',
+      ].join('\n'),
+      uri: 'file:///workspace/src/multiline.ts',
+    })
+
+    expect(result.annotations).toHaveLength(1)
+    expect(result.annotations[0]?.message).toBe(
+      'write docs\ninclude configuration examples\ninclude screenshots',
+    )
+    expect(result.annotations[0]?.range.end.line).toBe(2)
+  })
 })

@@ -43,7 +43,11 @@ function diagnosticSeverityForAnnotation(
  * Checks whether an annotation should be published as a diagnostic.
  */
 function isDiagnosticEnabled(annotation: BeaconAnnotation): boolean {
-  return annotation.diagnostics?.enabled !== false
+  return (
+    annotation.diagnostics?.enabled !== false &&
+    !annotation.resolved &&
+    !annotation.ignored
+  )
 }
 
 /**

@@ -82,6 +82,34 @@ export function useBeaconCommands() {
   )
   useDisposable(
     vscodeCommands.registerCommand(
+      commands.resolve,
+      (annotation: BeaconAnnotation) =>
+        annotationStore.markResolved(annotation.id, true),
+    ),
+  )
+  useDisposable(
+    vscodeCommands.registerCommand(
+      commands.unresolve,
+      (annotation: BeaconAnnotation) =>
+        annotationStore.markResolved(annotation.id, false),
+    ),
+  )
+  useDisposable(
+    vscodeCommands.registerCommand(
+      commands.ignore,
+      (annotation: BeaconAnnotation) =>
+        annotationStore.markIgnored(annotation.id, true),
+    ),
+  )
+  useDisposable(
+    vscodeCommands.registerCommand(
+      commands.unignore,
+      (annotation: BeaconAnnotation) =>
+        annotationStore.markIgnored(annotation.id, false),
+    ),
+  )
+  useDisposable(
+    vscodeCommands.registerCommand(
       commands.copyMarkdown,
       (annotation?: BeaconAnnotation) =>
         env.clipboard.writeText(

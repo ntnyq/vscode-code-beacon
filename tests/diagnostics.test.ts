@@ -134,4 +134,22 @@ describe('beacon diagnostics', () => {
     expect(diagnostics.get('file:///workspace/src/a.ts')).toBeUndefined()
     expect(diagnostics.get('file:///workspace/src/b.ts')?.[0]?.severity).toBe(0)
   })
+
+  it('does not publish resolved or ignored annotations', () => {
+    const diagnostics = diagnosticsByUriForAnnotations(
+      [
+        createAnnotation({
+          id: 'resolved',
+          resolved: true,
+        }),
+        createAnnotation({
+          id: 'ignored',
+          ignored: true,
+        }),
+      ],
+      'workspace',
+    )
+
+    expect(diagnostics.size).toBe(0)
+  })
 })

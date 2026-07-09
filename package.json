@@ -444,6 +444,26 @@
       },
       {
         "category": "Code Beacon",
+        "command": "code-beacon.resolve",
+        "title": "Resolve Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.unresolve",
+        "title": "Reopen Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.ignore",
+        "title": "Ignore Beacon"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.unignore",
+        "title": "Unignore Beacon"
+      },
+      {
+        "category": "Code Beacon",
         "command": "code-beacon.exportMarkdown",
         "title": "Export Beacons as Markdown"
       },
@@ -503,13 +523,33 @@
       "view/item/context": [
         {
           "command": "code-beacon.reveal",
-          "when": "view == codeBeacon.annotations && viewItem == beacon",
+          "when": "view == codeBeacon.annotations && viewItem =~ /^beacon/",
           "group": "inline"
         },
         {
           "command": "code-beacon.copyLink",
-          "when": "view == codeBeacon.annotations && viewItem == beacon",
+          "when": "view == codeBeacon.annotations && viewItem =~ /^beacon/",
           "group": "inline"
+        },
+        {
+          "command": "code-beacon.resolve",
+          "when": "view == codeBeacon.annotations && (viewItem == beacon || viewItem == beaconIgnored)",
+          "group": "inline"
+        },
+        {
+          "command": "code-beacon.unresolve",
+          "when": "view == codeBeacon.annotations && (viewItem == beaconResolved || viewItem == beaconResolvedIgnored)",
+          "group": "inline"
+        },
+        {
+          "command": "code-beacon.ignore",
+          "when": "view == codeBeacon.annotations && (viewItem == beacon || viewItem == beaconResolved)",
+          "group": "navigation"
+        },
+        {
+          "command": "code-beacon.unignore",
+          "when": "view == codeBeacon.annotations && (viewItem == beaconIgnored || viewItem == beaconResolvedIgnored)",
+          "group": "navigation"
         }
       ]
     }

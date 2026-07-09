@@ -1,5 +1,6 @@
 import { defineExtension } from 'reactive-vscode'
 import { version } from '../package.json'
+import { useBeaconCodeLens } from './composables/use-beacon-codelens'
 import { useBeaconCommands } from './composables/use-beacon-commands'
 import { useBeaconDiagnostics } from './composables/use-beacon-diagnostics'
 import { useBeaconExplorer } from './composables/use-beacon-explorer'
@@ -18,6 +19,7 @@ const { activate, deactivate } = defineExtension(() => {
   useWorkspaceScan()
   useBeaconHighlight()
   useBeaconHover()
+  useBeaconCodeLens()
 
   logger.info(`✅ Activated, version: ${version} `)
 })

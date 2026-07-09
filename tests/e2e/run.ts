@@ -1,11 +1,19 @@
+import { execFile } from 'node:child_process'
 import { access, readFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
+import { promisify } from 'node:util'
+import { runTests } from '@vscode/test-electron'
 
+const execFileAsync = promisify(execFile)
 const root = resolve(import.meta.dirname, '../..')
 const packageJsonPath = resolve(root, 'package.json')
 const distPath = resolve(root, 'dist/index.js')
 const readmePath = resolve(root, 'README.md')
 const changelogPath = resolve(root, 'CHANGELOG.md')
+const playgroundPath = resolve(root, 'playground')
+const extensionTestsPath = resolve(root, 'tests/e2e/extension-host.cjs')
+const packageOutputPath = resolve(tmpdir(), 'vscode-code-beacon-e2e.vsix')
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -21,6 +29,15 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+async function runCommand(command: string, args: readonly string[]) {
+  const { stderr, stdout } = await execFileAsync(command, [...args], {
+    cwd: root,
+  })
+
+  process.stdout.write(stdout)
+  process.stderr.write(stderr)
 }
 
 const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8')) as {
@@ -54,3 +71,22 @@ assert(
   views.some(view => view.id === 'codeBeacon.annotations'),
   'Code Beacon annotations view missing',
 )
+
+await runCommand('pnpm', [
+  'exec',
+  'vsce',
+  'package',
+  '--no-dependencies',
+  '--out',
+  packageOutputPath,
+])
+assert(await pathExists(packageOutputPath), 'vsce package must create a VSIX')
+
+await runTests({
+  extensionDevelopmentPath: root,
+  extensionTestsEnv: {
+    CODE_BEACON_E2E_WORKSPACE: playgroundPath,
+  },
+  extensionTestsPath,
+  launchArgs: [playgroundPath],
+})

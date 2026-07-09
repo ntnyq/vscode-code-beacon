@@ -24,6 +24,10 @@ export type CommandKey =
   | "code-beacon.reveal"
   | "code-beacon.copyLink"
   | "code-beacon.copyMarkdown"
+  | "code-beacon.resolve"
+  | "code-beacon.unresolve"
+  | "code-beacon.ignore"
+  | "code-beacon.unignore"
   | "code-beacon.exportMarkdown"
   | "code-beacon.exportJson"
   | "code-beacon.exportCsv"
@@ -89,6 +93,26 @@ export const commands = {
    * @value `code-beacon.copyMarkdown`
    */
   copyMarkdown: "code-beacon.copyMarkdown",
+  /**
+   * Resolve Beacon
+   * @value `code-beacon.resolve`
+   */
+  resolve: "code-beacon.resolve",
+  /**
+   * Reopen Beacon
+   * @value `code-beacon.unresolve`
+   */
+  unresolve: "code-beacon.unresolve",
+  /**
+   * Ignore Beacon
+   * @value `code-beacon.ignore`
+   */
+  ignore: "code-beacon.ignore",
+  /**
+   * Unignore Beacon
+   * @value `code-beacon.unignore`
+   */
+  unignore: "code-beacon.unignore",
   /**
    * Export Beacons as Markdown
    * @value `code-beacon.exportMarkdown`

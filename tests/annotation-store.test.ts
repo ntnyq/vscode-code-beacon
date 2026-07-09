@@ -123,6 +123,21 @@ describe('annotation store', () => {
     ).toStrictEqual(['visible-a', 'workspace-b'])
   })
 
+  it('preserves resolved and ignored state across rescans', () => {
+    const store = createAnnotationStore()
+    const annotation = createAnnotation('a')
+
+    store.setForUri(annotation.uri, [annotation])
+    store.markResolved(annotation.id, true)
+    store.markIgnored(annotation.id, true)
+    store.setForUri(annotation.uri, [annotation])
+
+    expect(store.getForUri(annotation.uri)[0]).toMatchObject({
+      ignored: true,
+      resolved: true,
+    })
+  })
+
   it('formats file links with one-based line and column numbers', async () => {
     const { formatBeaconLink } = await import('../src/utils/ranges')
 

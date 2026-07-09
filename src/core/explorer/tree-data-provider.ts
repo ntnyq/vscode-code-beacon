@@ -61,7 +61,7 @@ function groupLabel(
     category: annotation.category,
     file: annotation.uri,
     flat: 'All Beacons',
-    owner: annotation.source,
+    owner: annotation.owner ?? 'Unassigned',
     rule: annotation.ruleId,
     severity: annotation.severity,
   }
@@ -81,6 +81,40 @@ function beaconIcon(annotation: BeaconAnnotation): ThemeIcon {
   }
 
   return new ThemeIcon(iconIds[annotation.severity])
+}
+
+/**
+ * Sorts group labels with unassigned owner groups first.
+ */
+function compareGroupLabels(left: string, right: string): number {
+  if (left === 'Unassigned' && right !== 'Unassigned') {
+    return -1
+  }
+
+  if (right === 'Unassigned' && left !== 'Unassigned') {
+    return 1
+  }
+
+  return left.localeCompare(right)
+}
+
+/**
+ * Builds a TreeView context value that encodes annotation state.
+ */
+function beaconContextValue(annotation: BeaconAnnotation): string {
+  if (annotation.resolved && annotation.ignored) {
+    return 'beaconResolvedIgnored'
+  }
+
+  if (annotation.resolved) {
+    return 'beaconResolved'
+  }
+
+  if (annotation.ignored) {
+    return 'beaconIgnored'
+  }
+
+  return 'beacon'
 }
 
 /**
@@ -161,7 +195,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
     }
 
     return [...groups.entries()]
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareGroupLabels(left, right))
       .map(([label, annotations]) => ({
         annotations,
         id: `${groupBy}:${label}`,
@@ -198,8 +232,15 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
       command: commands.reveal,
       title: 'Reveal Beacon',
     }
-    item.contextValue = 'beacon'
-    item.description = `${annotation.line + 1}:${annotation.column + 1}`
+    item.contextValue = beaconContextValue(annotation)
+    item.description = [
+      `${annotation.line + 1}:${annotation.column + 1}`,
+      annotation.owner ? `@${annotation.owner}` : '',
+      annotation.resolved ? 'resolved' : '',
+      annotation.ignored ? 'ignored' : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
     item.iconPath = beaconIcon(annotation)
     item.resourceUri = Uri.parse(annotation.uri)
     item.tooltip = formatBeaconLink(annotation)

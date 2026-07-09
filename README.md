@@ -61,6 +61,10 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 | `code-beacon.reveal`          | Code Beacon: Reveal Beacon                 |
 | `code-beacon.copyLink`        | Code Beacon: Copy Beacon Link              |
 | `code-beacon.copyMarkdown`    | Code Beacon: Copy Beacon as Markdown       |
+| `code-beacon.resolve`         | Code Beacon: Resolve Beacon                |
+| `code-beacon.unresolve`       | Code Beacon: Reopen Beacon                 |
+| `code-beacon.ignore`          | Code Beacon: Ignore Beacon                 |
+| `code-beacon.unignore`        | Code Beacon: Unignore Beacon               |
 | `code-beacon.exportMarkdown`  | Code Beacon: Export Beacons as Markdown    |
 | `code-beacon.exportJson`      | Code Beacon: Export Beacons as JSON        |
 | `code-beacon.exportCsv`       | Code Beacon: Export Beacons as CSV         |

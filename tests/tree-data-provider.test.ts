@@ -90,6 +90,27 @@ describe(BeaconTreeDataProvider, () => {
     ])
   })
 
+  it('groups annotations by captured owner when available', async () => {
+    const provider = new BeaconTreeDataProvider(
+      () => [
+        createAnnotation('a', {
+          owner: 'alice',
+        }),
+        createAnnotation('b', {
+          owner: 'bob',
+        }),
+        createAnnotation('c'),
+      ],
+      () => 'owner',
+    )
+
+    const roots = (await provider.getChildren()) as BeaconTreeElement[]
+
+    expect(
+      roots.map(item => (item.type === 'group' ? item.label : '')),
+    ).toStrictEqual(['Unassigned', 'alice', 'bob'])
+  })
+
   it('returns beacon leaves for a group', async () => {
     const annotation = createAnnotation('a')
     const provider = new BeaconTreeDataProvider(() => [annotation])
@@ -116,5 +137,17 @@ describe(BeaconTreeDataProvider, () => {
       command: commands.reveal,
     })
     expect(item.description).toBe('2:4')
+  })
+
+  it('includes resolved and ignored state in beacon tree item context', () => {
+    const annotation = createAnnotation('a', {
+      ignored: true,
+      resolved: true,
+    })
+    const provider = new BeaconTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+
+    expect(item.contextValue).toBe('beaconResolvedIgnored')
+    expect(item.description).toBe('2:4 resolved ignored')
   })
 })

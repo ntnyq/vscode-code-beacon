@@ -71,6 +71,73 @@ function lineEndAt(text: string, offset: number): number {
   return newline === -1 ? text.length : newline
 }
 
+interface ExtractedMessage {
+  readonly message: string
+  readonly owner?: string
+  readonly messageEnd: number
+}
+
+interface ParsedOwnerMessage {
+  readonly message: string
+  readonly owner?: string
+}
+
+function parseOwnerMessage(value: string): ParsedOwnerMessage {
+  const normalizedValue = value.replace(/^[:\s-]+/u, '').trim()
+  const ownerPatterns = [
+    /^\((?<owner>[^)]+)\)\s*:?\s*(?<message>.*)$/u,
+    /^@(?<owner>[\w.-]+)\s*:?\s*(?<message>.*)$/u,
+    /^\[owner=(?<owner>[^\]]+)\]\s*:?\s*(?<message>.*)$/u,
+  ]
+
+  for (const pattern of ownerPatterns) {
+    const match = pattern.exec(normalizedValue)
+
+    if (match?.groups?.owner) {
+      return {
+        message: match.groups.message?.trim() ?? '',
+        owner: match.groups.owner.trim(),
+      }
+    }
+  }
+
+  return {
+    message: normalizedValue,
+  }
+}
+
+function followUpLineMessage(line: string): string | undefined {
+  const match = /^\s*(?:(?:\/\/|#)\s{2,}|\*\s{2,})(?<message>.+)$/u.exec(line)
+
+  return match?.groups?.message.trim()
+}
+
+function collectFollowUpMessages(
+  text: string,
+  fromOffset: number,
+): { readonly lines: readonly string[]; readonly end: number } {
+  const lines: string[] = []
+  let cursor = fromOffset
+  let end = fromOffset
+
+  while (cursor < text.length && text[cursor] === '\n') {
+    const lineStart = cursor + 1
+    const lineEnd = lineEndAt(text, lineStart)
+    const line = text.slice(lineStart, lineEnd)
+    const message = followUpLineMessage(line)
+
+    if (!message) {
+      break
+    }
+
+    lines.push(message)
+    end = lineEnd
+    cursor = lineEnd
+  }
+
+  return { end, lines }
+}
+
 /**
  * Extracts the display message for one regex match according to rule settings.
  */
@@ -79,20 +146,39 @@ function extractMessage(
   match: RegExpExecArray,
   matchEnd: number,
   rule: CompiledBeaconRule,
-): string {
+): ExtractedMessage {
   if (rule.messageMode.mode === 'match') {
-    return ''
+    return {
+      message: '',
+      messageEnd: matchEnd,
+    }
   }
 
   if (rule.messageMode.mode === 'group') {
     const namedValue = match.groups?.[rule.messageMode.group]
-    return rule.messageMode.trim
+    const message = rule.messageMode.trim
       ? (namedValue ?? '').trim()
       : (namedValue ?? '')
+
+    return {
+      message,
+      messageEnd: matchEnd,
+    }
   }
 
-  const value = text.slice(matchEnd, lineEndAt(text, matchEnd))
-  return rule.messageMode.trim ? value.replace(/^[:\s-]+/u, '').trim() : value
+  const firstLineEnd = lineEndAt(text, matchEnd)
+  const value = text.slice(matchEnd, firstLineEnd)
+  const parsed = rule.messageMode.trim
+    ? parseOwnerMessage(value)
+    : { message: value }
+  const followUp = collectFollowUpMessages(text, firstLineEnd)
+  const messageLines = [parsed.message, ...followUp.lines].filter(Boolean)
+
+  return {
+    message: messageLines.join('\n'),
+    messageEnd: followUp.end,
+    owner: parsed.owner,
+  }
 }
 
 /**
@@ -171,10 +257,14 @@ function scanRange(
       }
 
       const end = start + keyword.length
-      const message = extractMessage(text, match, end, rule)
+      const extractedMessage = extractMessage(text, match, end, rule)
       const keywordRange = rangeAt(text, start, end)
-      const messageEnd = lineEndAt(text, end)
+      const messageEnd = extractedMessage.messageEnd
       const messageRange = rangeAt(text, end, messageEnd)
+      const annotationRange =
+        extractedMessage.message.includes('\n') || rule.style.marker === 'line'
+          ? rangeAt(text, start, messageEnd)
+          : keywordRange
 
       annotations.push({
         category: rule.category,
@@ -184,13 +274,11 @@ function scanRange(
         keywordRange,
         languageId: options.languageId,
         line: keywordRange.start.line,
-        message,
+        message: extractedMessage.message,
         messageRange,
         diagnostics: rule.diagnostics,
-        range:
-          rule.style.marker === 'line'
-            ? rangeAt(text, start, messageEnd)
-            : keywordRange,
+        owner: extractedMessage.owner,
+        range: annotationRange,
         ruleId: rule.id,
         severity: rule.severity,
         source: options.source,

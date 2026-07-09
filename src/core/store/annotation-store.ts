@@ -23,6 +23,16 @@ export interface AnnotationStore {
   ) => void
 
   /**
+   * Marks an annotation resolved or unresolved by id.
+   */
+  markResolved: (id: string, resolved: boolean) => void
+
+  /**
+   * Marks an annotation ignored or unignored by id.
+   */
+  markIgnored: (id: string, ignored: boolean) => void
+
+  /**
    * Returns annotations for one URI.
    */
   getForUri: (uri: string) => readonly BeaconAnnotation[]
@@ -53,6 +63,16 @@ export function createAnnotationStore(): AnnotationStore {
   const annotationsByUri = new Map<string, readonly BeaconAnnotation[]>()
 
   /**
+   * Persistent per-annotation resolved state keyed by annotation id.
+   */
+  const resolvedIds = new Set<string>()
+
+  /**
+   * Persistent per-annotation ignored state keyed by annotation id.
+   */
+  const ignoredIds = new Set<string>()
+
+  /**
    * Active subscribers notified after every store mutation.
    */
   const listeners = new Set<AnnotationStoreListener>()
@@ -66,12 +86,32 @@ export function createAnnotationStore(): AnnotationStore {
     }
   }
 
+  /**
+   * Applies persistent state flags to a scanned annotation.
+   */
+  const withState = (annotation: BeaconAnnotation): BeaconAnnotation => ({
+    ...annotation,
+    ignored: ignoredIds.has(annotation.id),
+    resolved: resolvedIds.has(annotation.id),
+  })
+
+  /**
+   * Rewrites all stored annotations with the latest persistent state flags.
+   */
+  const refreshStoredState = () => {
+    for (const [uri, annotations] of annotationsByUri) {
+      annotationsByUri.set(uri, annotations.map(withState))
+    }
+  }
+
   return {
     /**
      * Clears annotations for every URI.
      */
     clear() {
       annotationsByUri.clear()
+      resolvedIds.clear()
+      ignoredIds.clear()
       notify()
     },
 
@@ -93,7 +133,7 @@ export function createAnnotationStore(): AnnotationStore {
      * Replaces annotations for one URI and notifies subscribers.
      */
     setForUri(uri, annotations) {
-      annotationsByUri.set(uri, [...annotations])
+      annotationsByUri.set(uri, annotations.map(withState))
       notify()
     },
 
@@ -108,7 +148,7 @@ export function createAnnotationStore(): AnnotationStore {
         const replacementAnnotations = replacementByUri.get(uri) ?? []
         const nextAnnotations = [
           ...retainedAnnotations,
-          ...replacementAnnotations,
+          ...replacementAnnotations.map(withState),
         ]
 
         if (nextAnnotations.length > 0) {
@@ -120,10 +160,38 @@ export function createAnnotationStore(): AnnotationStore {
 
       for (const [uri, replacementAnnotations] of replacementByUri) {
         if (!annotationsByUri.has(uri) && replacementAnnotations.length > 0) {
-          annotationsByUri.set(uri, [...replacementAnnotations])
+          annotationsByUri.set(uri, replacementAnnotations.map(withState))
         }
       }
 
+      notify()
+    },
+
+    /**
+     * Marks an annotation resolved or unresolved by id.
+     */
+    markResolved(id, resolved) {
+      if (resolved) {
+        resolvedIds.add(id)
+      } else {
+        resolvedIds.delete(id)
+      }
+
+      refreshStoredState()
+      notify()
+    },
+
+    /**
+     * Marks an annotation ignored or unignored by id.
+     */
+    markIgnored(id, ignored) {
+      if (ignored) {
+        ignoredIds.add(id)
+      } else {
+        ignoredIds.delete(id)
+      }
+
+      refreshStoredState()
       notify()
     },
 

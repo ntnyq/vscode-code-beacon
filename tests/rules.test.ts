@@ -95,6 +95,47 @@ describe('rule normalization', () => {
     ])
   })
 
+  it('ignores custom regex rules when custom regex is disabled', () => {
+    const result = normalizeRules(
+      [
+        {
+          id: 'unsafe',
+          label: 'Unsafe',
+          category: 'custom',
+          enabled: true,
+          matcher: {
+            type: 'regex',
+            pattern: '(a+)+$',
+          },
+          severity: 'warning',
+        },
+        {
+          id: 'safe-text',
+          label: 'Safe Text',
+          category: 'custom',
+          enabled: true,
+          matcher: {
+            type: 'text',
+            value: 'SAFE',
+          },
+          severity: 'information',
+        },
+      ],
+      {
+        allowCustomRegex: false,
+      },
+    )
+
+    expect(result.rules.some(rule => rule.id === 'unsafe')).toBe(false)
+    expect(result.rules.some(rule => rule.id === 'safe-text')).toBe(true)
+    expect(result.rules.some(rule => rule.id === 'perf')).toBe(true)
+    expect(result.errors).toContainEqual({
+      ruleId: 'unsafe',
+      message:
+        'Regex matcher for rule "unsafe" is disabled in untrusted workspaces',
+    })
+  })
+
   it('drops disabled custom rules', () => {
     const result = normalizeRules([
       {

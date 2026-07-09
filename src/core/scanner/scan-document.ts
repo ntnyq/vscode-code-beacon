@@ -40,26 +40,63 @@ export interface ScanDocumentOptions {
 }
 
 /**
- * Converts an absolute text offset to a serialized line/character position.
+ * Maps absolute text offsets to serialized line/character positions.
  */
-function positionAt(text: string, offset: number): SerializedPosition {
-  const before = text.slice(0, offset)
-  const line = before.split('\n').length - 1
-  const lastNewline = before.lastIndexOf('\n')
-
-  return {
-    character: lastNewline === -1 ? offset : offset - lastNewline - 1,
-    line,
-  }
+interface PositionMapper {
+  readonly rangeAt: (start: number, end: number) => SerializedRange
 }
 
 /**
- * Converts absolute text offsets into a serialized range.
+ * Creates a reusable offset mapper for a document scan.
  */
-function rangeAt(text: string, start: number, end: number): SerializedRange {
+function createPositionMapper(text: string): PositionMapper {
+  const lineStarts = [0]
+
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === '\n') {
+      lineStarts.push(index + 1)
+    }
+  }
+
+  const positionAt = (offset: number): SerializedPosition => {
+    let low = 0
+    let high = lineStarts.length - 1
+
+    while (low <= high) {
+      const middle = Math.floor((low + high) / 2)
+      const lineStart = lineStarts[middle] ?? 0
+      const nextLineStart = lineStarts[middle + 1] ?? Number.POSITIVE_INFINITY
+
+      if (offset < lineStart) {
+        high = middle - 1
+        continue
+      }
+
+      if (offset >= nextLineStart) {
+        low = middle + 1
+        continue
+      }
+
+      return {
+        character: offset - lineStart,
+        line: middle,
+      }
+    }
+
+    const lastLine = lineStarts.length - 1
+    return {
+      character: offset - (lineStarts[lastLine] ?? 0),
+      line: lastLine,
+    }
+  }
+
   return {
-    end: positionAt(text, end),
-    start: positionAt(text, start),
+    rangeAt(start, end) {
+      return {
+        end: positionAt(end),
+        start: positionAt(start),
+      }
+    },
   }
 }
 
@@ -232,6 +269,7 @@ function scanRange(
   text: string,
   range: OffsetRange,
   options: ScanDocumentOptions,
+  positionMapper: PositionMapper,
 ): BeaconAnnotation[] {
   const annotations: BeaconAnnotation[] = []
   const segment = text.slice(range.start, range.end)
@@ -258,12 +296,12 @@ function scanRange(
 
       const end = start + keyword.length
       const extractedMessage = extractMessage(text, match, end, rule)
-      const keywordRange = rangeAt(text, start, end)
+      const keywordRange = positionMapper.rangeAt(start, end)
       const messageEnd = extractedMessage.messageEnd
-      const messageRange = rangeAt(text, end, messageEnd)
+      const messageRange = positionMapper.rangeAt(end, messageEnd)
       const annotationRange =
         extractedMessage.message.includes('\n') || rule.style.marker === 'line'
-          ? rangeAt(text, start, messageEnd)
+          ? positionMapper.rangeAt(start, messageEnd)
           : keywordRange
 
       annotations.push({
@@ -312,6 +350,7 @@ export function scanDocument(options: ScanDocumentOptions): BeaconScanResult {
 
   const fullDocumentRanges = [{ end: options.text.length, start: 0 }]
   const commentRanges = getCommentRanges(options.text, options.languageId)
+  const positionMapper = createPositionMapper(options.text)
 
   return {
     annotations: options.rules.flatMap(rule => {
@@ -321,10 +360,15 @@ export function scanDocument(options: ScanDocumentOptions): BeaconScanResult {
           : fullDocumentRanges
 
       return ranges.flatMap(range =>
-        scanRange(options.text, range, {
-          ...options,
-          rules: [rule],
-        }),
+        scanRange(
+          options.text,
+          range,
+          {
+            ...options,
+            rules: [rule],
+          },
+          positionMapper,
+        ),
       )
     }),
     durationMs: Date.now() - startedAt,

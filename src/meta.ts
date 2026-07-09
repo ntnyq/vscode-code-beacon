@@ -145,7 +145,6 @@ export const commands = {
  */
 export type ConfigKey =
   | "code-beacon.enable"
-  | "code-beacon.debug"
   | "code-beacon.languages"
   | "code-beacon.rules"
   | "code-beacon.include"
@@ -162,11 +161,9 @@ export type ConfigKey =
   | "code-beacon.explorer.groupBy"
   | "code-beacon.codelens.enabled"
   | "code-beacon.hover.enabled"
-  | "code-beacon.export.defaultFormat"
 
 export interface ConfigKeyTypeMap {
   "code-beacon.enable": boolean,
-  "code-beacon.debug": boolean,
   "code-beacon.languages": string[],
   "code-beacon.rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
   "code-beacon.include": string[],
@@ -183,12 +180,10 @@ export interface ConfigKeyTypeMap {
   "code-beacon.explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
   "code-beacon.codelens.enabled": boolean,
   "code-beacon.hover.enabled": boolean,
-  "code-beacon.export.defaultFormat": ("markdown" | "json" | "csv"),
 }
 
 export interface ConfigShorthandMap {
   enable: "code-beacon.enable",
-  debug: "code-beacon.debug",
   languages: "code-beacon.languages",
   rules: "code-beacon.rules",
   include: "code-beacon.include",
@@ -205,12 +200,10 @@ export interface ConfigShorthandMap {
   explorerGroupBy: "code-beacon.explorer.groupBy",
   codelensEnabled: "code-beacon.codelens.enabled",
   hoverEnabled: "code-beacon.hover.enabled",
-  exportDefaultFormat: "code-beacon.export.defaultFormat",
 }
 
 export interface ConfigShorthandTypeMap {
   enable: boolean,
-  debug: boolean,
   languages: string[],
   rules: { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
   include: string[],
@@ -227,7 +220,6 @@ export interface ConfigShorthandTypeMap {
   explorerGroupBy: ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
   codelensEnabled: boolean,
   hoverEnabled: boolean,
-  exportDefaultFormat: ("markdown" | "json" | "csv"),
 }
 
 export interface ConfigItem<T extends keyof ConfigKeyTypeMap> {
@@ -250,16 +242,6 @@ export const configs = {
     key: "code-beacon.enable",
     default: true,
   } as ConfigItem<"code-beacon.enable">,
-  /**
-   * Enable debug logging.
-   * @key `code-beacon.debug`
-   * @default `false`
-   * @type `boolean`
-   */
-  debug: {
-    key: "code-beacon.debug",
-    default: false,
-  } as ConfigItem<"code-beacon.debug">,
   /**
    * Language IDs where annotations are scanned. Use '*' for all languages and prefix with '!' to exclude.
    * @key `code-beacon.languages`
@@ -420,21 +402,10 @@ export const configs = {
     key: "code-beacon.hover.enabled",
     default: true,
   } as ConfigItem<"code-beacon.hover.enabled">,
-  /**
-   * Default export format.
-   * @key `code-beacon.export.defaultFormat`
-   * @default `"markdown"`
-   * @type `string`
-   */
-  exportDefaultFormat: {
-    key: "code-beacon.export.defaultFormat",
-    default: "markdown",
-  } as ConfigItem<"code-beacon.export.defaultFormat">,
 }
 
 export interface ScopedConfigKeyTypeMap {
   "enable": boolean,
-  "debug": boolean,
   "languages": string[],
   "rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
   "include": string[],
@@ -451,14 +422,12 @@ export interface ScopedConfigKeyTypeMap {
   "explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
   "codelens.enabled": boolean,
   "hover.enabled": boolean,
-  "export.defaultFormat": ("markdown" | "json" | "csv"),
 }
 
 export const scopedConfigs = {
   scope: "code-beacon",
   defaults: {
     "enable": true,
-    "debug": false,
     "languages": ["*"],
     "rules": [],
     "include": ["**/*"],
@@ -475,14 +444,12 @@ export const scopedConfigs = {
     "explorer.groupBy": "file",
     "codelens.enabled": false,
     "hover.enabled": true,
-    "export.defaultFormat": "markdown",
   } satisfies ScopedConfigKeyTypeMap,
 }
 
 export interface NestedConfigs {
   "code-beacon": {
     "enable": boolean,
-    "debug": boolean,
     "languages": string[],
     "rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
     "include": string[],
@@ -509,15 +476,11 @@ export interface NestedConfigs {
     "hover": {
       "enabled": boolean,
     },
-    "export": {
-      "defaultFormat": ("markdown" | "json" | "csv"),
-    },
   },
 }
 
 export interface NestedScopedConfigs {
   "enable": boolean,
-  "debug": boolean,
   "languages": string[],
   "rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
   "include": string[],
@@ -543,9 +506,6 @@ export interface NestedScopedConfigs {
   },
   "hover": {
     "enabled": boolean,
-  },
-  "export": {
-    "defaultFormat": ("markdown" | "json" | "csv"),
   },
 }
 

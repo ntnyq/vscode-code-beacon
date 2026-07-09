@@ -4,6 +4,7 @@ import type { Position } from 'vscode'
 import { config } from '../config'
 import { formatBeaconHoverMarkdown } from '../core/hover/format'
 import { annotationStore } from '../core/store/annotation-store'
+import { beaconDocumentSelector } from '../core/workspace/documents'
 import type { BeaconAnnotation, SerializedRange } from '../types/annotation'
 
 /**
@@ -39,30 +40,25 @@ function annotationAtPosition(
  */
 export function useBeaconHover() {
   useDisposable(
-    languages.registerHoverProvider(
-      {
-        scheme: 'file',
+    languages.registerHoverProvider(beaconDocumentSelector, {
+      provideHover(document, position) {
+        if (!config.enable || !config.hover.enabled) {
+          return null
+        }
+
+        const annotation = annotationAtPosition(
+          annotationStore.getForUri(document.uri.toString()),
+          position,
+        )
+
+        if (!annotation) {
+          return null
+        }
+
+        return new Hover(
+          new MarkdownString(formatBeaconHoverMarkdown(annotation)),
+        )
       },
-      {
-        provideHover(document, position) {
-          if (!config.enable || !config.hover.enabled) {
-            return null
-          }
-
-          const annotation = annotationAtPosition(
-            annotationStore.getForUri(document.uri.toString()),
-            position,
-          )
-
-          if (!annotation) {
-            return null
-          }
-
-          return new Hover(
-            new MarkdownString(formatBeaconHoverMarkdown(annotation)),
-          )
-        },
-      },
-    ),
+    }),
   )
 }

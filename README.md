@@ -83,12 +83,6 @@ Description: Enable or disable code beacon.
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.debug`
-
-Description: Enable debug logging.  
-Type: `boolean`  
-Default: `false`
-
 #### `code-beacon.languages`
 
 Description: Language IDs where annotations are scanned. Use '\*' for all languages and prefix with '!' to exclude.  
@@ -184,12 +178,6 @@ Default: `false`
 Description: Enable hover details for annotations.  
 Type: `boolean`  
 Default: `true`
-
-#### `code-beacon.export.defaultFormat`
-
-Description: Default export format.  
-Type: `string`  
-Default: `"markdown"`
 
 <!-- configs-list -->
 

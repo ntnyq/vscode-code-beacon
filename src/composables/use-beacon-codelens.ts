@@ -3,6 +3,7 @@ import { CodeLens, languages } from 'vscode'
 import { config } from '../config'
 import { createBeaconCodeLensCommands } from '../core/codelens/commands'
 import { annotationStore } from '../core/store/annotation-store'
+import { beaconDocumentSelector } from '../core/workspace/documents'
 import { toVscodeRange } from '../utils/ranges'
 
 /**
@@ -10,26 +11,20 @@ import { toVscodeRange } from '../utils/ranges'
  */
 export function useBeaconCodeLens() {
   useDisposable(
-    languages.registerCodeLensProvider(
-      {
-        scheme: 'file',
-      },
-      {
-        provideCodeLenses(document) {
-          if (!config.enable || !config.codelens.enabled) {
-            return []
-          }
+    languages.registerCodeLensProvider(beaconDocumentSelector, {
+      provideCodeLenses(document) {
+        if (!config.enable || !config.codelens.enabled) {
+          return []
+        }
 
-          return annotationStore
-            .getForUri(document.uri.toString())
-            .flatMap(annotation =>
-              createBeaconCodeLensCommands(annotation).map(
-                command =>
-                  new CodeLens(toVscodeRange(annotation.range), command),
-              ),
-            )
-        },
+        return annotationStore
+          .getForUri(document.uri.toString())
+          .flatMap(annotation =>
+            createBeaconCodeLensCommands(annotation).map(
+              command => new CodeLens(toVscodeRange(annotation.range), command),
+            ),
+          )
       },
-    ),
+    }),
   )
 }

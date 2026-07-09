@@ -30,6 +30,9 @@ describe('package metadata', () => {
     expect(pkg.extensionKind).toStrictEqual(['ui', 'workspace'])
     expect(pkg.capabilities.virtualWorkspaces.supported).toBe(true)
     expect(pkg.capabilities.untrustedWorkspaces.supported).toBe('limited')
+    expect(
+      pkg.capabilities.untrustedWorkspaces.restrictedConfigurations,
+    ).toStrictEqual(['code-beacon.rules'])
   })
 
   it('declares the publishable command surface', () => {
@@ -64,7 +67,6 @@ describe('package metadata', () => {
 
     expect(keys).toStrictEqual([
       'code-beacon.enable',
-      'code-beacon.debug',
       'code-beacon.languages',
       'code-beacon.rules',
       'code-beacon.include',
@@ -81,7 +83,6 @@ describe('package metadata', () => {
       'code-beacon.explorer.groupBy',
       'code-beacon.codelens.enabled',
       'code-beacon.hover.enabled',
-      'code-beacon.export.defaultFormat',
     ])
   })
 

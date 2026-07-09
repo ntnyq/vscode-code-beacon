@@ -8,6 +8,13 @@ import type {
 } from '../../types/annotation'
 
 /**
+ * Runtime options that constrain custom rule normalization.
+ */
+export interface NormalizeRuleOptions {
+  readonly allowCustomRegex?: boolean
+}
+
+/**
  * Default message extraction behavior for built-in and custom rules.
  */
 const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
@@ -124,6 +131,7 @@ function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
  */
 export function normalizeRules(
   customRules: readonly BeaconRuleConfig[],
+  options: NormalizeRuleOptions = {},
 ): NormalizedRuleResult {
   const mergedRules = new Map<string, BeaconRuleConfig>()
   const errors: BeaconRuleError[] = []
@@ -133,6 +141,14 @@ export function normalizeRules(
   }
 
   for (const rule of customRules) {
+    if (options.allowCustomRegex === false && rule.matcher.type === 'regex') {
+      errors.push({
+        message: `Regex matcher for rule "${rule.id}" is disabled in untrusted workspaces`,
+        ruleId: rule.id,
+      })
+      continue
+    }
+
     mergedRules.set(rule.id, rule)
   }
 

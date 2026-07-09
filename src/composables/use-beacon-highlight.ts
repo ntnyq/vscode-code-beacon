@@ -3,7 +3,7 @@ import { commands as vscodeCommands, window, workspace } from 'vscode'
 import type { TextDocument, TextEditor } from 'vscode'
 import { config } from '../config'
 import { applyBeaconDecorations } from '../core/decorations/apply-decorations'
-import { DecorationTypeCache } from '../core/decorations/decoration-type-cache'
+import { EditorDecorationCaches } from '../core/decorations/editor-decoration-caches'
 import { normalizeRules } from '../core/rules/normalize'
 import { scanDocument } from '../core/scanner/scan-document'
 import {
@@ -11,46 +11,10 @@ import {
   initialScanTarget,
 } from '../core/scanner/scan-mode'
 import { annotationStore } from '../core/store/annotation-store'
+import { isScannableTextDocument } from '../core/workspace/documents'
 import { commands } from '../meta'
 import type { BeaconAnnotation, BeaconRuleConfig } from '../types/annotation'
 import { logger } from '../utils/logger'
-
-/**
- * Checks whether a language id is allowed by the current language filters.
- */
-function isLanguageEnabled(languageId: string): boolean {
-  const languages = config.languages
-
-  if (languages.length === 0) {
-    return true
-  }
-
-  const excluded = new Set(
-    languages
-      .filter(language => language.startsWith('!'))
-      .map(language => language.slice(1)),
-  )
-
-  if (excluded.has(languageId) || excluded.has('*')) {
-    return false
-  }
-
-  const included = languages.filter(language => !language.startsWith('!'))
-  return (
-    included.length === 0 ||
-    included.includes('*') ||
-    included.includes(languageId)
-  )
-}
-
-/**
- * Checks whether a document can be scanned by the current runtime.
- */
-function isScannableDocument(document: TextDocument): boolean {
-  return (
-    document.uri.scheme === 'file' && isLanguageEnabled(document.languageId)
-  )
-}
 
 /**
  * Finds the visible editor instance for a document, if one exists.
@@ -64,64 +28,69 @@ function visibleEditorForDocument(
 }
 
 /**
+ * Scans a text document and updates the annotation store for its URI.
+ */
+function scanTextDocument(
+  document: TextDocument,
+  source: BeaconAnnotation['source'],
+): readonly BeaconAnnotation[] {
+  const uri = document.uri.toString()
+
+  if (!config.enable || !isScannableTextDocument(document, config.languages)) {
+    annotationStore.setForUri(uri, [])
+    return []
+  }
+
+  const normalizedRules = normalizeRules(
+    config.rules as readonly BeaconRuleConfig[],
+    {
+      allowCustomRegex: workspace.isTrusted,
+    },
+  )
+
+  for (const error of normalizedRules.errors) {
+    logger.warn(`Rule ${error.ruleId}: ${error.message}`)
+  }
+
+  const result = scanDocument({
+    commentOnly: config.commentOnly,
+    languageId: document.languageId,
+    maxFileSize: config.maxFileSize,
+    rules: normalizedRules.rules,
+    source,
+    text: document.getText(),
+    uri,
+  })
+
+  annotationStore.setForUri(uri, result.annotations)
+
+  return result.annotations
+}
+
+/**
  * Registers editor scanning, scan commands, and decoration updates.
  */
 export function useBeaconHighlight() {
-  const decorationCache = new DecorationTypeCache()
+  const decorationCaches = new EditorDecorationCaches()
 
   /**
    * Re-applies visible editor decorations from the current store contents.
    */
   const refreshVisibleDecorations = () => {
+    decorationCaches.disposeForClosedEditors(window.visibleTextEditors)
+
     for (const editor of window.visibleTextEditors) {
       if (!config.decorations.enabled) {
-        decorationCache.clearForEditor(editor)
+        decorationCaches.clearForEditor(editor)
         continue
       }
 
       applyBeaconDecorations(
         editor,
         annotationStore.getForUri(editor.document.uri.toString()),
-        decorationCache,
+        decorationCaches.get(editor),
       )
     }
-  }
-
-  /**
-   * Scans a text document and updates the annotation store for its URI.
-   */
-  const scanTextDocument = (
-    document: TextDocument,
-    source: BeaconAnnotation['source'],
-  ): readonly BeaconAnnotation[] => {
-    const uri = document.uri.toString()
-
-    if (!config.enable || !isScannableDocument(document)) {
-      annotationStore.setForUri(uri, [])
-      return []
-    }
-
-    const normalizedRules = normalizeRules(
-      config.rules as readonly BeaconRuleConfig[],
-    )
-
-    for (const error of normalizedRules.errors) {
-      logger.warn(`Rule ${error.ruleId}: ${error.message}`)
-    }
-
-    const result = scanDocument({
-      commentOnly: config.commentOnly,
-      languageId: document.languageId,
-      maxFileSize: config.maxFileSize,
-      rules: normalizedRules.rules,
-      source,
-      text: document.getText(),
-      uri,
-    })
-
-    annotationStore.setForUri(uri, result.annotations)
-
-    return result.annotations
   }
 
   /**
@@ -236,12 +205,18 @@ export function useBeaconHighlight() {
       }
     }),
   )
+  useDisposable(
+    workspace.onDidGrantWorkspaceTrust(() => {
+      scanByConfiguredMode()
+      refreshVisibleDecorations()
+    }),
+  )
   useDisposable({
     dispose: annotationStore.subscribe(refreshVisibleDecorations),
   })
   useDisposable({
     dispose() {
-      decorationCache.disposeAll()
+      decorationCaches.disposeAll()
     },
   })
 

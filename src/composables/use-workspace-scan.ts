@@ -63,6 +63,9 @@ export function useWorkspaceScan() {
       async progress => {
         const normalizedRules = normalizeRules(
           config.rules as readonly BeaconRuleConfig[],
+          {
+            allowCustomRegex: workspace.isTrusted,
+          },
         )
 
         for (const error of normalizedRules.errors) {

@@ -6,6 +6,7 @@ import {
   env,
   window,
   workspace,
+  type Disposable,
   type TextDocument,
 } from 'vscode'
 import { config } from '../config'
@@ -34,6 +35,10 @@ function normalizeStaleDays(value: unknown): number {
     value >= 1
     ? value
     : DEFAULT_STALE_DAYS
+}
+
+function isChangedFilesScope(): boolean {
+  return config.explorer.scope === 'changedFiles'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -100,12 +105,15 @@ async function revealAnnotation(value?: unknown) {
  */
 export function useBeaconExplorer() {
   const gitMetadataIndex = new BeaconExplorerGitMetadataIndex<TextDocument>()
-  const { getMetadataForAnnotations } = useBeaconGit()
+  const { getChangedUris, getMetadataForAnnotations, subscribeToChangedUris } =
+    useBeaconGit()
+  let changedUris = new Set<string>()
   const provider = new BeaconTreeDataProvider(
     () =>
       filterBeaconAnnotations(annotationStore.getAll(), {
         activeUri: window.activeTextEditor?.document.uri.toString(),
         categories: config.explorer.categories,
+        changedUris,
         includeIgnored: config.explorer.includeIgnored,
         includeResolved: config.explorer.includeResolved,
         metadataByAnnotationId: gitMetadataIndex.metadataByAnnotationId,
@@ -125,6 +133,76 @@ export function useBeaconExplorer() {
   )
 
   let hydrationRequest = 0
+  let changedUrisRequest = 0
+  let changedUrisSubscription: Disposable | undefined
+  let changedUrisSubscriptionRequest = 0
+  let isChangedUrisSubscriptionPending = false
+
+  function disposeChangedUrisSubscription() {
+    changedUrisSubscriptionRequest += 1
+    isChangedUrisSubscriptionPending = false
+    changedUrisSubscription?.dispose()
+    changedUrisSubscription = undefined
+  }
+
+  function clearChangedUris() {
+    changedUrisRequest += 1
+    changedUris = new Set()
+    disposeChangedUrisSubscription()
+  }
+
+  function refreshChangedUris() {
+    if (!isChangedFilesScope()) {
+      clearChangedUris()
+      return
+    }
+
+    if (!changedUrisSubscription && !isChangedUrisSubscriptionPending) {
+      const subscriptionRequest = changedUrisSubscriptionRequest
+      isChangedUrisSubscriptionPending = true
+      // oxlint-disable-next-line no-void -- VS Code listeners cannot await Git setup.
+      void subscribeToChangedUris(refreshExplorer)
+        .then(subscription => {
+          if (
+            subscriptionRequest !== changedUrisSubscriptionRequest ||
+            !isChangedFilesScope()
+          ) {
+            subscription.dispose()
+            return
+          }
+
+          changedUrisSubscription = subscription
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (subscriptionRequest === changedUrisSubscriptionRequest) {
+            isChangedUrisSubscriptionPending = false
+          }
+        })
+    }
+
+    const request = changedUrisRequest + 1
+    changedUrisRequest = request
+    // oxlint-disable-next-line no-void -- VS Code listeners cannot await Git snapshots.
+    void getChangedUris().then(
+      uris => {
+        if (request !== changedUrisRequest || !isChangedFilesScope()) {
+          return
+        }
+
+        changedUris = new Set(uris)
+        provider.refresh()
+      },
+      () => {
+        if (request !== changedUrisRequest || !isChangedFilesScope()) {
+          return
+        }
+
+        changedUris = new Set()
+        provider.refresh()
+      },
+    )
+  }
 
   async function hydrateGitMetadata() {
     const request = hydrationRequest + 1
@@ -187,6 +265,7 @@ export function useBeaconExplorer() {
 
   function refreshExplorer() {
     provider.refresh()
+    refreshChangedUris()
     // oxlint-disable-next-line no-void -- VS Code listeners cannot await hydration.
     void hydrateGitMetadata()
   }
@@ -197,6 +276,7 @@ export function useBeaconExplorer() {
   })
 
   useDisposable(view)
+  useDisposable({ dispose: disposeChangedUrisSubscription })
   useDisposable({
     dispose: annotationStore.subscribe(refreshExplorer),
   })
@@ -229,6 +309,7 @@ export function useBeaconExplorer() {
 
   // oxlint-disable-next-line no-void -- Explorer setup cannot await hydration.
   void hydrateGitMetadata()
+  refreshChangedUris()
 
   return {
     provider,

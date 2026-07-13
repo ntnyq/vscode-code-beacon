@@ -10,6 +10,23 @@ interface TestUri {
   readonly toString: () => string
 }
 
+interface TestChange {
+  readonly originalUri?: TestUri
+  readonly uri: TestUri
+}
+
+interface TestDisposable {
+  dispose: () => void
+}
+
+interface TestRepositoryState {
+  readonly indexChanges: readonly TestChange[]
+  readonly mergeChanges: readonly TestChange[]
+  readonly onDidChange: (listener: () => void) => TestDisposable
+  readonly untrackedChanges: readonly TestChange[]
+  readonly workingTreeChanges: readonly TestChange[]
+}
+
 interface TestRepository {
   readonly blame: ReturnType<typeof vi.fn<(path: string) => Promise<string>>>
   readonly getCommit: ReturnType<
@@ -17,6 +34,7 @@ interface TestRepository {
   >
   isUsingVirtualFileSystem: boolean
   readonly rootUri: TestUri
+  readonly state: TestRepositoryState
 }
 
 interface TestCommit {
@@ -33,6 +51,48 @@ const { asRelativePath, getExtension } = vi.hoisted(() => ({
   >(() => 'src/example.ts'),
   getExtension: vi.fn<(id: string) => unknown>(),
 }))
+
+function event() {
+  const listeners = new Set<() => void>()
+
+  return {
+    event: (listener: () => void): TestDisposable => {
+      listeners.add(listener)
+      return { dispose: () => listeners.delete(listener) }
+    },
+    fire: () => {
+      for (const listener of listeners) {
+        listener()
+      }
+    },
+    get listenerCount() {
+      return listeners.size
+    },
+  }
+}
+
+function repositoryState(
+  changes: Partial<
+    Pick<
+      TestRepositoryState,
+      | 'indexChanges'
+      | 'mergeChanges'
+      | 'untrackedChanges'
+      | 'workingTreeChanges'
+    >
+  > = {},
+) {
+  const onDidChange = event()
+
+  return {
+    indexChanges: changes.indexChanges ?? [],
+    mergeChanges: changes.mergeChanges ?? [],
+    onDidChange: onDidChange.event,
+    signal: onDidChange,
+    untrackedChanges: changes.untrackedChanges ?? [],
+    workingTreeChanges: changes.workingTreeChanges ?? [],
+  }
+}
 
 let isTrusted = true
 
@@ -73,7 +133,10 @@ function annotation(line = 4, id = `annotation-${line}`): BeaconAnnotation {
   return { id, line } as BeaconAnnotation
 }
 
-function repository(rootUri = uri('/workspace')): TestRepository {
+function repository(
+  rootUri = uri('/workspace'),
+  state = repositoryState(),
+): TestRepository {
   return {
     blame: vi.fn<(path: string) => Promise<string>>(() =>
       Promise.resolve(
@@ -97,21 +160,44 @@ function repository(rootUri = uri('/workspace')): TestRepository {
     ),
     isUsingVirtualFileSystem: false,
     rootUri,
+    state,
   }
 }
 
-function gitExtension(testRepository: TestRepository) {
+function gitExtension(
+  testRepository: TestRepository,
+  repositories: TestRepository[] = [testRepository],
+) {
   const getRepository = vi.fn<(uri: unknown) => TestRepository | undefined>(
     () => testRepository,
   )
+  const onDidCloseRepository = event()
+  const onDidOpenRepository = event()
   const getAPI = vi.fn<
-    (version: number) => { getRepository: typeof getRepository }
-  >(() => ({ getRepository }))
+    (version: number) => {
+      getRepository: typeof getRepository
+      onDidCloseRepository: typeof onDidCloseRepository.event
+      onDidOpenRepository: typeof onDidOpenRepository.event
+      repositories: readonly TestRepository[]
+    }
+  >(() => ({
+    getRepository,
+    onDidCloseRepository: onDidCloseRepository.event,
+    onDidOpenRepository: onDidOpenRepository.event,
+    repositories,
+  }))
   const activate = vi.fn<() => Promise<{ getAPI: typeof getAPI }>>(() =>
     Promise.resolve({ getAPI }),
   )
 
-  return { activate, getAPI, getRepository }
+  return {
+    activate,
+    closeRepository: onDidCloseRepository,
+    getAPI,
+    getRepository,
+    openRepository: onDidOpenRepository,
+    repositories,
+  }
 }
 
 describe('beacon Git metadata', () => {
@@ -446,5 +532,163 @@ describe('beacon Git metadata', () => {
         ],
       ]),
     )
+  })
+})
+
+describe('changed Git URIs', () => {
+  beforeEach(() => {
+    getExtension.mockReset()
+    isTrusted = true
+  })
+
+  it('collects the current URI from every change bucket without duplicates', async () => {
+    const staged = uri('/workspace/staged.ts')
+    const unstaged = uri('/workspace/unstaged.ts')
+    const merged = uri('/workspace/merged.ts')
+    const untracked = uri('/workspace/untracked.ts')
+    const renamed = uri('/workspace/renamed.ts')
+    const testRepository = repository(
+      uri('/workspace'),
+      repositoryState({
+        indexChanges: [
+          { uri: staged },
+          { originalUri: uri('/workspace/old.ts'), uri: renamed },
+        ],
+        mergeChanges: [{ uri: merged }],
+        untrackedChanges: [{ uri: untracked }],
+        workingTreeChanges: [{ uri: unstaged }, { uri: renamed }],
+      }),
+    )
+    const extension = gitExtension(testRepository)
+    getExtension.mockReturnValue(extension)
+
+    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+      new Set([
+        staged.toString(),
+        renamed.toString(),
+        unstaged.toString(),
+        merged.toString(),
+        untracked.toString(),
+      ]),
+    )
+  })
+
+  it('ignores virtual repositories while collecting changed URIs', async () => {
+    const localRepository = repository(
+      uri('/workspace'),
+      repositoryState({
+        workingTreeChanges: [{ uri: uri('/workspace/local.ts') }],
+      }),
+    )
+    const virtualRepository = repository(
+      uri('/virtual'),
+      repositoryState({
+        workingTreeChanges: [{ uri: uri('/virtual/ignored.ts') }],
+      }),
+    )
+    virtualRepository.isUsingVirtualFileSystem = true
+    const extension = gitExtension(localRepository, [
+      localRepository,
+      virtualRepository,
+    ])
+    getExtension.mockReturnValue(extension)
+
+    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+      new Set(['file:///workspace/local.ts']),
+    )
+  })
+
+  it('returns an empty changed URI set when Git is unavailable', async () => {
+    isTrusted = false
+
+    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+      new Set(),
+    )
+    expect(getExtension).not.toHaveBeenCalled()
+
+    isTrusted = true
+    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+      new Set(),
+    )
+
+    const getAPI = vi.fn<(version: number) => never>(() => {
+      throw new Error('Git API unavailable')
+    })
+    getExtension.mockReturnValue({
+      activate: vi.fn<() => Promise<{ getAPI: typeof getAPI }>>(() =>
+        Promise.resolve({ getAPI }),
+      ),
+    })
+
+    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+      new Set(),
+    )
+
+    const activate = vi.fn<() => Promise<unknown>>(() =>
+      Promise.reject(new Error('Git extension disabled')),
+    )
+    getExtension.mockReturnValue({ activate })
+
+    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+      new Set(),
+    )
+  })
+
+  it('observes repository changes and removes every listener when disposed', async () => {
+    const state = repositoryState()
+    const testRepository = repository(uri('/workspace'), state)
+    const extension = gitExtension(testRepository)
+    const listener = vi.fn<() => void>()
+    getExtension.mockReturnValue(extension)
+
+    const disposable = await useBeaconGit().subscribeToChangedUris(listener)
+
+    state.signal.fire()
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    const openedState = repositoryState()
+    const openedRepository = repository(uri('/workspace/opened'), openedState)
+    extension.repositories.push(openedRepository)
+    extension.openRepository.fire()
+    openedState.signal.fire()
+    expect(listener).toHaveBeenCalledTimes(3)
+
+    extension.repositories.splice(
+      extension.repositories.indexOf(openedRepository),
+      1,
+    )
+    extension.closeRepository.fire()
+    openedState.signal.fire()
+    expect(listener).toHaveBeenCalledTimes(4)
+
+    disposable.dispose()
+    state.signal.fire()
+    extension.openRepository.fire()
+    extension.closeRepository.fire()
+
+    expect(listener).toHaveBeenCalledTimes(4)
+    expect(state.signal.listenerCount).toBe(0)
+    expect(extension.openRepository.listenerCount).toBe(0)
+    expect(extension.closeRepository.listenerCount).toBe(0)
+  })
+
+  it('disposes an open listener when close-listener registration throws', async () => {
+    const testRepository = repository()
+    const extension = gitExtension(testRepository)
+    extension.getAPI.mockReturnValue({
+      getRepository: extension.getRepository,
+      onDidCloseRepository: () => {
+        throw new Error('Git close listener unavailable')
+      },
+      onDidOpenRepository: extension.openRepository.event,
+      repositories: extension.repositories,
+    })
+    getExtension.mockReturnValue(extension)
+
+    const disposable = await useBeaconGit().subscribeToChangedUris(vi.fn())
+
+    expect(extension.openRepository.listenerCount).toBe(0)
+    disposable.dispose()
+    expect(extension.openRepository.listenerCount).toBe(0)
   })
 })

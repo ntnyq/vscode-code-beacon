@@ -20,7 +20,11 @@ const {
   createTreeView,
   editorState,
   executeCommand,
+  getChangedUris,
   getMetadataForAnnotations,
+  gitChangedUrisListeners,
+  gitChangedUrisSubscriptions,
+  subscribeToChangedUris,
   activeEditorListeners,
   configurationListeners,
   openTextDocument,
@@ -44,6 +48,8 @@ const {
   }
   const revealRangeMock = vi.fn<() => void>()
   const capturedTreeDataProviders: unknown[] = []
+  const changedUrisListeners: (() => void)[] = []
+  const changedUrisSubscriptions: { dispose: () => void }[] = []
   const visibleEditorsListenerCallbacks: unknown[] = []
   const state = { isTrusted: true }
 
@@ -64,12 +70,17 @@ const {
     }),
     editorState: explorerEditorState,
     executeCommand: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    getChangedUris: vi.fn<() => Promise<ReadonlySet<string>>>(() =>
+      Promise.resolve(new Set()),
+    ),
     getMetadataForAnnotations: vi.fn<
       (
         document: Vscode.TextDocument,
         annotations: readonly BeaconAnnotation[],
       ) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
     >(() => Promise.resolve(new Map<string, BeaconGitMetadata>())),
+    gitChangedUrisListeners: changedUrisListeners,
+    gitChangedUrisSubscriptions: changedUrisSubscriptions,
     openTextDocument: vi.fn<(uri: unknown) => Promise<{ uri: unknown }>>(uri =>
       Promise.resolve({ uri }),
     ),
@@ -82,6 +93,16 @@ const {
       }),
     ),
     treeDataProviders: capturedTreeDataProviders,
+    subscribeToChangedUris: vi.fn<
+      (listener: () => void) => Promise<{
+        dispose: () => void
+      }>
+    >(listener => {
+      changedUrisListeners.push(listener)
+      const subscription = { dispose: vi.fn<() => void>() }
+      changedUrisSubscriptions.push(subscription)
+      return Promise.resolve(subscription)
+    }),
     visibleEditorsListeners: visibleEditorsListenerCallbacks,
     workspaceState: state,
   }
@@ -123,7 +144,11 @@ vi.mock(
   import('../src/composables/use-beacon-git'),
   () =>
     ({
-      useBeaconGit: () => ({ getMetadataForAnnotations }),
+      useBeaconGit: () => ({
+        getChangedUris,
+        getMetadataForAnnotations,
+        subscribeToChangedUris,
+      }),
     }) as unknown as Partial<typeof BeaconGit>,
 )
 
@@ -378,6 +403,8 @@ describe('beacon explorer commands', () => {
     editorState.activeTextEditor = undefined
     editorState.visibleTextEditors = []
     executeCommand.mockClear()
+    getChangedUris.mockReset()
+    getChangedUris.mockResolvedValue(new Set())
     getMetadataForAnnotations.mockReset()
     getMetadataForAnnotations.mockResolvedValue(
       new Map<string, BeaconGitMetadata>(),
@@ -387,6 +414,15 @@ describe('beacon explorer commands', () => {
     resetExplorerConfig()
     revealRange.mockClear()
     showTextDocument.mockClear()
+    gitChangedUrisListeners.length = 0
+    gitChangedUrisSubscriptions.length = 0
+    subscribeToChangedUris.mockReset()
+    subscribeToChangedUris.mockImplementation(listener => {
+      gitChangedUrisListeners.push(listener)
+      const subscription = { dispose: vi.fn<() => void>() }
+      gitChangedUrisSubscriptions.push(subscription)
+      return Promise.resolve(subscription)
+    })
     treeDataProviders.length = 0
     visibleEditorsListeners.length = 0
     workspaceState.isTrusted = true
@@ -456,6 +492,154 @@ describe('beacon explorer commands', () => {
       'workspace',
     ])
     expect(refresh).toHaveBeenCalledTimes(3)
+    expect(getChangedUris).not.toHaveBeenCalled()
+    expect(subscribeToChangedUris).not.toHaveBeenCalled()
+  })
+
+  it('loads changed-file annotations and reloads them after a Git change', async () => {
+    const first = createAnnotation({
+      id: 'first',
+      uri: 'file:///workspace/src/first.ts',
+    })
+    const second = createAnnotation({
+      id: 'second',
+      uri: 'file:///workspace/src/second.ts',
+    })
+    annotationStore.setForUri(first.uri, [first])
+    annotationStore.setForUri(second.uri, [second])
+    Object.assign(config.explorer, { scope: 'changedFiles' })
+    getChangedUris.mockResolvedValueOnce(new Set([first.uri]))
+    getChangedUris.mockResolvedValueOnce(new Set([second.uri]))
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
+
+    await vi.waitFor(() => {
+      expect(getChangedUris).toHaveBeenCalledExactlyOnceWith()
+      expect(subscribeToChangedUris).toHaveBeenCalledExactlyOnceWith(
+        expect.any(Function),
+      )
+      expect(providerAnnotationIds(provider)).toStrictEqual(['first'])
+    })
+
+    latestListener<() => void>(gitChangedUrisListeners)()
+
+    await vi.waitFor(() => {
+      expect(getChangedUris).toHaveBeenCalledTimes(2)
+      expect(providerAnnotationIds(provider)).toStrictEqual(['second'])
+    })
+  })
+
+  it('clears changed-file state and disposes the Git subscription on scope exit', async () => {
+    const changed = createAnnotation({
+      id: 'changed',
+      uri: 'file:///workspace/src/changed.ts',
+    })
+    const unchanged = createAnnotation({
+      id: 'unchanged',
+      uri: 'file:///workspace/src/unchanged.ts',
+    })
+    const nextSnapshot = deferred<ReadonlySet<string>>()
+    annotationStore.setForUri(changed.uri, [changed])
+    annotationStore.setForUri(unchanged.uri, [unchanged])
+    Object.assign(config.explorer, { scope: 'changedFiles' })
+    getChangedUris.mockResolvedValueOnce(new Set([changed.uri]))
+    getChangedUris.mockReturnValueOnce(nextSnapshot.promise)
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+
+    await vi.waitFor(() => {
+      expect(providerAnnotationIds(provider)).toStrictEqual(['changed'])
+      expect(gitChangedUrisSubscriptions).toHaveLength(1)
+    })
+
+    Object.assign(config.explorer, { scope: 'workspace' })
+    latestListener<
+      (event: { affectsConfiguration: (section: string) => boolean }) => void
+    >(configurationListeners)({
+      affectsConfiguration: section => section === 'code-beacon',
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual([
+      'changed',
+      'unchanged',
+    ])
+    expect(
+      gitChangedUrisSubscriptions[0]?.dispose,
+    ).toHaveBeenCalledExactlyOnceWith()
+
+    Object.assign(config.explorer, { scope: 'changedFiles' })
+    latestListener<
+      (event: { affectsConfiguration: (section: string) => boolean }) => void
+    >(configurationListeners)({
+      affectsConfiguration: section => section === 'code-beacon',
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
+    nextSnapshot.resolve(new Set([unchanged.uri]))
+  })
+
+  it('ignores a superseded changed-file snapshot', async () => {
+    const first = createAnnotation({
+      id: 'first',
+      uri: 'file:///workspace/src/first.ts',
+    })
+    const second = createAnnotation({
+      id: 'second',
+      uri: 'file:///workspace/src/second.ts',
+    })
+    const initialSnapshot = deferred<ReadonlySet<string>>()
+    const latestSnapshot = deferred<ReadonlySet<string>>()
+    annotationStore.setForUri(first.uri, [first])
+    annotationStore.setForUri(second.uri, [second])
+    Object.assign(config.explorer, { scope: 'changedFiles' })
+    getChangedUris.mockReturnValueOnce(initialSnapshot.promise)
+    getChangedUris.mockReturnValueOnce(latestSnapshot.promise)
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+
+    await vi.waitFor(() => {
+      expect(getChangedUris).toHaveBeenCalledExactlyOnceWith()
+      expect(gitChangedUrisListeners).toHaveLength(1)
+    })
+
+    latestListener<() => void>(gitChangedUrisListeners)()
+
+    await vi.waitFor(() => {
+      expect(getChangedUris).toHaveBeenCalledTimes(2)
+    })
+
+    latestSnapshot.resolve(new Set([second.uri]))
+    await vi.waitFor(() => {
+      expect(providerAnnotationIds(provider)).toStrictEqual(['second'])
+    })
+
+    initialSnapshot.resolve(new Set([first.uri]))
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(providerAnnotationIds(provider)).toStrictEqual(['second'])
+  })
+
+  it('keeps the changed-files provider empty for untrusted or empty Git results', async () => {
+    const candidate = createAnnotation({ id: 'candidate' })
+    annotationStore.setForUri(candidate.uri, [candidate])
+    Object.assign(config.explorer, { scope: 'changedFiles' })
+    workspaceState.isTrusted = false
+    getChangedUris.mockResolvedValue(new Set())
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+
+    await vi.waitFor(() => {
+      expect(getChangedUris).toHaveBeenCalledExactlyOnceWith()
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
   })
 
   it('passes the ownerless setting to the composed Explorer filter', () => {
@@ -471,6 +655,8 @@ describe('beacon explorer commands', () => {
     ])
     expect(openTextDocument).not.toHaveBeenCalled()
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+    expect(getChangedUris).not.toHaveBeenCalled()
+    expect(subscribeToChangedUris).not.toHaveBeenCalled()
   })
 
   it('hydrates grouped documents for stale filtering and refreshes matching annotations', async () => {

@@ -180,7 +180,7 @@ Default: `"file"`
 
 #### `code-beacon.explorer.scope`
 
-Description: Limits Code Beacon Explorer results to the workspace, active file, or visible editors.  
+Description: Limits Code Beacon Explorer results to the workspace, active file, visible editors, or changed files. When set to "changedFiles", the Explorer includes files reported by VS Code's built-in Git extension as staged, unstaged, merge-conflict, or untracked changes. This scope is available only for trusted local desktop workspaces; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty changed-files view.  
 Type: `string`  
 Default: `"workspace"`
 

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import type { ConfigKeyTypeMap } from '../src/meta'
 
 const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
   activationEvents: string[]
@@ -120,6 +121,17 @@ describe('package metadata', () => {
       type: 'integer',
     })
     expect(staleDays.type).not.toBe('number')
+  })
+
+  it('supports the changed-files Explorer scope in schema and generated config', () => {
+    const explorerScope = pkg.contributes.configuration.properties[
+      'code-beacon.explorer.scope'
+    ] as { enum?: unknown[] }
+
+    expect(explorerScope.enum).toContain('changedFiles')
+    expectTypeOf<'changedFiles'>().toMatchTypeOf<
+      ConfigKeyTypeMap['code-beacon.explorer.scope']
+    >()
   })
 
   it('normalizes generated metadata outputs', () => {

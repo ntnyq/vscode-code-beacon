@@ -8,7 +8,11 @@ import type { BeaconGitMetadata } from '../git/blame'
 /**
  * Scope used to select the annotations displayed in the Code Beacon Explorer.
  */
-export type BeaconExplorerScope = 'workspace' | 'activeFile' | 'openEditors'
+export type BeaconExplorerScope =
+  | 'workspace'
+  | 'activeFile'
+  | 'openEditors'
+  | 'changedFiles'
 
 /**
  * Plain Explorer filter input independent from the VS Code API.
@@ -28,6 +32,7 @@ export interface BeaconExplorerFilter {
   readonly metadataByAnnotationId: ReadonlyMap<string, BeaconGitMetadata>
   readonly activeUri: string | undefined
   readonly openUris: readonly string[]
+  readonly changedUris: ReadonlySet<string>
 }
 
 export function isBeaconOwnerless(annotation: BeaconAnnotation): boolean {
@@ -88,6 +93,13 @@ export function filterBeaconAnnotations(
       }
 
       if (filter.scope === 'openEditors' && !openUris.has(annotation.uri)) {
+        return false
+      }
+
+      if (
+        filter.scope === 'changedFiles' &&
+        !filter.changedUris.has(annotation.uri)
+      ) {
         return false
       }
 

@@ -12,11 +12,43 @@ interface API {
   getRepository: (uri: TextDocument['uri']) => Repository | null | undefined
 }
 
+interface Disposable {
+  dispose: () => void
+}
+
+interface Event<T> {
+  (listener: (event: T) => void): Disposable
+}
+
+interface Change {
+  readonly uri: {
+    toString: () => string
+  }
+}
+
+interface RepositoryState {
+  readonly indexChanges: readonly Change[]
+  readonly mergeChanges: readonly Change[]
+  readonly onDidChange: Event<void>
+  readonly untrackedChanges: readonly Change[]
+  readonly workingTreeChanges: readonly Change[]
+}
+
+interface ChangedUrisAPI extends API {
+  readonly onDidCloseRepository: Event<Repository>
+  readonly onDidOpenRepository: Event<Repository>
+  readonly repositories: readonly Repository[]
+}
+
 interface Repository {
   readonly isUsingVirtualFileSystem: boolean
   readonly rootUri: TextDocument['uri']
   blame: (path: string) => Promise<string>
   getCommit: (hash: string) => Promise<Commit>
+}
+
+interface ChangedUrisRepository extends Repository {
+  readonly state: RepositoryState
 }
 
 interface Commit {
@@ -39,6 +71,35 @@ function isAPI(value: unknown): value is API {
   return isRecord(value) && typeof value.getRepository === 'function'
 }
 
+function isChange(value: unknown): value is Change {
+  return (
+    isRecord(value) &&
+    isRecord(value.uri) &&
+    typeof value.uri.toString === 'function'
+  )
+}
+
+function isRepositoryState(value: unknown): value is RepositoryState {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.indexChanges) &&
+    Array.isArray(value.workingTreeChanges) &&
+    Array.isArray(value.mergeChanges) &&
+    Array.isArray(value.untrackedChanges) &&
+    typeof value.onDidChange === 'function'
+  )
+}
+
+function isChangedUrisAPI(value: unknown): value is ChangedUrisAPI {
+  return (
+    isRecord(value) &&
+    typeof value.getRepository === 'function' &&
+    Array.isArray(value.repositories) &&
+    typeof value.onDidOpenRepository === 'function' &&
+    typeof value.onDidCloseRepository === 'function'
+  )
+}
+
 function isUri(value: unknown): value is TextDocument['uri'] {
   return (
     isRecord(value) &&
@@ -55,6 +116,14 @@ function isRepository(value: unknown): value is Repository {
     isUri(value.rootUri) &&
     typeof value.blame === 'function' &&
     typeof value.getCommit === 'function'
+  )
+}
+
+function isChangedUrisRepository(
+  value: unknown,
+): value is ChangedUrisRepository {
+  return (
+    isRecord(value) && isRepository(value) && isRepositoryState(value.state)
   )
 }
 
@@ -126,6 +195,172 @@ function toMetadata(commit: Commit): BeaconGitMetadata {
  */
 export function useBeaconGit() {
   const cache = new BeaconGitMetadataCache()
+
+  async function getChangedUrisAPI(): Promise<ChangedUrisAPI | undefined> {
+    if (!workspace.isTrusted) {
+      return undefined
+    }
+
+    try {
+      const extension = extensions.getExtension<unknown>('vscode.git')
+      if (!extension) {
+        return undefined
+      }
+
+      const gitExtension = await extension.activate()
+      if (!isGitExtension(gitExtension)) {
+        return undefined
+      }
+
+      const api = gitExtension.getAPI(1)
+      return isChangedUrisAPI(api) ? api : undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  function collectChangedUris(
+    repositories: readonly Repository[],
+  ): ReadonlySet<string> {
+    const uris = new Set<string>()
+
+    for (const repository of repositories) {
+      if (
+        !isChangedUrisRepository(repository) ||
+        repository.isUsingVirtualFileSystem
+      ) {
+        continue
+      }
+
+      const { state } = repository
+      const changes = [
+        ...state.indexChanges,
+        ...state.workingTreeChanges,
+        ...state.mergeChanges,
+        ...state.untrackedChanges,
+      ]
+
+      for (const change of changes) {
+        if (isChange(change)) {
+          uris.add(change.uri.toString())
+        }
+      }
+    }
+
+    return uris
+  }
+
+  async function getChangedUris(): Promise<ReadonlySet<string>> {
+    const api = await getChangedUrisAPI()
+    if (!api) {
+      return new Set()
+    }
+
+    try {
+      return collectChangedUris(api.repositories)
+    } catch {
+      return new Set()
+    }
+  }
+
+  async function subscribeToChangedUris(
+    listener: () => void,
+  ): Promise<Disposable> {
+    const api = await getChangedUrisAPI()
+    if (!api) {
+      return { dispose: () => {} }
+    }
+    const changedUrisApi = api
+
+    let disposed = false
+    let repositoryDisposables: Disposable[] = []
+    const apiDisposables: Disposable[] = []
+
+    function dispose() {
+      if (disposed) {
+        return
+      }
+
+      disposed = true
+      for (const disposable of [...repositoryDisposables, ...apiDisposables]) {
+        disposable.dispose()
+      }
+      repositoryDisposables = []
+      apiDisposables.length = 0
+    }
+
+    function rebindRepositoryListeners(): boolean {
+      for (const disposable of repositoryDisposables) {
+        disposable.dispose()
+      }
+      repositoryDisposables = []
+
+      try {
+        for (const repository of changedUrisApi.repositories) {
+          if (
+            !isChangedUrisRepository(repository) ||
+            repository.isUsingVirtualFileSystem
+          ) {
+            continue
+          }
+
+          const disposable = repository.state.onDidChange(() => {
+            if (!disposed) {
+              listener()
+            }
+          })
+          if (
+            !isRecord(disposable) ||
+            typeof disposable.dispose !== 'function'
+          ) {
+            throw new TypeError('Invalid Git repository state listener')
+          }
+          repositoryDisposables.push(disposable)
+        }
+
+        return true
+      } catch {
+        dispose()
+        return false
+      }
+    }
+
+    try {
+      const onRepositoryChange = () => {
+        if (!disposed && rebindRepositoryListeners()) {
+          listener()
+        }
+      }
+      const openDisposable =
+        changedUrisApi.onDidOpenRepository(onRepositoryChange)
+      if (
+        !isRecord(openDisposable) ||
+        typeof openDisposable.dispose !== 'function'
+      ) {
+        throw new TypeError('Invalid Git repository listener')
+      }
+      apiDisposables.push(openDisposable)
+
+      const closeDisposable =
+        changedUrisApi.onDidCloseRepository(onRepositoryChange)
+      if (
+        !isRecord(closeDisposable) ||
+        typeof closeDisposable.dispose !== 'function'
+      ) {
+        throw new TypeError('Invalid Git repository listener')
+      }
+      apiDisposables.push(closeDisposable)
+
+      if (!rebindRepositoryListeners()) {
+        return { dispose: () => {} }
+      }
+
+      return { dispose }
+    } catch {
+      dispose()
+      return { dispose: () => {} }
+    }
+  }
 
   async function getMetadataForAnnotations(
     document: TextDocument,
@@ -220,6 +455,7 @@ export function useBeaconGit() {
   }
 
   return {
+    getChangedUris,
     async getMetadata(
       document: TextDocument,
       annotation: BeaconAnnotation,
@@ -230,5 +466,6 @@ export function useBeaconGit() {
       return metadataByAnnotationId.get(annotation.id)
     },
     getMetadataForAnnotations,
+    subscribeToChangedUris,
   }
 }

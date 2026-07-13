@@ -58,6 +58,7 @@ const annotations: readonly BeaconAnnotation[] = [
 const defaultFilter: BeaconExplorerFilter = {
   activeUri: undefined,
   categories: [],
+  changedUris: new Set(),
   includeIgnored: false,
   includeResolved: false,
   metadataByAnnotationId: new Map(),
@@ -127,6 +128,14 @@ describe(filterBeaconAnnotations, () => {
       ['open-fixme'],
     ],
     [
+      'changed file scope',
+      {
+        changedUris: new Set(['file:///workspace/src/open.ts']),
+        scope: 'changedFiles',
+      },
+      ['open-fixme'],
+    ],
+    [
       'resolved state',
       { includeResolved: true },
       ['active-todo', 'active-bug', 'open-fixme', 'resolved-note'],
@@ -146,6 +155,16 @@ describe(filterBeaconAnnotations, () => {
     expect(
       filteredIds({ categories: [], owners: [], query: '', severities: [] }),
     ).toStrictEqual(['active-todo', 'active-bug', 'open-fixme'])
+  })
+
+  it('combines changed file scope with category filtering using AND', () => {
+    expect(
+      filteredIds({
+        categories: ['bug'],
+        changedUris: new Set(['file:///workspace/src/open.ts']),
+        scope: 'changedFiles',
+      }),
+    ).toStrictEqual([])
   })
 
   it.each([

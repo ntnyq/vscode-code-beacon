@@ -194,7 +194,7 @@ export interface ConfigKeyTypeMap {
   "code-beacon.diagnostics.mode": ("off" | "openFiles" | "workspace"),
   "code-beacon.explorer.enabled": boolean,
   "code-beacon.explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
-  "code-beacon.explorer.scope": ("workspace" | "activeFile" | "openEditors"),
+  "code-beacon.explorer.scope": ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
   "code-beacon.explorer.categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
   "code-beacon.explorer.severities": ("hint" | "information" | "warning" | "error")[],
   "code-beacon.explorer.owners": string[],
@@ -254,7 +254,7 @@ export interface ConfigShorthandTypeMap {
   diagnosticsMode: ("off" | "openFiles" | "workspace"),
   explorerEnabled: boolean,
   explorerGroupBy: ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
-  explorerScope: ("workspace" | "activeFile" | "openEditors"),
+  explorerScope: ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
   explorerCategories: ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
   explorerSeverities: ("hint" | "information" | "warning" | "error")[],
   explorerOwners: string[],
@@ -429,7 +429,7 @@ export const configs = {
     default: "file",
   } as ConfigItem<"code-beacon.explorer.groupBy">,
   /**
-   * Limits Code Beacon Explorer results to the workspace, active file, or visible editors.
+   * Limits Code Beacon Explorer results to the workspace, active file, visible editors, or changed files. When set to "changedFiles", the Explorer includes files reported by VS Code's built-in Git extension as staged, unstaged, merge-conflict, or untracked changes. This scope is available only for trusted local desktop workspaces; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty changed-files view.
    * @key `code-beacon.explorer.scope`
    * @default `"workspace"`
    * @type `string`
@@ -566,7 +566,7 @@ export interface ScopedConfigKeyTypeMap {
   "diagnostics.mode": ("off" | "openFiles" | "workspace"),
   "explorer.enabled": boolean,
   "explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
-  "explorer.scope": ("workspace" | "activeFile" | "openEditors"),
+  "explorer.scope": ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
   "explorer.categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
   "explorer.severities": ("hint" | "information" | "warning" | "error")[],
   "explorer.owners": string[],
@@ -635,7 +635,7 @@ export interface NestedConfigs {
     "explorer": {
       "enabled": boolean,
       "groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
-      "scope": ("workspace" | "activeFile" | "openEditors"),
+      "scope": ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
       "categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
       "severities": ("hint" | "information" | "warning" | "error")[],
       "owners": string[],
@@ -678,7 +678,7 @@ export interface NestedScopedConfigs {
   "explorer": {
     "enabled": boolean,
     "groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
-    "scope": ("workspace" | "activeFile" | "openEditors"),
+    "scope": ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
     "categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
     "severities": ("hint" | "information" | "warning" | "error")[],
     "owners": string[],

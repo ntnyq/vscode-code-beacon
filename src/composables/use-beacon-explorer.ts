@@ -135,6 +135,7 @@ export function useBeaconExplorer(
         staleDays: normalizeStaleDays(config.git.staleDays),
       }),
     () => config.explorer.groupBy,
+    () => gitMetadataIndex.metadataByAnnotationId,
   )
 
   let hydrationRequest = 0
@@ -214,7 +215,10 @@ export function useBeaconExplorer(
     hydrationRequest = request
     gitMetadataIndex.clear()
 
-    if (!config.explorer.onlyStale || !workspace.isTrusted) {
+    if (
+      (!config.explorer.onlyStale && !config.git.showMetadata) ||
+      !workspace.isTrusted
+    ) {
       return
     }
 
@@ -233,7 +237,7 @@ export function useBeaconExplorer(
     for (const [uri, annotations] of annotationsByUri) {
       if (
         request !== hydrationRequest ||
-        !config.explorer.onlyStale ||
+        (!config.explorer.onlyStale && !config.git.showMetadata) ||
         !workspace.isTrusted
       ) {
         return
@@ -243,7 +247,7 @@ export function useBeaconExplorer(
         const document = await workspace.openTextDocument(Uri.parse(uri))
         if (
           request !== hydrationRequest ||
-          !config.explorer.onlyStale ||
+          (!config.explorer.onlyStale && !config.git.showMetadata) ||
           !workspace.isTrusted
         ) {
           return
@@ -257,7 +261,7 @@ export function useBeaconExplorer(
 
     if (
       request !== hydrationRequest ||
-      !config.explorer.onlyStale ||
+      (!config.explorer.onlyStale && !config.git.showMetadata) ||
       !workspace.isTrusted
     ) {
       return

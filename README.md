@@ -238,6 +238,12 @@ Description: Number of days after which a valid Git commit date is considered st
 Type: `integer`  
 Default: `90`
 
+#### `code-beacon.git.showMetadata`
+
+Description: Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.  
+Type: `boolean`  
+Default: `false`
+
 #### `code-beacon.scm.enabled`
 
 Description: Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.  

@@ -760,8 +760,8 @@ codeBeacon.activeAnnotation
 - [x] stale/ownerless filters。
 - [x] Create Issue body generator。
 - [x] changed files scope。
-- [ ] source control integration。
-- [ ] richer hover and tree metadata。
+- [x] source control integration。
+- [x] richer hover and tree metadata。
 
 ### Phase 4：AI
 

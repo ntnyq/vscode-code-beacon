@@ -4,6 +4,7 @@ import {
   BeaconTreeDataProvider,
   type BeaconTreeElement,
 } from '../src/core/explorer/tree-data-provider'
+import type { BeaconGitMetadata } from '../src/core/git/blame'
 import { commands } from '../src/meta'
 import type { BeaconAnnotation } from '../src/types/annotation'
 
@@ -157,6 +158,60 @@ describe(BeaconTreeDataProvider, () => {
       command: commands.reveal,
     })
     expect(item.description).toBe('2:4')
+  })
+
+  it('presents optional Git metadata in beacon tree items', () => {
+    const annotation = createAnnotation('a', {
+      ignored: true,
+      owner: 'Ada',
+      resolved: true,
+    })
+    const metadataByAnnotationId = new Map<string, BeaconGitMetadata>([
+      [
+        annotation.id,
+        {
+          authorName: 'Grace Hopper',
+          commitDate: '2026-07-11T12:00:00.000Z',
+          hash: '1234567890abcdef',
+          summary: 'Document metadata presentation',
+        },
+      ],
+    ])
+    const provider = new BeaconTreeDataProvider(
+      () => [annotation],
+      () => 'file',
+      () => metadataByAnnotationId,
+      () => new Date('2026-07-12T12:00:00.000Z'),
+    )
+    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+
+    expect(item.description).toBe(
+      '2:4 • @Ada • Grace Hopper • 1 day ago • resolved • ignored',
+    )
+    expect(item.tooltip).toContain('Owner: @Ada')
+    expect(item.tooltip).toContain('State: resolved, ignored')
+    expect(item.tooltip).toContain('Git:')
+    expect(item.tooltip).toContain('Author: Grace Hopper')
+  })
+
+  it('retains compact descriptions and provides base tooltips without Git metadata', () => {
+    const annotation = createAnnotation('a')
+    const provider = new BeaconTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+
+    expect(item.description).toBe('2:4')
+    expect(item.tooltip).toContain('Owner: Unassigned')
+    expect(item.tooltip).toContain('State: active')
+    expect(item.tooltip).not.toContain('Git:')
+  })
+
+  it('omits whitespace-only owners from compact descriptions without Git metadata', () => {
+    const annotation = createAnnotation('a', { owner: '   ' })
+    const provider = new BeaconTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+
+    expect(item.description).toBe('2:4')
+    expect(item.tooltip).toContain('Owner: Unassigned')
   })
 
   it('includes resolved and ignored state in beacon tree item context', () => {

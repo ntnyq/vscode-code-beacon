@@ -1,5 +1,10 @@
 import type { BeaconAnnotation } from '../../types/annotation'
 import type { BeaconGitMetadata } from '../git/blame'
+import {
+  beaconDisplayOwner,
+  beaconDisplayState,
+  formatBeaconGitAge,
+} from '../git/presentation'
 
 /**
  * Formats a one-based annotation location for hover content.
@@ -8,35 +13,53 @@ function formatAnnotationLocation(annotation: BeaconAnnotation): string {
   return `${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`
 }
 
+function escapeMarkdown(value: string): string {
+  return value.replaceAll(/[\\`*_{}[\]<>()#+\-.!|]/gu, String.raw`\$&`)
+}
+
 /**
  * Builds Markdown hover content for a beacon annotation.
  */
 export function formatBeaconHoverMarkdown(
   annotation: BeaconAnnotation,
   metadata?: BeaconGitMetadata,
+  now: Date = new Date(),
 ): string {
+  const owner = beaconDisplayOwner(annotation)
   const title = annotation.message
-    ? `**${annotation.keyword}** ${annotation.message}`
-    : `**${annotation.keyword}**`
+    ? `**${escapeMarkdown(annotation.keyword)}** ${escapeMarkdown(annotation.message)}`
+    : `**${escapeMarkdown(annotation.keyword)}**`
 
   const details = [
     title,
     '',
-    `- Category: \`${annotation.category}\``,
-    `- Severity: \`${annotation.severity}\``,
-    `- Rule: \`${annotation.ruleId}\``,
-    `- Source: \`${annotation.source}\``,
-    `- Location: \`${formatAnnotationLocation(annotation)}\``,
+    `- Category: \`${escapeMarkdown(annotation.category)}\``,
+    `- Severity: \`${escapeMarkdown(annotation.severity)}\``,
+    `- Rule: \`${escapeMarkdown(annotation.ruleId)}\``,
+    `- Source: \`${escapeMarkdown(annotation.source)}\``,
+    `- Location: \`${escapeMarkdown(formatAnnotationLocation(annotation))}\``,
   ]
 
+  if (owner) {
+    details.push(`- Owner: @${escapeMarkdown(owner)}`)
+  }
+
+  details.push(`- State: ${beaconDisplayState(annotation)}`)
+
   if (metadata) {
+    const age = formatBeaconGitAge(metadata, now)
+
     details.push(
       '',
       '**Git**',
-      `- Author: ${metadata.authorName}`,
-      `- Date: \`${metadata.commitDate}\``,
-      `- Commit: \`${metadata.hash.slice(0, 7)}\``,
-      `- Summary: ${metadata.summary}`,
+      `- Author: ${escapeMarkdown(metadata.authorName)}`,
+      ...(metadata.authorEmail
+        ? [`- Email: ${escapeMarkdown(metadata.authorEmail)}`]
+        : []),
+      `- Date: \`${escapeMarkdown(metadata.commitDate)}\``,
+      ...(age ? [`- Age: \`${age}\``] : []),
+      `- Commit: \`${escapeMarkdown(metadata.hash.slice(0, 7))}\``,
+      `- Summary: ${escapeMarkdown(metadata.summary)}`,
     )
   }
 

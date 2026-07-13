@@ -135,6 +135,7 @@ vi.mock(
           severities: [],
         },
         git: {
+          showMetadata: false,
           staleDays: 90,
         },
       },
@@ -316,6 +317,12 @@ function isoDaysAgo(days: number): string {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 }
 
+async function flushPromises() {
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
 interface Deferred<T> {
   readonly promise: Promise<T>
   readonly resolve: (value: T) => void
@@ -381,6 +388,7 @@ function resetExplorerConfig() {
     severities: [],
   })
   Object.assign(config.git, {
+    showMetadata: false,
     staleDays: 90,
   })
 }
@@ -708,6 +716,53 @@ describe('beacon explorer commands', () => {
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
     expect(getChangedUris).not.toHaveBeenCalled()
     expect(subscribeToChangedUris).not.toHaveBeenCalled()
+  })
+
+  it('skips Git hydration when stale filtering and Explorer metadata are disabled', async () => {
+    const annotation = createAnnotation()
+    annotationStore.setForUri(annotation.uri, [annotation])
+
+    useBeaconExplorer(git)
+    await flushPromises()
+
+    expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+  })
+
+  it('hydrates trusted Explorer metadata when explicitly enabled', async () => {
+    const annotation = createAnnotation()
+    annotationStore.setForUri(annotation.uri, [annotation])
+    Object.assign(config.git, { showMetadata: true })
+    const metadata = gitMetadata(isoDaysAgo(1))
+    getMetadataForAnnotations.mockResolvedValue(
+      new Map([[annotation.id, metadata]]),
+    )
+
+    useBeaconExplorer(git)
+    await flushPromises()
+
+    expect(getMetadataForAnnotations).toHaveBeenCalledExactlyOnceWith(
+      { uri: { value: annotation.uri } },
+      [expect.objectContaining({ id: annotation.id })],
+    )
+    const provider = createdProvider()
+    const item = provider.getTreeItem(createLeaf(annotation))
+    expect(item.description).toContain('Ada Lovelace')
+    expect(item.description).toContain('1 day ago')
+  })
+
+  it('keeps trusted-only Explorer metadata unavailable in untrusted workspaces', async () => {
+    const annotation = createAnnotation()
+    annotationStore.setForUri(annotation.uri, [annotation])
+    Object.assign(config.git, { showMetadata: true })
+    workspaceState.isTrusted = false
+
+    useBeaconExplorer(git)
+    await flushPromises()
+
+    expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+    expect(
+      createdProvider().getTreeItem(createLeaf(annotation)).description,
+    ).toBe('2:4')
   })
 
   it('hydrates grouped documents for stale filtering and refreshes matching annotations', async () => {

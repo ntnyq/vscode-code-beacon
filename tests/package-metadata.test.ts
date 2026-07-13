@@ -101,6 +101,7 @@ describe('package metadata', () => {
       'code-beacon.explorer.onlyStale',
       'code-beacon.explorer.onlyOwnerless',
       'code-beacon.git.staleDays',
+      'code-beacon.git.showMetadata',
       'code-beacon.scm.enabled',
       'code-beacon.codelens.enabled',
       'code-beacon.hover.enabled',
@@ -122,6 +123,22 @@ describe('package metadata', () => {
       type: 'integer',
     })
     expect(staleDays.type).not.toBe('number')
+  })
+
+  it('declares optional Explorer Git metadata', () => {
+    const showMetadata = pkg.contributes.configuration.properties[
+      'code-beacon.git.showMetadata'
+    ] as { default?: unknown; type?: unknown }
+
+    expect(showMetadata).toStrictEqual({
+      default: false,
+      description:
+        "Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.",
+      type: 'boolean',
+    })
+    expectTypeOf<false>().toMatchTypeOf<
+      ConfigKeyTypeMap['code-beacon.git.showMetadata']
+    >()
   })
 
   it('declares an opt-in read-only Source Control setting', () => {

@@ -9,7 +9,12 @@ import {
 } from 'vscode'
 import { commands } from '../../meta'
 import type { BeaconAnnotation } from '../../types/annotation'
-import { formatBeaconLink } from '../../utils/ranges'
+import type { BeaconGitMetadata } from '../git/blame'
+import {
+  beaconDisplayOwner,
+  formatBeaconExplorerDescription,
+  formatBeaconExplorerTooltip,
+} from '../git/presentation'
 import { compareBeaconAnnotations } from './filter'
 
 /**
@@ -50,6 +55,16 @@ export type BeaconTreeElement = BeaconGroupTreeElement | BeaconLeafTreeElement
  * Reader used by the TreeView provider to access current annotations.
  */
 export type GetBeaconAnnotations = () => readonly BeaconAnnotation[]
+
+/**
+ * Reader used by the TreeView provider to access Git metadata by annotation.
+ */
+export type GetBeaconGitMetadata = () => ReadonlyMap<string, BeaconGitMetadata>
+
+/**
+ * Reader used by the TreeView provider to access the current time.
+ */
+export type GetBeaconNow = () => Date
 
 /**
  * Selects the display label for an annotation and grouping mode.
@@ -141,6 +156,16 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   private readonly getGroupBy: () => BeaconExplorerGroupBy
 
   /**
+   * Reader for optional Git metadata keyed by annotation ID.
+   */
+  private readonly getMetadataByAnnotationId: GetBeaconGitMetadata
+
+  /**
+   * Reader for the current time used in Git metadata presentation.
+   */
+  private readonly getNow: GetBeaconNow
+
+  /**
    * VS Code event fired when TreeView data should refresh.
    */
   public readonly onDidChangeTreeData: Event<BeaconTreeElement | undefined> =
@@ -149,7 +174,8 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   /**
    * VS Code callback that converts a tree element into a TreeItem.
    */
-  public readonly getTreeItem = BeaconTreeDataProvider.createTreeItem
+  public readonly getTreeItem = (element: BeaconTreeElement) =>
+    this.createTreeItem(element)
 
   /**
    * Creates a provider from annotation and grouping readers.
@@ -157,9 +183,13 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   public constructor(
     getAnnotations: GetBeaconAnnotations,
     getGroupBy: () => BeaconExplorerGroupBy = () => 'file',
+    getMetadataByAnnotationId: GetBeaconGitMetadata = () => new Map(),
+    getNow: GetBeaconNow = () => new Date(),
   ) {
     this.getAnnotations = getAnnotations
     this.getGroupBy = getGroupBy
+    this.getMetadataByAnnotationId = getMetadataByAnnotationId
+    this.getNow = getNow
   }
 
   /**
@@ -210,7 +240,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   /**
    * Converts a group or annotation leaf into a VS Code TreeItem.
    */
-  private static createTreeItem(element: BeaconTreeElement): TreeItem {
+  private createTreeItem(element: BeaconTreeElement): TreeItem {
     if (element.type === 'group') {
       const item = new TreeItem(
         element.label,
@@ -223,6 +253,8 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
     }
 
     const { annotation } = element
+    const metadata = this.getMetadataByAnnotationId().get(annotation.id)
+    const owner = beaconDisplayOwner(annotation)
     const item = new TreeItem(
       annotation.message
         ? `${annotation.keyword} ${annotation.message}`
@@ -236,17 +268,23 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
       title: 'Reveal Beacon',
     }
     item.contextValue = beaconContextValue(annotation)
-    item.description = [
-      `${annotation.line + 1}:${annotation.column + 1}`,
-      annotation.owner ? `@${annotation.owner}` : '',
-      annotation.resolved ? 'resolved' : '',
-      annotation.ignored ? 'ignored' : '',
-    ]
-      .filter(Boolean)
-      .join(' ')
+    item.description = metadata
+      ? formatBeaconExplorerDescription(annotation, metadata, this.getNow())
+      : [
+          `${annotation.line + 1}:${annotation.column + 1}`,
+          owner ? `@${owner}` : '',
+          annotation.resolved ? 'resolved' : '',
+          annotation.ignored ? 'ignored' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
     item.iconPath = beaconIcon(annotation)
     item.resourceUri = Uri.parse(annotation.uri)
-    item.tooltip = formatBeaconLink(annotation)
+    item.tooltip = formatBeaconExplorerTooltip(
+      annotation,
+      metadata,
+      this.getNow(),
+    )
 
     return item
   }

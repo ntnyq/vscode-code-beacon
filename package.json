@@ -447,6 +447,11 @@
           "minimum": 1,
           "description": "Number of days after which a valid Git commit date is considered stale."
         },
+        "code-beacon.git.showMetadata": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata."
+        },
         "code-beacon.scm.enabled": {
           "type": "boolean",
           "default": false,

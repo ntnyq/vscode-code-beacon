@@ -176,6 +176,7 @@ export type ConfigKey =
   | "code-beacon.explorer.onlyOwnerless"
   | "code-beacon.git.staleDays"
   | "code-beacon.git.showMetadata"
+  | "code-beacon.ai.enabled"
   | "code-beacon.scm.enabled"
   | "code-beacon.codelens.enabled"
   | "code-beacon.hover.enabled"
@@ -207,6 +208,7 @@ export interface ConfigKeyTypeMap {
   "code-beacon.explorer.onlyOwnerless": boolean,
   "code-beacon.git.staleDays": unknown,
   "code-beacon.git.showMetadata": boolean,
+  "code-beacon.ai.enabled": boolean,
   "code-beacon.scm.enabled": boolean,
   "code-beacon.codelens.enabled": boolean,
   "code-beacon.hover.enabled": boolean,
@@ -239,6 +241,7 @@ export interface ConfigShorthandMap {
   explorerOnlyOwnerless: "code-beacon.explorer.onlyOwnerless",
   gitStaleDays: "code-beacon.git.staleDays",
   gitShowMetadata: "code-beacon.git.showMetadata",
+  aiEnabled: "code-beacon.ai.enabled",
   scmEnabled: "code-beacon.scm.enabled",
   codelensEnabled: "code-beacon.codelens.enabled",
   hoverEnabled: "code-beacon.hover.enabled",
@@ -271,6 +274,7 @@ export interface ConfigShorthandTypeMap {
   explorerOnlyOwnerless: boolean,
   gitStaleDays: unknown,
   gitShowMetadata: boolean,
+  aiEnabled: boolean,
   scmEnabled: boolean,
   codelensEnabled: boolean,
   hoverEnabled: boolean,
@@ -547,6 +551,16 @@ export const configs = {
     default: false,
   } as ConfigItem<"code-beacon.git.showMetadata">,
   /**
+   * Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent.
+   * @key `code-beacon.ai.enabled`
+   * @default `false`
+   * @type `boolean`
+   */
+  aiEnabled: {
+    key: "code-beacon.ai.enabled",
+    default: false,
+  } as ConfigItem<"code-beacon.ai.enabled">,
+  /**
    * Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.
    * @key `code-beacon.scm.enabled`
    * @default `false`
@@ -605,6 +619,7 @@ export interface ScopedConfigKeyTypeMap {
   "explorer.onlyOwnerless": boolean,
   "git.staleDays": unknown,
   "git.showMetadata": boolean,
+  "ai.enabled": boolean,
   "scm.enabled": boolean,
   "codelens.enabled": boolean,
   "hover.enabled": boolean,
@@ -639,6 +654,7 @@ export const scopedConfigs = {
     "explorer.onlyOwnerless": false,
     "git.staleDays": 90,
     "git.showMetadata": false,
+    "ai.enabled": false,
     "scm.enabled": false,
     "codelens.enabled": false,
     "hover.enabled": true,
@@ -680,6 +696,9 @@ export interface NestedConfigs {
     "git": {
       "staleDays": unknown,
       "showMetadata": boolean,
+    },
+    "ai": {
+      "enabled": boolean,
     },
     "scm": {
       "enabled": boolean,
@@ -727,6 +746,9 @@ export interface NestedScopedConfigs {
   "git": {
     "staleDays": unknown,
     "showMetadata": boolean,
+  },
+  "ai": {
+    "enabled": boolean,
   },
   "scm": {
     "enabled": boolean,

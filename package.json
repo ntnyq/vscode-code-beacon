@@ -452,6 +452,11 @@
           "default": false,
           "description": "Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata."
         },
+        "code-beacon.ai.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent."
+        },
         "code-beacon.scm.enabled": {
           "type": "boolean",
           "default": false,
@@ -469,6 +474,51 @@
         }
       }
     },
+    "languageModelTools": [
+      {
+        "name": "code_beacon_list_annotations",
+        "tags": [
+          "code-beacon",
+          "annotations",
+          "read-only"
+        ],
+        "toolReferenceName": "codeBeaconAnnotations",
+        "displayName": "List Code Beacon Annotations",
+        "modelDescription": "Returns a bounded JSON list of annotations already-indexed in Code Beacon's in-memory store. Use it to inspect current annotation work; do not use it to search unscanned files or retrieve source code.",
+        "userDescription": "List annotations already discovered by Code Beacon.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(list-unordered)",
+        "when": "config.code-beacon.ai.enabled",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "all",
+                "activeFile",
+                "openEditors"
+              ],
+              "default": "all"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "includeResolved": {
+              "type": "boolean",
+              "default": false
+            },
+            "includeIgnored": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "category": "Code Beacon",
@@ -647,6 +697,7 @@
     }
   },
   "activationEvents": [
+    "onLanguageModelTool:code_beacon_list_annotations",
     "onStartupFinished"
   ],
   "extensionKind": [

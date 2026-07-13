@@ -244,6 +244,12 @@ Description: Show Git author, age, and commit details in Code Beacon Explorer it
 Type: `boolean`  
 Default: `false`
 
+#### `code-beacon.ai.enabled`
+
+Description: Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent.  
+Type: `boolean`  
+Default: `false`
+
 #### `code-beacon.scm.enabled`
 
 Description: Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.  

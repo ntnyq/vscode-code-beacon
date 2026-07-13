@@ -7,6 +7,7 @@ import type * as BeaconExplorer from '../src/composables/use-beacon-explorer'
 import type * as BeaconGit from '../src/composables/use-beacon-git'
 import type * as BeaconHighlight from '../src/composables/use-beacon-highlight'
 import type * as BeaconHover from '../src/composables/use-beacon-hover'
+import type * as BeaconLanguageModelTools from '../src/composables/use-beacon-language-model-tools'
 import type * as BeaconNotebook from '../src/composables/use-beacon-notebook'
 import type * as BeaconSourceControl from '../src/composables/use-beacon-source-control'
 import type * as WorkspaceScan from '../src/composables/use-workspace-scan'
@@ -22,6 +23,7 @@ const {
   useBeaconGit,
   useBeaconHighlight,
   useBeaconHover,
+  useBeaconLanguageModelTools,
   useBeaconNotebook,
   useBeaconSourceControl,
   useWorkspaceScan,
@@ -50,6 +52,7 @@ const {
       scanTextDocument: scan,
     })),
     useBeaconHover: vi.fn<(getMetadata: typeof metadata) => void>(),
+    useBeaconLanguageModelTools: vi.fn<() => void>(),
     useBeaconNotebook: vi.fn<(scanDocument: typeof scan) => void>(),
     useBeaconSourceControl: vi.fn<(adapter: typeof git) => void>(),
     useWorkspaceScan: vi.fn<() => void>(),
@@ -108,6 +111,13 @@ vi.mock(
     }) as unknown as Partial<typeof BeaconHover>,
 )
 vi.mock(
+  import('../src/composables/use-beacon-language-model-tools'),
+  () =>
+    ({
+      useBeaconLanguageModelTools,
+    }) as unknown as Partial<typeof BeaconLanguageModelTools>,
+)
+vi.mock(
   import('../src/composables/use-beacon-notebook'),
   () =>
     ({
@@ -148,5 +158,7 @@ describe('extension activation', () => {
       beaconGit.getMetadata,
     )
     expect(useBeaconSourceControl).toHaveBeenCalledExactlyOnceWith(beaconGit)
+    expect(useBeaconLanguageModelTools).toHaveBeenCalledExactlyOnceWith()
+    expect(useBeaconLanguageModelTools).toHaveBeenCalledAfter(useBeaconCodeLens)
   })
 })

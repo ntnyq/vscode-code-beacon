@@ -765,7 +765,7 @@ codeBeacon.activeAnnotation
 
 ### Phase 4：AI
 
-- [ ] Language Model Tool contribution。
+- [x] Language Model Tool contribution。
 - [ ] explain/generate fix/summarize commands。
 - [ ] TODO quality scoring。
 - [ ] Workspace annotation digest。

@@ -18,6 +18,7 @@ const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
   contributes: {
     commands: { command: string; title: string }[]
     configuration: { properties: Record<string, unknown> }
+    languageModelTools?: unknown[]
     viewsContainers?: { activitybar: { id: string; title: string }[] }
     views?: { codeBeacon: { id: string; name: string; when?: string }[] }
     menus?: {
@@ -102,6 +103,7 @@ describe('package metadata', () => {
       'code-beacon.explorer.onlyOwnerless',
       'code-beacon.git.staleDays',
       'code-beacon.git.showMetadata',
+      'code-beacon.ai.enabled',
       'code-beacon.scm.enabled',
       'code-beacon.codelens.enabled',
       'code-beacon.hover.enabled',
@@ -141,6 +143,22 @@ describe('package metadata', () => {
     >()
   })
 
+  it('declares an opt-in read-only Language Model Tools setting', () => {
+    const aiEnabled = pkg.contributes.configuration.properties[
+      'code-beacon.ai.enabled'
+    ] as { default?: unknown; description?: unknown; type?: unknown }
+
+    expect(aiEnabled).toStrictEqual({
+      default: false,
+      description:
+        "Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent.",
+      type: 'boolean',
+    })
+    expectTypeOf<false>().toMatchTypeOf<
+      ConfigKeyTypeMap['code-beacon.ai.enabled']
+    >()
+  })
+
   it('declares an opt-in read-only Source Control setting', () => {
     const sourceControl = pkg.contributes.configuration.properties[
       'code-beacon.scm.enabled'
@@ -170,8 +188,40 @@ describe('package metadata', () => {
     )
   })
 
+  it('declares the read-only annotation Language Model Tool', () => {
+    expect(pkg.activationEvents).toStrictEqual([
+      'onLanguageModelTool:code_beacon_list_annotations',
+      'onStartupFinished',
+    ])
+    expect(pkg.contributes.languageModelTools).toStrictEqual([
+      {
+        canBeReferencedInPrompt: true,
+        displayName: 'List Code Beacon Annotations',
+        icon: '$(list-unordered)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            includeIgnored: { default: false, type: 'boolean' },
+            includeResolved: { default: false, type: 'boolean' },
+            limit: { default: 50, maximum: 100, minimum: 1, type: 'integer' },
+            scope: {
+              default: 'all',
+              enum: ['all', 'activeFile', 'openEditors'],
+              type: 'string',
+            },
+          },
+        },
+        modelDescription: expect.stringContaining('already-indexed'),
+        name: 'code_beacon_list_annotations',
+        tags: ['code-beacon', 'annotations', 'read-only'],
+        toolReferenceName: 'codeBeaconAnnotations',
+        userDescription: expect.stringContaining('already discovered'),
+        when: 'config.code-beacon.ai.enabled',
+      },
+    ])
+  })
+
   it('declares the Code Beacon TreeView contribution', () => {
-    expect(pkg.activationEvents).toStrictEqual(['onStartupFinished'])
     expect(pkg.contributes.viewsContainers?.activitybar).toStrictEqual([
       {
         id: 'codeBeacon',

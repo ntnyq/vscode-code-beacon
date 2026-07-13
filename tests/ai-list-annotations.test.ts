@@ -130,6 +130,36 @@ describe(listBeaconAnnotations, () => {
       limit: 100,
     })
   })
+
+  it('projects nonempty optional dates without exposing annotation internals', () => {
+    const result = listBeaconAnnotations(
+      [
+        annotation('dated', {
+          dueDate: ' 2026-08-01 ',
+          expiresDate: '2026-09-01',
+        }),
+        annotation('blank-dates', { dueDate: ' ', expiresDate: '\t' }),
+      ],
+      {},
+      context,
+    )
+
+    expect(result.annotations).toStrictEqual([
+      expect.objectContaining({
+        dueDate: '2026-08-01',
+        expiresDate: '2026-09-01',
+        id: 'dated',
+      }),
+      expect.objectContaining({ id: 'blank-dates' }),
+    ])
+    expect(result.annotations[1]).not.toHaveProperty('dueDate')
+    expect(result.annotations[1]).not.toHaveProperty('expiresDate')
+    expect(result.annotations[0]).not.toHaveProperty('range')
+    expect(result.annotations[0]).not.toHaveProperty('keywordRange')
+    expect(result.annotations[0]).not.toHaveProperty('messageRange')
+    expect(result.annotations[0]).not.toHaveProperty('style')
+    expect(result.annotations[0]).not.toHaveProperty('diagnostics')
+  })
 })
 
 describe(serializeBeaconListAnnotations, () => {

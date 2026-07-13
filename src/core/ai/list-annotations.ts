@@ -3,73 +3,83 @@ import type {
   BeaconCategory,
   BeaconSeverity,
 } from '../../types/annotation'
-import { compareBeaconAnnotations } from '../explorer/filter'
+import * as annotationSelector from './select-annotations'
 
-export const DEFAULT_BEACON_ANNOTATION_LIMIT = 50
-export const MAX_BEACON_ANNOTATION_LIMIT = 100
+export const DEFAULT_BEACON_ANNOTATION_LIMIT =
+  annotationSelector.DEFAULT_BEACON_ANNOTATION_LIMIT
+export const MAX_BEACON_ANNOTATION_LIMIT =
+  annotationSelector.MAX_BEACON_ANNOTATION_LIMIT
 
-export type BeaconAnnotationToolScope = 'all' | 'activeFile' | 'openEditors'
+export type BeaconAnnotationToolScope =
+  annotationSelector.BeaconAnnotationToolScope
+export type BeaconListAnnotationsContext =
+  annotationSelector.BeaconListAnnotationsContext
+export type BeaconListAnnotationsInput =
+  annotationSelector.BeaconListAnnotationsInput
+export type NormalizedBeaconListAnnotationsInput =
+  annotationSelector.NormalizedBeaconListAnnotationsInput
 
-export interface BeaconListAnnotationsInput {
-  readonly scope?: BeaconAnnotationToolScope
-  readonly limit?: number
-  readonly includeResolved?: boolean
-  readonly includeIgnored?: boolean
+export function normalizeBeaconListAnnotationsInput(
+  input: BeaconListAnnotationsInput,
+): NormalizedBeaconListAnnotationsInput {
+  return annotationSelector.normalizeBeaconListAnnotationsInput(input)
 }
 
-export interface BeaconListAnnotationsContext {
-  readonly activeUri: string | undefined
-  readonly openUris: readonly string[]
-}
-
-export interface NormalizedBeaconListAnnotationsInput {
-  readonly scope: BeaconAnnotationToolScope
-  readonly limit: number
-  readonly includeResolved: boolean
-  readonly includeIgnored: boolean
+export interface BeaconListedAnnotation {
+  readonly id: string
+  readonly uri: string
+  readonly line: number
+  readonly column: number
+  readonly keyword: string
+  readonly message: string
+  readonly category: BeaconCategory
+  readonly severity: BeaconSeverity
+  readonly ruleId: string
+  readonly owner?: string
+  readonly dueDate?: string
+  readonly expiresDate?: string
+  readonly resolved: boolean
+  readonly ignored: boolean
+  readonly source: BeaconAnnotation['source']
 }
 
 export interface BeaconListAnnotationsResult {
-  readonly annotations: readonly {
-    readonly id: string
-    readonly uri: string
-    readonly line: number
-    readonly column: number
-    readonly keyword: string
-    readonly message: string
-    readonly category: BeaconCategory
-    readonly severity: BeaconSeverity
-    readonly ruleId: string
-    readonly owner?: string
-    readonly resolved: boolean
-    readonly ignored: boolean
-    readonly source: BeaconAnnotation['source']
-  }[]
+  readonly annotations: readonly BeaconListedAnnotation[]
   readonly returned: number
   readonly scope: BeaconAnnotationToolScope
   readonly total: number
   readonly truncated: boolean
 }
 
-export function normalizeBeaconListAnnotationsInput(
-  input: BeaconListAnnotationsInput,
-): NormalizedBeaconListAnnotationsInput {
-  const limit = input.limit
+function trimOptional(value: string | undefined): string | undefined {
+  const trimmed = value?.trim()
+
+  return trimmed === undefined || trimmed === '' ? undefined : trimmed
+}
+
+export function projectBeaconAnnotation(
+  annotation: BeaconAnnotation,
+): BeaconListedAnnotation {
+  const owner = trimOptional(annotation.owner)
+  const dueDate = trimOptional(annotation.dueDate)
+  const expiresDate = trimOptional(annotation.expiresDate)
 
   return {
-    includeIgnored: input.includeIgnored === true,
-    includeResolved: input.includeResolved === true,
-    limit:
-      typeof limit === 'number' &&
-      Number.isInteger(limit) &&
-      limit >= 1 &&
-      limit <= MAX_BEACON_ANNOTATION_LIMIT
-        ? limit
-        : DEFAULT_BEACON_ANNOTATION_LIMIT,
-    scope:
-      input.scope === 'activeFile' || input.scope === 'openEditors'
-        ? input.scope
-        : 'all',
+    id: annotation.id,
+    uri: annotation.uri,
+    line: annotation.line,
+    column: annotation.column,
+    keyword: annotation.keyword,
+    message: annotation.message,
+    category: annotation.category,
+    severity: annotation.severity,
+    ruleId: annotation.ruleId,
+    ...(owner === undefined ? {} : { owner }),
+    ...(dueDate === undefined ? {} : { dueDate }),
+    ...(expiresDate === undefined ? {} : { expiresDate }),
+    resolved: annotation.resolved === true,
+    ignored: annotation.ignored === true,
+    source: annotation.source,
   }
 }
 
@@ -78,60 +88,15 @@ export function listBeaconAnnotations(
   input: BeaconListAnnotationsInput,
   context: BeaconListAnnotationsContext,
 ): BeaconListAnnotationsResult {
-  const normalizedInput = normalizeBeaconListAnnotationsInput(input)
-  const openUris = new Set(context.openUris)
-  const matchingAnnotations = annotations
-    .filter(annotation => {
-      if (annotation.resolved === true && !normalizedInput.includeResolved) {
-        return false
-      }
-
-      if (annotation.ignored === true && !normalizedInput.includeIgnored) {
-        return false
-      }
-
-      if (
-        normalizedInput.scope === 'activeFile' &&
-        annotation.uri !== context.activeUri
-      ) {
-        return false
-      }
-
-      return (
-        normalizedInput.scope !== 'openEditors' || openUris.has(annotation.uri)
-      )
-    })
-    .toSorted(compareBeaconAnnotations)
-  const total = matchingAnnotations.length
-  const selectedAnnotations = matchingAnnotations.slice(
-    0,
-    normalizedInput.limit,
+  const selected = annotationSelector.selectBeaconAnnotations(
+    annotations,
+    input,
+    context,
   )
 
   return {
-    annotations: selectedAnnotations.map(annotation => {
-      const owner = annotation.owner?.trim()
-
-      return {
-        id: annotation.id,
-        uri: annotation.uri,
-        line: annotation.line,
-        column: annotation.column,
-        keyword: annotation.keyword,
-        message: annotation.message,
-        category: annotation.category,
-        severity: annotation.severity,
-        ruleId: annotation.ruleId,
-        ...(owner === undefined || owner === '' ? {} : { owner }),
-        resolved: annotation.resolved === true,
-        ignored: annotation.ignored === true,
-        source: annotation.source,
-      }
-    }),
-    returned: selectedAnnotations.length,
-    scope: normalizedInput.scope,
-    total,
-    truncated: total > selectedAnnotations.length,
+    ...selected,
+    annotations: selected.annotations.map(projectBeaconAnnotation),
   }
 }
 

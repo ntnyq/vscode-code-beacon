@@ -191,6 +191,7 @@ describe('package metadata', () => {
   it('declares the read-only annotation Language Model Tool', () => {
     expect(pkg.activationEvents).toStrictEqual([
       'onLanguageModelTool:code_beacon_list_annotations',
+      'onLanguageModelTool:code_beacon_quality_check',
       'onStartupFinished',
     ])
     expect(pkg.contributes.languageModelTools).toStrictEqual([
@@ -216,6 +217,30 @@ describe('package metadata', () => {
         tags: ['code-beacon', 'annotations', 'read-only'],
         toolReferenceName: 'codeBeaconAnnotations',
         userDescription: expect.stringContaining('already discovered'),
+        when: 'config.code-beacon.ai.enabled',
+      },
+      {
+        canBeReferencedInPrompt: true,
+        displayName: 'Check Code Beacon Annotation Quality',
+        icon: '$(checklist)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            includeIgnored: { default: false, type: 'boolean' },
+            includeResolved: { default: false, type: 'boolean' },
+            limit: { default: 50, maximum: 100, minimum: 1, type: 'integer' },
+            scope: {
+              default: 'all',
+              enum: ['all', 'activeFile', 'openEditors'],
+              type: 'string',
+            },
+          },
+        },
+        modelDescription: expect.stringContaining('deterministic'),
+        name: 'code_beacon_quality_check',
+        tags: ['code-beacon', 'annotations', 'read-only'],
+        toolReferenceName: 'codeBeaconAnnotationQuality',
+        userDescription: expect.stringContaining('quality'),
         when: 'config.code-beacon.ai.enabled',
       },
     ])

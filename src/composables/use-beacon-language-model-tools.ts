@@ -14,9 +14,14 @@ import {
   type BeaconAnnotationToolScope,
   type BeaconListAnnotationsInput,
 } from '../core/ai/list-annotations'
+import {
+  createBeaconQualityCheck,
+  serializeBeaconQualityCheck,
+} from '../core/ai/quality-check'
 import { annotationStore } from '../core/store/annotation-store'
 
 export const BEACON_LIST_ANNOTATIONS_TOOL_NAME = 'code_beacon_list_annotations'
+export const BEACON_QUALITY_CHECK_TOOL_NAME = 'code_beacon_quality_check'
 
 const toolScopeLabel: Record<BeaconAnnotationToolScope, string> = {
   activeFile: 'the active file',
@@ -24,11 +29,27 @@ const toolScopeLabel: Record<BeaconAnnotationToolScope, string> = {
   openEditors: 'open editors',
 }
 
+function getCurrentAnnotationSnapshot() {
+  if (!config.ai.enabled) {
+    throw new Error(
+      'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
+    )
+  }
+
+  const annotations = annotationStore.getAll()
+  const activeUri = window.activeTextEditor?.document.uri.toString()
+  const openUris = window.visibleTextEditors.map(editor =>
+    editor.document.uri.toString(),
+  )
+
+  return { annotations, context: { activeUri, openUris } }
+}
+
 /**
- * Registers the read-only annotation snapshot tool for Language Model clients.
+ * Registers read-only annotation tools for Language Model clients.
  */
 export function useBeaconLanguageModelTools() {
-  const tool: LanguageModelTool<BeaconListAnnotationsInput> = {
+  const listTool: LanguageModelTool<BeaconListAnnotationsInput> = {
     prepareInvocation(options) {
       const normalizedInput = normalizeBeaconListAnnotationsInput(options.input)
       const scopeLabel = toolScopeLabel[normalizedInput.scope]
@@ -42,21 +63,8 @@ export function useBeaconLanguageModelTools() {
       }
     },
     invoke(options) {
-      if (!config.ai.enabled) {
-        throw new Error(
-          'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
-        )
-      }
-
-      const annotations = annotationStore.getAll()
-      const activeUri = window.activeTextEditor?.document.uri.toString()
-      const openUris = window.visibleTextEditors.map(editor =>
-        editor.document.uri.toString(),
-      )
-      const result = listBeaconAnnotations(annotations, options.input, {
-        activeUri,
-        openUris,
-      })
+      const { annotations, context } = getCurrentAnnotationSnapshot()
+      const result = listBeaconAnnotations(annotations, options.input, context)
 
       return new LanguageModelToolResult([
         new LanguageModelTextPart(serializeBeaconListAnnotations(result)),
@@ -64,5 +72,34 @@ export function useBeaconLanguageModelTools() {
     },
   }
 
-  useDisposable(lm.registerTool(BEACON_LIST_ANNOTATIONS_TOOL_NAME, tool))
+  const qualityTool: LanguageModelTool<BeaconListAnnotationsInput> = {
+    prepareInvocation(options) {
+      const normalizedInput = normalizeBeaconListAnnotationsInput(options.input)
+      const scopeLabel = toolScopeLabel[normalizedInput.scope]
+
+      return Promise.resolve({
+        invocationMessage: `Checking up to ${normalizedInput.limit} Code Beacon annotations from ${scopeLabel}.`,
+        confirmationMessages: {
+          title: 'Share Code Beacon annotation quality',
+          message: `Share quality scores for up to ${normalizedInput.limit} already-indexed Code Beacon annotations from ${scopeLabel} with the agent?`,
+        },
+      })
+    },
+    invoke(options) {
+      const { annotations, context } = getCurrentAnnotationSnapshot()
+      const result = createBeaconQualityCheck(
+        annotations,
+        options.input,
+        context,
+        new Date(),
+      )
+
+      return new LanguageModelToolResult([
+        new LanguageModelTextPart(serializeBeaconQualityCheck(result)),
+      ])
+    },
+  }
+
+  useDisposable(lm.registerTool(BEACON_LIST_ANNOTATIONS_TOOL_NAME, listTool))
+  useDisposable(lm.registerTool(BEACON_QUALITY_CHECK_TOOL_NAME, qualityTool))
 }

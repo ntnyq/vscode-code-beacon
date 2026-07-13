@@ -517,6 +517,49 @@
             }
           }
         }
+      },
+      {
+        "name": "code_beacon_quality_check",
+        "tags": [
+          "code-beacon",
+          "annotations",
+          "read-only"
+        ],
+        "toolReferenceName": "codeBeaconAnnotationQuality",
+        "displayName": "Check Code Beacon Annotation Quality",
+        "modelDescription": "Returns deterministic quality scores derived only from already-indexed Code Beacon annotations. Use it to identify annotation quality issues; do not use it to search unscanned files or retrieve source code.",
+        "userDescription": "Check quality scores for annotations already discovered by Code Beacon.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(checklist)",
+        "when": "config.code-beacon.ai.enabled",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "scope": {
+              "type": "string",
+              "enum": [
+                "all",
+                "activeFile",
+                "openEditors"
+              ],
+              "default": "all"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "includeResolved": {
+              "type": "boolean",
+              "default": false
+            },
+            "includeIgnored": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
       }
     ],
     "commands": [
@@ -698,6 +741,7 @@
   },
   "activationEvents": [
     "onLanguageModelTool:code_beacon_list_annotations",
+    "onLanguageModelTool:code_beacon_quality_check",
     "onStartupFinished"
   ],
   "extensionKind": [

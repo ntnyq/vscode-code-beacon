@@ -111,35 +111,73 @@ function lineEndAt(text: string, offset: number): number {
 interface ExtractedMessage {
   readonly message: string
   readonly owner?: string
+  readonly dueDate?: string
+  readonly expiresDate?: string
   readonly messageEnd: number
 }
 
-interface ParsedOwnerMessage {
+interface ParsedAnnotationMessage {
   readonly message: string
   readonly owner?: string
+  readonly dueDate?: string
+  readonly expiresDate?: string
 }
 
-function parseOwnerMessage(value: string): ParsedOwnerMessage {
-  const normalizedValue = value.replace(/^[:\s-]+/u, '').trim()
+interface ParseAnnotationMessageOptions {
+  readonly extractOwner?: boolean
+  readonly trim?: boolean
+}
+
+function parseAnnotationMessage(
+  value: string,
+  { extractOwner = false, trim = true }: ParseAnnotationMessageOptions = {},
+): ParsedAnnotationMessage {
+  const normalizedValue = extractOwner
+    ? value.replace(/^[:\s-]+/u, '').trim()
+    : trim
+      ? value.trim()
+      : value
   const ownerPatterns = [
     /^\((?<owner>[^)]+)\)\s*:?\s*(?<message>.*)$/u,
     /^@(?<owner>[\w.-]+)\s*:?\s*(?<message>.*)$/u,
     /^\[owner=(?<owner>[^\]]+)\]\s*:?\s*(?<message>.*)$/u,
   ]
 
-  for (const pattern of ownerPatterns) {
-    const match = pattern.exec(normalizedValue)
+  let message = normalizedValue
+  let owner: string | undefined
 
-    if (match?.groups?.owner) {
-      return {
-        message: match.groups.message?.trim() ?? '',
-        owner: match.groups.owner.trim(),
+  if (extractOwner) {
+    for (const pattern of ownerPatterns) {
+      const match = pattern.exec(normalizedValue)
+
+      if (match?.groups?.owner) {
+        message = match.groups.message?.trim() ?? ''
+        owner = match.groups.owner.trim()
+        break
       }
     }
   }
 
+  let dueDate: string | undefined
+  let expiresDate: string | undefined
+  const messageWithoutDirectives = message.replaceAll(
+    /(?:^|\s)(due|expires):(\S+)/giu,
+    (_match, directive: string, directiveValue: string) => {
+      if (directive.toLowerCase() === 'due') {
+        dueDate = directiveValue
+      } else {
+        expiresDate = directiveValue
+      }
+
+      return ''
+    },
+  )
+
   return {
-    message: normalizedValue,
+    dueDate,
+    expiresDate,
+    message: trim ? messageWithoutDirectives.trim() : messageWithoutDirectives,
+    owner,
   }
 }
 
@@ -185,7 +223,11 @@ function extractMessage(
   rule: CompiledBeaconRule,
 ): ExtractedMessage {
   if (rule.messageMode.mode === 'match') {
+    const parsed = parseAnnotationMessage(match[0], { trim: false })
+
     return {
+      dueDate: parsed.dueDate,
+      expiresDate: parsed.expiresDate,
       message: '',
       messageEnd: matchEnd,
     }
@@ -193,25 +235,48 @@ function extractMessage(
 
   if (rule.messageMode.mode === 'group') {
     const namedValue = match.groups?.[rule.messageMode.group]
-    const message = rule.messageMode.trim
-      ? (namedValue ?? '').trim()
-      : (namedValue ?? '')
+    const parsed = parseAnnotationMessage(namedValue ?? '', {
+      trim: rule.messageMode.trim,
+    })
 
     return {
-      message,
+      dueDate: parsed.dueDate,
+      expiresDate: parsed.expiresDate,
+      message: parsed.message,
       messageEnd: matchEnd,
     }
   }
 
   const firstLineEnd = lineEndAt(text, matchEnd)
   const value = text.slice(matchEnd, firstLineEnd)
-  const parsed = rule.messageMode.trim
-    ? parseOwnerMessage(value)
-    : { message: value }
+  const parsed = parseAnnotationMessage(value, {
+    extractOwner: rule.messageMode.trim,
+    trim: rule.messageMode.trim,
+  })
   const followUp = collectFollowUpMessages(text, firstLineEnd)
-  const messageLines = [parsed.message, ...followUp.lines].filter(Boolean)
+  const followUpMessages = followUp.lines.map(message =>
+    parseAnnotationMessage(message, { trim: rule.messageMode.trim }),
+  )
+  const messageLines = [
+    parsed.message,
+    ...followUpMessages.map(({ message }) => message),
+  ].filter(Boolean)
+  let dueDate = parsed.dueDate
+  let expiresDate = parsed.expiresDate
+
+  for (const followUpMessage of followUpMessages) {
+    if (followUpMessage.dueDate !== undefined) {
+      dueDate = followUpMessage.dueDate
+    }
+
+    if (followUpMessage.expiresDate !== undefined) {
+      expiresDate = followUpMessage.expiresDate
+    }
+  }
 
   return {
+    dueDate,
+    expiresDate,
     message: messageLines.join('\n'),
     messageEnd: followUp.end,
     owner: parsed.owner,
@@ -315,6 +380,8 @@ function scanRange(
         message: extractedMessage.message,
         messageRange,
         diagnostics: rule.diagnostics,
+        dueDate: extractedMessage.dueDate,
+        expiresDate: extractedMessage.expiresDate,
         owner: extractedMessage.owner,
         range: annotationRange,
         ruleId: rule.id,

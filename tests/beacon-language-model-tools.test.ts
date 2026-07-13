@@ -4,6 +4,7 @@ import { LanguageModelToolResult } from 'vscode'
 import type * as Vscode from 'vscode'
 import {
   BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+  BEACON_QUALITY_CHECK_TOOL_NAME,
   useBeaconLanguageModelTools,
 } from '../src/composables/use-beacon-language-model-tools'
 import type { BeaconListAnnotationsInput } from '../src/core/ai/list-annotations'
@@ -21,15 +22,15 @@ const {
   useDisposable,
   vscodeState,
 } = vi.hoisted(() => {
-  const toolInstances: RegisteredTool[] = []
+  const toolInstances = new Map<string, RegisteredTool>()
   const registrationDisposable = { dispose: vi.fn<() => void>() }
 
   return {
     configState: { enabled: false },
     registerTool: vi.fn<
       (name: string, tool: RegisteredTool) => Vscode.Disposable
-    >((_name, tool) => {
-      toolInstances.push(tool)
+    >((name, tool) => {
+      toolInstances.set(name, tool)
       return registrationDisposable
     }),
     registeredTools: toolInstances,
@@ -133,11 +134,11 @@ function editor(uri: string): Vscode.TextEditor {
   } as Vscode.TextEditor
 }
 
-function registeredTool(): RegisteredTool {
-  const tool = registeredTools[0]
+function registeredTool(name: string): RegisteredTool {
+  const tool = registeredTools.get(name)
 
   if (!tool) {
-    throw new TypeError('Expected a Language Model Tool to be registered')
+    throw new TypeError(`Expected ${name} to be registered`)
   }
 
   return tool
@@ -178,12 +179,25 @@ function annotationIds(
   return parsed.annotations.map(item => item.id)
 }
 
+function qualityResult(
+  result: Vscode.LanguageModelToolResult | null | undefined,
+): {
+  annotations: { annotation: { id: string }; annotationId: string }[]
+  counts: { good: number; needsAttention: number; poor: number }
+  returned: number
+  scope: string
+  total: number
+  truncated: boolean
+} {
+  return JSON.parse(resultText(toolResult(result)))
+}
+
 describe(useBeaconLanguageModelTools, () => {
   beforeEach(() => {
     annotationStore.clear()
     configState.enabled = false
     registerTool.mockClear()
-    registeredTools.length = 0
+    registeredTools.clear()
     textPart.mockClear()
     useDisposable.mockClear()
     vscodeState.activeTextEditor = undefined
@@ -192,7 +206,7 @@ describe(useBeaconLanguageModelTools, () => {
     vscodeState.visibleTextEditorsReads = 0
   })
 
-  it('registers the manifest tool and disposes its registration', () => {
+  it('registers and disposes both manifest tools', () => {
     useBeaconLanguageModelTools()
 
     expect(registerTool).toHaveBeenCalledWith(
@@ -202,16 +216,28 @@ describe(useBeaconLanguageModelTools, () => {
         prepareInvocation: expect.any(Function),
       }),
     )
-    expect(useDisposable).toHaveBeenCalledWith(toolDisposable)
+    expect(registerTool).toHaveBeenCalledWith(
+      'code_beacon_quality_check',
+      expect.objectContaining({
+        invoke: expect.any(Function),
+        prepareInvocation: expect.any(Function),
+      }),
+    )
+    expect(useDisposable).toHaveBeenCalledTimes(2)
+    expect(useDisposable).toHaveBeenNthCalledWith(1, toolDisposable)
+    expect(useDisposable).toHaveBeenNthCalledWith(2, toolDisposable)
     expect(BEACON_LIST_ANNOTATIONS_TOOL_NAME).toBe(
       'code_beacon_list_annotations',
     )
+    expect(BEACON_QUALITY_CHECK_TOOL_NAME).toBe('code_beacon_quality_check')
   })
 
   it('prepares a side-effect-free confirmation for the selected scope and limit', async () => {
     useBeaconLanguageModelTools()
 
-    const prepared = await registeredTool().prepareInvocation?.(
+    const prepared = await registeredTool(
+      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+    ).prepareInvocation?.(
       { input: { limit: 2, scope: 'activeFile' } },
       cancellationToken,
     )
@@ -227,13 +253,52 @@ describe(useBeaconLanguageModelTools, () => {
     })
   })
 
+  it('prepares a quality confirmation for the selected scope and limit', async () => {
+    useBeaconLanguageModelTools()
+
+    await expect(
+      registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).prepareInvocation?.(
+        { input: { limit: 2, scope: 'openEditors' } },
+        cancellationToken,
+      ),
+    ).resolves.toMatchObject({
+      confirmationMessages: { title: 'Share Code Beacon annotation quality' },
+      invocationMessage:
+        'Checking up to 2 Code Beacon annotations from open editors.',
+    })
+  })
+
   it('throws synchronously without reading the store or editors while AI tools are disabled', () => {
     useBeaconLanguageModelTools()
     const getAll = vi.spyOn(annotationStore, 'getAll')
 
     try {
       expect(() =>
-        registeredTool().invoke(invocation({}), cancellationToken),
+        registeredTool(BEACON_LIST_ANNOTATIONS_TOOL_NAME).invoke(
+          invocation({}),
+          cancellationToken,
+        ),
+      ).toThrow(
+        'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
+      )
+      expect(getAll).not.toHaveBeenCalled()
+      expect(vscodeState.activeTextEditorReads).toBe(0)
+      expect(vscodeState.visibleTextEditorsReads).toBe(0)
+    } finally {
+      getAll.mockRestore()
+    }
+  })
+
+  it('throws synchronously without reading the store or editors while quality tools are disabled', () => {
+    useBeaconLanguageModelTools()
+    const getAll = vi.spyOn(annotationStore, 'getAll')
+
+    try {
+      expect(() =>
+        registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).invoke(
+          invocation({}),
+          cancellationToken,
+        ),
       ).toThrow(
         'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
       )
@@ -253,10 +318,9 @@ describe(useBeaconLanguageModelTools, () => {
     ])
     useBeaconLanguageModelTools()
 
-    const result = await registeredTool().invoke(
-      invocation({ limit: 1 }),
-      cancellationToken,
-    )
+    const result = await registeredTool(
+      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+    ).invoke(invocation({ limit: 1 }), cancellationToken)
 
     expect(textPart).toHaveBeenCalledWith(
       expect.stringContaining('"returned":1'),
@@ -274,10 +338,9 @@ describe(useBeaconLanguageModelTools, () => {
     vscodeState.visibleTextEditors = [editor('file:///workspace/a.ts')]
     useBeaconLanguageModelTools()
 
-    const result = await registeredTool().invoke(
-      invocation({ scope: 'activeFile' }),
-      cancellationToken,
-    )
+    const result = await registeredTool(
+      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+    ).invoke(invocation({ scope: 'activeFile' }), cancellationToken)
 
     expect(annotationIds(result)).toStrictEqual(['b'])
   })
@@ -298,11 +361,74 @@ describe(useBeaconLanguageModelTools, () => {
     ]
     useBeaconLanguageModelTools()
 
-    const result = await registeredTool().invoke(
+    const result = await registeredTool(
+      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+    ).invoke(invocation({ scope: 'openEditors' }), cancellationToken)
+
+    expect(annotationIds(result)).toStrictEqual(['b', 'c'])
+  })
+
+  it('returns a quality JSON result scoped to the active editor when enabled', async () => {
+    configState.enabled = true
+    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
+    annotationStore.setForUri('file:///workspace/b.ts', [
+      annotation('b', 'file:///workspace/b.ts'),
+    ])
+    vscodeState.activeTextEditor = editor('file:///workspace/b.ts')
+    useBeaconLanguageModelTools()
+
+    const result = await registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).invoke(
+      invocation({ scope: 'activeFile' }),
+      cancellationToken,
+    )
+
+    expect(qualityResult(result)).toMatchObject({
+      annotations: [
+        {
+          annotation: { id: 'b' },
+          annotationId: 'b',
+          level: 'needsAttention',
+          score: 70,
+        },
+      ],
+      counts: { good: 0, needsAttention: 1, poor: 0 },
+      returned: 1,
+      scope: 'activeFile',
+      total: 1,
+      truncated: false,
+    })
+  })
+
+  it('returns a quality JSON result scoped to visible editors when enabled', async () => {
+    configState.enabled = true
+    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
+    annotationStore.setForUri('file:///workspace/b.ts', [
+      annotation('b', 'file:///workspace/b.ts'),
+    ])
+    annotationStore.setForUri('file:///workspace/c.ts', [
+      annotation('c', 'file:///workspace/c.ts'),
+    ])
+    vscodeState.visibleTextEditors = [
+      editor('file:///workspace/b.ts'),
+      editor('file:///workspace/c.ts'),
+    ]
+    useBeaconLanguageModelTools()
+
+    const result = await registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).invoke(
       invocation({ scope: 'openEditors' }),
       cancellationToken,
     )
 
-    expect(annotationIds(result)).toStrictEqual(['b', 'c'])
+    expect(qualityResult(result)).toMatchObject({
+      annotations: [
+        { annotation: { id: 'b' }, annotationId: 'b' },
+        { annotation: { id: 'c' }, annotationId: 'c' },
+      ],
+      counts: { good: 0, needsAttention: 2, poor: 0 },
+      returned: 2,
+      scope: 'openEditors',
+      total: 2,
+      truncated: false,
+    })
   })
 })

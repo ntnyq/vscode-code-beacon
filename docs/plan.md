@@ -767,7 +767,7 @@ codeBeacon.activeAnnotation
 
 - [x] Language Model Tool contribution。
 - [ ] explain/generate fix/summarize commands。
-- [ ] TODO quality scoring。
+- [x] TODO quality scoring。
 - [ ] Workspace annotation digest。
 - [ ] AI action telemetry opt-in。
 

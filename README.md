@@ -67,6 +67,7 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 | `code-beacon.copyMarkdown`    | Code Beacon: Copy Beacon as Markdown       |
 | `code-beacon.createIssue`     | Code Beacon: Create Issue Body             |
 | `code-beacon.explain`         | Code Beacon: Explain Beacon                |
+| `code-beacon.generateFix`     | Code Beacon: Generate Beacon Fix           |
 | `code-beacon.resolve`         | Code Beacon: Resolve Beacon                |
 | `code-beacon.unresolve`       | Code Beacon: Reopen Beacon                 |
 | `code-beacon.ignore`          | Code Beacon: Ignore Beacon                 |

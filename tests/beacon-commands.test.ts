@@ -24,11 +24,14 @@ const {
   createOutputChannel,
   outputChannel,
   outputText,
+  rangeInstances,
   selectChatModels,
   textPart,
   uriParse,
   useDisposable,
   vscodeState,
+  workspaceEdits,
+  applyEdit,
   withProgress,
 } = vi.hoisted(() => {
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
@@ -44,6 +47,15 @@ const {
     show: vi.fn<(preserveFocus?: boolean) => void>(),
   }
   const token = { isCancellationRequested: false }
+  const ranges: { end: unknown; start: unknown }[] = []
+  const edits: {
+    replacements: {
+      metadata: unknown
+      newText: string
+      range: unknown
+      uri: unknown
+    }[]
+  }[] = []
 
   return {
     cancellationToken: token,
@@ -56,6 +68,7 @@ const {
     createOutputChannel: vi.fn<(name: string) => typeof channel>(() => channel),
     outputChannel: channel,
     outputText: channelText,
+    rangeInstances: ranges,
     selectChatModels: vi.fn<() => Promise<Vscode.LanguageModelChat[]>>(() =>
       Promise.resolve([]),
     ),
@@ -66,6 +79,8 @@ const {
       documentLanguageId: 'typescript',
       documentText: 'const parser = deprecatedParser\n',
     },
+    workspaceEdits: edits,
+    applyEdit: vi.fn<() => Promise<boolean>>(() => Promise.resolve(true)),
     withProgress: vi.fn<
       (
         options: Vscode.ProgressOptions,
@@ -128,6 +143,39 @@ vi.mock(import('vscode'), () => {
     }
   }
 
+  class MockRange {
+    public readonly end: unknown
+    public readonly start: unknown
+
+    public constructor(start: unknown, end: unknown) {
+      this.start = start
+      this.end = end
+      rangeInstances.push(this)
+    }
+  }
+
+  class MockWorkspaceEdit {
+    public readonly replacements: {
+      metadata: unknown
+      newText: string
+      range: unknown
+      uri: unknown
+    }[] = []
+
+    public constructor() {
+      workspaceEdits.push(this)
+    }
+
+    public replace(
+      uri: unknown,
+      range: unknown,
+      newText: string,
+      metadata?: unknown,
+    ) {
+      this.replacements.push({ metadata, newText, range, uri })
+    }
+  }
+
   return {
     ConfigurationTarget: { Global: true },
     LanguageModelChatMessage: {
@@ -135,8 +183,10 @@ vi.mock(import('vscode'), () => {
     },
     LanguageModelError: MockLanguageModelError,
     LanguageModelTextPart: MockLanguageModelTextPart,
+    Range: MockRange,
     ProgressLocation: { Notification: 15 },
     Uri: { parse: uriParse },
+    WorkspaceEdit: MockWorkspaceEdit,
     commands: {
       executeCommand: vi.fn<() => Promise<void>>(() => Promise.resolve()),
       registerCommand: (
@@ -163,10 +213,20 @@ vi.mock(import('vscode'), () => {
       withProgress,
     },
     workspace: {
+      applyEdit,
       openTextDocument: vi.fn<() => Promise<unknown>>(() =>
         Promise.resolve({
           getText: () => vscodeState.documentText,
           languageId: vscodeState.documentLanguageId,
+          positionAt: (offset: number) => {
+            const prefix = vscodeState.documentText.slice(0, offset)
+            const lines = prefix.split(/\r\n?|\n/u)
+
+            return {
+              character: lines.at(-1)?.length ?? 0,
+              line: lines.length - 1,
+            }
+          },
         }),
       ),
     },
@@ -289,6 +349,40 @@ function createScannerAnnotation(): BeaconAnnotation {
   }
 }
 
+function createGenerateFixAnnotation(
+  overrides: Partial<BeaconAnnotation> = {},
+): BeaconAnnotation {
+  return createAnnotation({
+    keywordRange: {
+      end: { character: 8, line: 0 },
+      start: { character: 3, line: 0 },
+    },
+    line: 0,
+    range: {
+      end: { character: 31, line: 0 },
+      start: { character: 0, line: 0 },
+    },
+    ...overrides,
+  })
+}
+
+function generatedFixResponse(proposal: {
+  original: string
+  reason: string
+  replacement: string
+}): Vscode.LanguageModelChat {
+  return {
+    sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+      Promise.resolve({
+        stream: (async function* stream() {
+          yield new LanguageModelTextPart(JSON.stringify(proposal))
+        })(),
+        text: emptyTextStream(),
+      }),
+    ),
+  } as unknown as Vscode.LanguageModelChat
+}
+
 async function expectInvalidIssueAnnotation(value: unknown) {
   useBeaconCommands({
     get: <T>() => undefined as T | undefined,
@@ -340,6 +434,7 @@ describe('beacon command persistence', () => {
     selectChatModels.mockResolvedValue([])
     textPart.mockClear()
     uriParse.mockClear()
+    rangeInstances.length = 0
     useDisposable.mockClear()
     withProgress.mockClear()
     vi.mocked(env.clipboard.writeText).mockClear()
@@ -347,6 +442,9 @@ describe('beacon command persistence', () => {
     vi.mocked(window.showWarningMessage).mockClear()
     vi.mocked(window.showTextDocument).mockClear()
     vi.mocked(workspace.openTextDocument).mockClear()
+    workspaceEdits.length = 0
+    applyEdit.mockReset()
+    applyEdit.mockResolvedValue(true)
   })
 
   it('warns when explaining without a selected beacon', async () => {
@@ -845,6 +943,455 @@ describe('beacon command persistence', () => {
       'Explanation cancelled.',
     )
     expect(window.showWarningMessage).not.toHaveBeenCalled()
+  })
+
+  it('does not access VS Code data or create edits without a selected beacon or AI opt-in', async () => {
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')()
+    configState.aiEnabled = false
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(lm.selectChatModels).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('leaves text unchanged when the document or model cannot be opened', async () => {
+    const snapshot = vscodeState.documentText
+    vi.mocked(workspace.openTextDocument).mockRejectedValueOnce(
+      new Error('Document unavailable'),
+    )
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    const failedModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.reject(new Error('Model unavailable')),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels.mockResolvedValueOnce([failedModel])
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(vscodeState.documentText).toBe(snapshot)
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('reports model selection rejection without creating or applying an edit', async () => {
+    const snapshot = vscodeState.documentText
+    selectChatModels.mockRejectedValueOnce(new Error('Model unavailable'))
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(window.showWarningMessage).toHaveBeenCalledWith(
+      'Unable to select a Copilot language model to generate a fix.',
+    )
+    expect(vscodeState.documentText).toBe(snapshot)
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('reports when no Copilot model is available without creating an edit', async () => {
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'No Copilot language model is available to generate a fix.',
+    )
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    '{"original":"// TODO: replace deprecated parser","replacement":"// TODO: use a maintained parser","reason":"updated"',
+    '{"original":"// TODO: replace deprecated parser","replacement":"// TODO: use a maintained parser","reason":"updated","extra":"reject"}',
+    '{"original":"TODO:","replacement":"done","reason":"ambiguous"}',
+  ])(
+    'does not create edits for an invalid generated proposal: %s',
+    async text => {
+      const model = {
+        sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(
+          () =>
+            Promise.resolve({
+              stream: (async function* stream() {
+                yield new LanguageModelTextPart(text)
+              })(),
+              text: emptyTextStream(),
+            }),
+        ),
+      } as unknown as Vscode.LanguageModelChat
+      selectChatModels.mockResolvedValueOnce([model])
+      vscodeState.documentText =
+        '// TODO: replace deprecated parser\n// TODO: second annotation\n'
+      useBeaconCommands({
+        get: <T>() => undefined as T | undefined,
+        update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+      } as unknown as Vscode.Memento)
+
+      await registeredCommand('code-beacon.generateFix')(
+        createGenerateFixAnnotation(),
+      )
+
+      expect(workspaceEdits).toHaveLength(0)
+      expect(applyEdit).not.toHaveBeenCalled()
+    },
+  )
+
+  it('creates one same-document replacement and asks VS Code for confirmation', async () => {
+    const original = '// TODO: replace deprecated parser'
+    const replacement = '// TODO: use a maintained parser'
+    vscodeState.documentText = `${original}\nconst parser = deprecatedParser\n`
+    const annotation = createGenerateFixAnnotation()
+    selectChatModels.mockResolvedValueOnce([
+      generatedFixResponse({
+        original,
+        reason: 'Uses supported code.',
+        replacement,
+      }),
+    ])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(annotation)
+
+    expect(workspaceEdits).toHaveLength(1)
+    expect(workspaceEdits[0]?.replacements).toStrictEqual([
+      {
+        metadata: {
+          label: 'Apply Code Beacon generated fix',
+          needsConfirmation: true,
+        },
+        newText: replacement,
+        range: rangeInstances[0],
+        uri: { value: annotation.uri },
+      },
+    ])
+    expect(rangeInstances).toHaveLength(1)
+    expect(rangeInstances[0]).toMatchObject({
+      end: { character: original.length, line: 0 },
+      start: { character: 0, line: 0 },
+    })
+    expect(applyEdit).toHaveBeenCalledExactlyOnceWith(workspaceEdits[0])
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'Generated fix applied.',
+    )
+  })
+
+  it('reports rejected and failed confirmations without claiming success', async () => {
+    const original = '// TODO: replace deprecated parser'
+    vscodeState.documentText = `${original}\n`
+    const proposal = {
+      original,
+      reason: 'Uses supported code.',
+      replacement: '// TODO: use a maintained parser',
+    }
+    selectChatModels
+      .mockResolvedValueOnce([generatedFixResponse(proposal)])
+      .mockResolvedValueOnce([generatedFixResponse(proposal)])
+    applyEdit
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error('No'))
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(applyEdit).toHaveBeenCalledTimes(2)
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'Generated fix was not applied.',
+    )
+    expect(window.showWarningMessage).toHaveBeenCalledWith(
+      'Unable to apply the generated fix.',
+    )
+    expect(window.showInformationMessage).not.toHaveBeenCalledWith(
+      'Generated fix applied.',
+    )
+  })
+
+  it('does not create an edit when the document drifts after generation', async () => {
+    const original = '// TODO: replace deprecated parser'
+    const snapshot = `${original}\n`
+    const document = {
+      getText: vi
+        .fn<() => string>()
+        .mockReturnValueOnce(snapshot)
+        .mockReturnValue('// TODO: changed while waiting\n'),
+      languageId: 'typescript',
+      positionAt: vi.fn<(offset: number) => Vscode.Position>(),
+    } as unknown as Vscode.TextDocument
+    vi.mocked(workspace.openTextDocument).mockResolvedValueOnce(document)
+    selectChatModels.mockResolvedValueOnce([
+      generatedFixResponse({
+        original,
+        reason: 'Uses supported code.',
+        replacement: '// TODO: use a maintained parser',
+      }),
+    ])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'The annotation document changed; generated fix was not applied.',
+    )
+  })
+
+  it('does not apply a Generate Fix response after progress cancellation', async () => {
+    const original = '// TODO: replace deprecated parser'
+    const streamCanYield = deferred()
+    const streamWaiting = deferred()
+    const delayedModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            streamWaiting.resolve()
+            await streamCanYield.promise
+            yield new LanguageModelTextPart(
+              JSON.stringify({
+                original,
+                reason: 'Uses supported code.',
+                replacement: '// TODO: use a maintained parser',
+              }),
+            )
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    vscodeState.documentText = `${original}\n`
+    selectChatModels.mockResolvedValueOnce([delayedModel])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const first = registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    await streamWaiting.promise
+    cancellationToken.isCancellationRequested = true
+    streamCanYield.resolve()
+    await first
+
+    expect(applyEdit).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'Generated fix cancelled.',
+    )
+  })
+
+  it('reports a cancelled model request without exposing a generation error', async () => {
+    const model = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(
+        () => {
+          cancellationToken.isCancellationRequested = true
+          return Promise.reject(new Error('Cancelled'))
+        },
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels.mockResolvedValueOnce([model])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'Generated fix cancelled.',
+    )
+    expect(window.showWarningMessage).not.toHaveBeenCalledWith(
+      'Unable to generate a fix.',
+    )
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('does not apply a superseded Generate Fix response', async () => {
+    const original = '// TODO: replace deprecated parser'
+    const streamCanYield = deferred()
+    const streamWaiting = deferred()
+    const delayedModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            streamWaiting.resolve()
+            await streamCanYield.promise
+            yield new LanguageModelTextPart(
+              JSON.stringify({
+                original,
+                reason: 'Stale request',
+                replacement: '// TODO: stale replacement',
+              }),
+            )
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    vscodeState.documentText = `${original}\n`
+    selectChatModels
+      .mockResolvedValueOnce([delayedModel])
+      .mockResolvedValueOnce([
+        generatedFixResponse({
+          original,
+          reason: 'Newer request',
+          replacement: '// TODO: use a maintained parser',
+        }),
+      ])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const first = registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    await streamWaiting.promise
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    streamCanYield.resolve()
+    await first
+
+    expect(applyEdit).toHaveBeenCalledTimes(1)
+    expect(workspaceEdits).toHaveLength(1)
+  })
+
+  it('does not apply an in-flight Generate Fix response after lifecycle disposal', async () => {
+    const original = '// TODO: replace deprecated parser'
+    const streamCanYield = deferred()
+    const streamWaiting = deferred()
+    const delayedModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            streamWaiting.resolve()
+            await streamCanYield.promise
+            yield new LanguageModelTextPart(
+              JSON.stringify({
+                original,
+                reason: 'Disposed request',
+                replacement: '// TODO: use a maintained parser',
+              }),
+            )
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    vscodeState.documentText = `${original}\n`
+    selectChatModels.mockResolvedValueOnce([delayedModel])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const invocation = registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    await streamWaiting.promise
+    for (const [disposable] of useDisposable.mock.calls) {
+      const dispose = (disposable as { dispose?: unknown }).dispose
+
+      if (typeof dispose === 'function') {
+        dispose()
+      }
+    }
+    streamCanYield.resolve()
+    await invocation
+
+    expect(applyEdit).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+  })
+
+  it('does not supersede an Explain request when generating a fix', async () => {
+    const explainStreamCanYield = deferred()
+    const explainStreamWaiting = deferred()
+    const original = '// TODO: replace deprecated parser'
+    const delayedExplainModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            explainStreamWaiting.resolve()
+            await explainStreamCanYield.promise
+            yield new LanguageModelTextPart('Explanation remains current.')
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    vscodeState.documentText = `${original}\n`
+    selectChatModels
+      .mockResolvedValueOnce([delayedExplainModel])
+      .mockResolvedValueOnce([
+        generatedFixResponse({
+          original,
+          reason: 'Use supported code.',
+          replacement: '// TODO: use a maintained parser',
+        }),
+      ])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const explain = registeredCommand('code-beacon.explain')(
+      createGenerateFixAnnotation(),
+    )
+    await explainStreamWaiting.promise
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    explainStreamCanYield.resolve()
+    await explain
+
+    expect(outputText.join('')).toContain('Explanation remains current.')
+    expect(applyEdit).toHaveBeenCalledTimes(1)
   })
 
   it('copies one formatted issue body and confirms success', async () => {

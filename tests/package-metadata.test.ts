@@ -62,6 +62,7 @@ describe('package metadata', () => {
       'code-beacon.copyMarkdown',
       'code-beacon.createIssue',
       'code-beacon.explain',
+      'code-beacon.generateFix',
       'code-beacon.resolve',
       'code-beacon.unresolve',
       'code-beacon.ignore',
@@ -76,6 +77,11 @@ describe('package metadata', () => {
       category: 'Code Beacon',
       command: 'code-beacon.explain',
       title: 'Explain Beacon',
+    })
+    expect(pkg.contributes.commands).toContainEqual({
+      category: 'Code Beacon',
+      command: 'code-beacon.generateFix',
+      title: 'Generate Beacon Fix',
     })
   })
 
@@ -280,6 +286,13 @@ describe('package metadata', () => {
   it('declares Explain Beacon for beacon items in the Explorer', () => {
     expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
       command: 'code-beacon.explain',
+      when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+    })
+  })
+
+  it('declares Generate Beacon Fix for beacon items in the Explorer', () => {
+    expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
+      command: 'code-beacon.generateFix',
       when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
     })
   })

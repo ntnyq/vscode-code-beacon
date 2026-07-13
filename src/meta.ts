@@ -26,6 +26,7 @@ export type CommandKey =
   | "code-beacon.copyMarkdown"
   | "code-beacon.createIssue"
   | "code-beacon.explain"
+  | "code-beacon.generateFix"
   | "code-beacon.resolve"
   | "code-beacon.unresolve"
   | "code-beacon.ignore"
@@ -105,6 +106,11 @@ export const commands = {
    * @value `code-beacon.explain`
    */
   explain: "code-beacon.explain",
+  /**
+   * Generate Beacon Fix
+   * @value `code-beacon.generateFix`
+   */
+  generateFix: "code-beacon.generateFix",
   /**
    * Resolve Beacon
    * @value `code-beacon.resolve`

@@ -630,6 +630,11 @@
       },
       {
         "category": "Code Beacon",
+        "command": "code-beacon.generateFix",
+        "title": "Generate Beacon Fix"
+      },
+      {
+        "category": "Code Beacon",
         "command": "code-beacon.resolve",
         "title": "Resolve Beacon"
       },
@@ -723,6 +728,10 @@
         },
         {
           "command": "code-beacon.explain",
+          "when": "view == codeBeacon.annotations && viewItem =~ /^beacon/"
+        },
+        {
+          "command": "code-beacon.generateFix",
           "when": "view == codeBeacon.annotations && viewItem =~ /^beacon/"
         },
         {

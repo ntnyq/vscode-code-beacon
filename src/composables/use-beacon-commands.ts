@@ -7,8 +7,10 @@ import {
   LanguageModelTextPart,
   lm,
   ProgressLocation,
+  Range,
   Uri,
   window,
+  WorkspaceEdit,
   workspace,
 } from 'vscode'
 import type { LanguageModelChat, Memento, OutputChannel } from 'vscode'
@@ -17,6 +19,11 @@ import {
   annotationExplanationPrompt,
   annotationSourceWindow,
 } from '../core/ai/explain-annotation'
+import {
+  annotationFixPrompt,
+  parseGeneratedFix,
+  planGeneratedFix,
+} from '../core/ai/generate-annotation-fix'
 import type { BeaconLeafTreeElement } from '../core/explorer/tree-data-provider'
 import {
   formatAnnotations,
@@ -30,6 +37,7 @@ import { commands, extensionId } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
 
 const BEACON_EXPLAIN_COMMAND = 'code-beacon.explain'
+const BEACON_GENERATE_FIX_COMMAND = 'code-beacon.generateFix'
 
 /**
  * Updates the global extension enabled flag.
@@ -210,10 +218,12 @@ export function useBeaconCommands(workspaceState: Memento) {
   let saveChain = Promise.resolve()
   let explainOutputChannel: OutputChannel | undefined
   let explainRequestGeneration = 0
+  let generateFixRequestGeneration = 0
 
   useDisposable({
     dispose() {
       explainRequestGeneration++
+      generateFixRequestGeneration++
       explainOutputChannel?.dispose()
       explainOutputChannel = undefined
     },
@@ -388,6 +398,238 @@ export function useBeaconCommands(workspaceState: Memento) {
     }
   }
 
+  const generateAnnotationFix = async (value?: unknown) => {
+    const annotation = issueAnnotation(value)
+
+    if (!annotation) {
+      await window.showWarningMessage(
+        'Select a beacon in the Explorer to generate a fix.',
+      )
+      return
+    }
+
+    if (!config.ai.enabled) {
+      await window.showWarningMessage(
+        'Enable code-beacon.ai.enabled to generate annotation fixes.',
+      )
+      return
+    }
+
+    const requestGeneration = ++generateFixRequestGeneration
+    let document: Awaited<ReturnType<typeof workspace.openTextDocument>>
+
+    try {
+      document = await workspace.openTextDocument(Uri.parse(annotation.uri))
+    } catch {
+      if (requestGeneration !== generateFixRequestGeneration) {
+        return
+      }
+
+      await window.showWarningMessage(
+        'Unable to open the annotation document to generate a fix.',
+      )
+      return
+    }
+
+    if (requestGeneration !== generateFixRequestGeneration) {
+      return
+    }
+
+    const snapshot = document.getText()
+    const prompt = annotationFixPrompt(
+      { ...annotation, languageId: document.languageId },
+      annotationSourceWindow(snapshot, annotation.line),
+    )
+    let model: LanguageModelChat | undefined
+
+    try {
+      ;[model] = await lm.selectChatModels({ vendor: 'copilot' })
+    } catch {
+      if (requestGeneration !== generateFixRequestGeneration) {
+        return
+      }
+
+      await window.showWarningMessage(
+        'Unable to select a Copilot language model to generate a fix.',
+      )
+      return
+    }
+
+    if (requestGeneration !== generateFixRequestGeneration) {
+      return
+    }
+
+    if (!model) {
+      await window.showInformationMessage(
+        'No Copilot language model is available to generate a fix.',
+      )
+      return
+    }
+
+    let wasCancelled = false
+    let progressToken: { readonly isCancellationRequested: boolean } | undefined
+    let outcome:
+      | 'applied'
+      | 'apply-failed'
+      | 'document-drift'
+      | 'invalid-proposal'
+      | 'rejected'
+      | undefined
+
+    try {
+      await window.withProgress(
+        {
+          cancellable: true,
+          location: ProgressLocation.Notification,
+          title: 'Generating Code Beacon fix',
+        },
+        async (_progress, token) => {
+          progressToken = token
+
+          if (requestGeneration !== generateFixRequestGeneration) {
+            return
+          }
+
+          if (token.isCancellationRequested) {
+            wasCancelled = true
+            return
+          }
+
+          const response = await model.sendRequest(
+            prompt.map(message =>
+              createLanguageModelUserMessage(message.content),
+            ),
+            undefined,
+            token,
+          )
+          let generatedText = ''
+
+          for await (const part of response.stream) {
+            if (requestGeneration !== generateFixRequestGeneration) {
+              return
+            }
+
+            if (token.isCancellationRequested) {
+              wasCancelled = true
+              return
+            }
+
+            if (part instanceof LanguageModelTextPart) {
+              generatedText += part.value
+            }
+          }
+
+          if (requestGeneration !== generateFixRequestGeneration) {
+            return
+          }
+
+          if (token.isCancellationRequested) {
+            wasCancelled = true
+            return
+          }
+
+          const parsed = parseGeneratedFix(generatedText)
+
+          if (!parsed.ok) {
+            outcome = 'invalid-proposal'
+            return
+          }
+
+          const plan = planGeneratedFix(annotation, snapshot, parsed.proposal)
+
+          if (!plan.ok) {
+            outcome = 'invalid-proposal'
+            return
+          }
+
+          if (
+            requestGeneration !== generateFixRequestGeneration ||
+            token.isCancellationRequested
+          ) {
+            wasCancelled ||= token.isCancellationRequested
+            return
+          }
+
+          if (document.getText() !== plan.snapshot) {
+            outcome = 'document-drift'
+            return
+          }
+
+          const edit = new WorkspaceEdit()
+          edit.replace(
+            Uri.parse(annotation.uri),
+            new Range(
+              document.positionAt(plan.start),
+              document.positionAt(plan.end),
+            ),
+            plan.replacement,
+            {
+              label: 'Apply Code Beacon generated fix',
+              needsConfirmation: true,
+            },
+          )
+
+          if (
+            requestGeneration !== generateFixRequestGeneration ||
+            token.isCancellationRequested
+          ) {
+            wasCancelled ||= token.isCancellationRequested
+            return
+          }
+
+          if (document.getText() !== plan.snapshot) {
+            outcome = 'document-drift'
+            return
+          }
+
+          try {
+            const applied = await workspace.applyEdit(edit)
+            outcome = applied ? 'applied' : 'rejected'
+          } catch {
+            outcome = 'apply-failed'
+          }
+        },
+      )
+    } catch {
+      if (requestGeneration !== generateFixRequestGeneration) {
+        return
+      }
+
+      if (wasCancelled || progressToken?.isCancellationRequested) {
+        await window.showInformationMessage('Generated fix cancelled.')
+        return
+      }
+
+      await window.showWarningMessage('Unable to generate a fix.')
+      return
+    }
+
+    if (requestGeneration !== generateFixRequestGeneration) {
+      return
+    }
+
+    if (wasCancelled || progressToken?.isCancellationRequested) {
+      await window.showInformationMessage('Generated fix cancelled.')
+      return
+    }
+
+    if (outcome === 'invalid-proposal') {
+      await window.showWarningMessage(
+        'Generated fix proposal is invalid or no longer safe to apply.',
+      )
+    } else if (outcome === 'document-drift') {
+      await window.showInformationMessage(
+        'The annotation document changed; generated fix was not applied.',
+      )
+    } else if (outcome === 'rejected') {
+      await window.showInformationMessage('Generated fix was not applied.')
+    } else if (outcome === 'apply-failed') {
+      await window.showWarningMessage('Unable to apply the generated fix.')
+    } else if (outcome === 'applied') {
+      await window.showInformationMessage('Generated fix applied.')
+    }
+  }
+
   useDisposable(
     vscodeCommands.registerCommand(commands.enable, () => updateEnabled(true)),
   )
@@ -473,6 +715,12 @@ export function useBeaconCommands(workspaceState: Memento) {
   )
   useDisposable(
     vscodeCommands.registerCommand(BEACON_EXPLAIN_COMMAND, explainAnnotation),
+  )
+  useDisposable(
+    vscodeCommands.registerCommand(
+      BEACON_GENERATE_FIX_COMMAND,
+      generateAnnotationFix,
+    ),
   )
   useDisposable(
     vscodeCommands.registerCommand(commands.exportMarkdown, () =>

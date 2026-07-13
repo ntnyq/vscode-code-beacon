@@ -8,6 +8,7 @@ import {
   workspace,
 } from 'vscode'
 import { config } from '../config'
+import { filterBeaconAnnotations } from '../core/explorer/filter'
 import {
   BeaconTreeDataProvider,
   type BeaconLeafTreeElement,
@@ -86,7 +87,20 @@ async function revealAnnotation(value?: unknown) {
  */
 export function useBeaconExplorer() {
   const provider = new BeaconTreeDataProvider(
-    () => annotationStore.getAll(),
+    () =>
+      filterBeaconAnnotations(annotationStore.getAll(), {
+        activeUri: window.activeTextEditor?.document.uri.toString(),
+        categories: config.explorer.categories,
+        includeIgnored: config.explorer.includeIgnored,
+        includeResolved: config.explorer.includeResolved,
+        openUris: window.visibleTextEditors.map(editor =>
+          editor.document.uri.toString(),
+        ),
+        owners: config.explorer.owners,
+        query: config.explorer.query,
+        scope: config.explorer.scope,
+        severities: config.explorer.severities,
+      }),
     () => config.explorer.groupBy,
   )
 
@@ -99,6 +113,15 @@ export function useBeaconExplorer() {
   useDisposable({
     dispose: annotationStore.subscribe(() => provider.refresh()),
   })
+  useDisposable(window.onDidChangeActiveTextEditor(() => provider.refresh()))
+  useDisposable(window.onDidChangeVisibleTextEditors(() => provider.refresh()))
+  useDisposable(
+    workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration('code-beacon')) {
+        provider.refresh()
+      }
+    }),
+  )
   useDisposable(
     vscodeCommands.registerCommand(commands.focusExplorer, () =>
       vscodeCommands.executeCommand(`${BEACON_VIEW_ID}.focus`),

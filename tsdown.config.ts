@@ -11,8 +11,12 @@ export default defineConfig({
     neverBundle: ['vscode'],
     onlyBundle: false,
   },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  },
   dts: false,
   entry: ['src/index.ts'],
+  format: ['esm', 'cjs'],
   minify: !isDev(),
   platform: 'neutral',
   shims: true,

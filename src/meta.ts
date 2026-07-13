@@ -159,6 +159,13 @@ export type ConfigKey =
   | "code-beacon.diagnostics.mode"
   | "code-beacon.explorer.enabled"
   | "code-beacon.explorer.groupBy"
+  | "code-beacon.explorer.scope"
+  | "code-beacon.explorer.categories"
+  | "code-beacon.explorer.severities"
+  | "code-beacon.explorer.owners"
+  | "code-beacon.explorer.query"
+  | "code-beacon.explorer.includeResolved"
+  | "code-beacon.explorer.includeIgnored"
   | "code-beacon.codelens.enabled"
   | "code-beacon.hover.enabled"
 
@@ -178,6 +185,13 @@ export interface ConfigKeyTypeMap {
   "code-beacon.diagnostics.mode": ("off" | "openFiles" | "workspace"),
   "code-beacon.explorer.enabled": boolean,
   "code-beacon.explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
+  "code-beacon.explorer.scope": ("workspace" | "activeFile" | "openEditors"),
+  "code-beacon.explorer.categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
+  "code-beacon.explorer.severities": ("hint" | "information" | "warning" | "error")[],
+  "code-beacon.explorer.owners": string[],
+  "code-beacon.explorer.query": string,
+  "code-beacon.explorer.includeResolved": boolean,
+  "code-beacon.explorer.includeIgnored": boolean,
   "code-beacon.codelens.enabled": boolean,
   "code-beacon.hover.enabled": boolean,
 }
@@ -198,6 +212,13 @@ export interface ConfigShorthandMap {
   diagnosticsMode: "code-beacon.diagnostics.mode",
   explorerEnabled: "code-beacon.explorer.enabled",
   explorerGroupBy: "code-beacon.explorer.groupBy",
+  explorerScope: "code-beacon.explorer.scope",
+  explorerCategories: "code-beacon.explorer.categories",
+  explorerSeverities: "code-beacon.explorer.severities",
+  explorerOwners: "code-beacon.explorer.owners",
+  explorerQuery: "code-beacon.explorer.query",
+  explorerIncludeResolved: "code-beacon.explorer.includeResolved",
+  explorerIncludeIgnored: "code-beacon.explorer.includeIgnored",
   codelensEnabled: "code-beacon.codelens.enabled",
   hoverEnabled: "code-beacon.hover.enabled",
 }
@@ -218,6 +239,13 @@ export interface ConfigShorthandTypeMap {
   diagnosticsMode: ("off" | "openFiles" | "workspace"),
   explorerEnabled: boolean,
   explorerGroupBy: ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
+  explorerScope: ("workspace" | "activeFile" | "openEditors"),
+  explorerCategories: ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
+  explorerSeverities: ("hint" | "information" | "warning" | "error")[],
+  explorerOwners: string[],
+  explorerQuery: string,
+  explorerIncludeResolved: boolean,
+  explorerIncludeIgnored: boolean,
   codelensEnabled: boolean,
   hoverEnabled: boolean,
 }
@@ -383,6 +411,76 @@ export const configs = {
     default: "file",
   } as ConfigItem<"code-beacon.explorer.groupBy">,
   /**
+   * Limits Code Beacon Explorer results to the workspace, active file, or visible editors.
+   * @key `code-beacon.explorer.scope`
+   * @default `"workspace"`
+   * @type `string`
+   */
+  explorerScope: {
+    key: "code-beacon.explorer.scope",
+    default: "workspace",
+  } as ConfigItem<"code-beacon.explorer.scope">,
+  /**
+   * Categories shown in the Code Beacon Explorer. Leave empty to show all categories.
+   * @key `code-beacon.explorer.categories`
+   * @default `[]`
+   * @type `array`
+   */
+  explorerCategories: {
+    key: "code-beacon.explorer.categories",
+    default: [],
+  } as ConfigItem<"code-beacon.explorer.categories">,
+  /**
+   * Severities shown in the Code Beacon Explorer. Leave empty to show all severities.
+   * @key `code-beacon.explorer.severities`
+   * @default `[]`
+   * @type `array`
+   */
+  explorerSeverities: {
+    key: "code-beacon.explorer.severities",
+    default: [],
+  } as ConfigItem<"code-beacon.explorer.severities">,
+  /**
+   * Owners shown in the Code Beacon Explorer. Leave empty to show all owners.
+   * @key `code-beacon.explorer.owners`
+   * @default `[]`
+   * @type `array`
+   */
+  explorerOwners: {
+    key: "code-beacon.explorer.owners",
+    default: [],
+  } as ConfigItem<"code-beacon.explorer.owners">,
+  /**
+   * Case-insensitive text query for Code Beacon Explorer results.
+   * @key `code-beacon.explorer.query`
+   * @default `""`
+   * @type `string`
+   */
+  explorerQuery: {
+    key: "code-beacon.explorer.query",
+    default: "",
+  } as ConfigItem<"code-beacon.explorer.query">,
+  /**
+   * Show resolved beacons in the Code Beacon Explorer.
+   * @key `code-beacon.explorer.includeResolved`
+   * @default `false`
+   * @type `boolean`
+   */
+  explorerIncludeResolved: {
+    key: "code-beacon.explorer.includeResolved",
+    default: false,
+  } as ConfigItem<"code-beacon.explorer.includeResolved">,
+  /**
+   * Show ignored beacons in the Code Beacon Explorer.
+   * @key `code-beacon.explorer.includeIgnored`
+   * @default `false`
+   * @type `boolean`
+   */
+  explorerIncludeIgnored: {
+    key: "code-beacon.explorer.includeIgnored",
+    default: false,
+  } as ConfigItem<"code-beacon.explorer.includeIgnored">,
+  /**
    * Enable CodeLens actions above annotation lines.
    * @key `code-beacon.codelens.enabled`
    * @default `false`
@@ -420,6 +518,13 @@ export interface ScopedConfigKeyTypeMap {
   "diagnostics.mode": ("off" | "openFiles" | "workspace"),
   "explorer.enabled": boolean,
   "explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
+  "explorer.scope": ("workspace" | "activeFile" | "openEditors"),
+  "explorer.categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
+  "explorer.severities": ("hint" | "information" | "warning" | "error")[],
+  "explorer.owners": string[],
+  "explorer.query": string,
+  "explorer.includeResolved": boolean,
+  "explorer.includeIgnored": boolean,
   "codelens.enabled": boolean,
   "hover.enabled": boolean,
 }
@@ -442,6 +547,13 @@ export const scopedConfigs = {
     "diagnostics.mode": "off",
     "explorer.enabled": true,
     "explorer.groupBy": "file",
+    "explorer.scope": "workspace",
+    "explorer.categories": [],
+    "explorer.severities": [],
+    "explorer.owners": [],
+    "explorer.query": "",
+    "explorer.includeResolved": false,
+    "explorer.includeIgnored": false,
     "codelens.enabled": false,
     "hover.enabled": true,
   } satisfies ScopedConfigKeyTypeMap,
@@ -469,6 +581,13 @@ export interface NestedConfigs {
     "explorer": {
       "enabled": boolean,
       "groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
+      "scope": ("workspace" | "activeFile" | "openEditors"),
+      "categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
+      "severities": ("hint" | "information" | "warning" | "error")[],
+      "owners": string[],
+      "query": string,
+      "includeResolved": boolean,
+      "includeIgnored": boolean,
     },
     "codelens": {
       "enabled": boolean,
@@ -500,6 +619,13 @@ export interface NestedScopedConfigs {
   "explorer": {
     "enabled": boolean,
     "groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
+    "scope": ("workspace" | "activeFile" | "openEditors"),
+    "categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
+    "severities": ("hint" | "information" | "warning" | "error")[],
+    "owners": string[],
+    "query": string,
+    "includeResolved": boolean,
+    "includeIgnored": boolean,
   },
   "codelens": {
     "enabled": boolean,

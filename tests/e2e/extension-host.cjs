@@ -70,6 +70,23 @@ exports.run = async function run() {
     'Expected active-file diagnostics to include TODO',
   )
 
+  await configure('scanMode', 'openEditors')
+  const notebook = await vscode.workspace.openNotebookDocument(
+    vscode.Uri.file(resolve(workspacePath, 'notebooks/code-beacon.ipynb')),
+  )
+  const cell = notebook.cellAt(0)
+  const notebookDiagnostics = await waitFor(
+    () =>
+      vscode.languages
+        .getDiagnostics(cell.document.uri)
+        .filter(diagnostic => diagnostic.source === 'Code Beacon'),
+    'Expected Code Beacon diagnostics for the notebook cell',
+  )
+  assert.ok(
+    notebookDiagnostics.some(diagnostic => diagnostic.message.includes('TODO')),
+    'Expected notebook-cell diagnostics to include TODO',
+  )
+
   const hovers = await vscode.commands.executeCommand(
     'vscode.executeHoverProvider',
     document.uri,

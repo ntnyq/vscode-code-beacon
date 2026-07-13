@@ -45,9 +45,10 @@
   ],
   "type": "module",
   "main": "./dist/index.js",
-  "browser": "./dist/index.js",
+  "browser": "./dist/index.cjs",
   "scripts": {
     "build": "tsdown",
+    "build:web-test": "tsdown --config tsdown.web-test.config.ts",
     "dev": "tsdown --watch",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
@@ -57,12 +58,14 @@
     "prepare": "husky",
     "release": "run-s release:check release:version release:publish",
     "release:build": "run-s generate:meta build",
-    "release:check": "run-s format:check lint typecheck test",
+    "release:check": "run-s format:check lint typecheck test:unit test:integration",
     "release:publish": "vsce publish --no-dependencies",
     "release:version": "bumpp --all --execute='pnpm release:build'",
     "test": "run-p test:unit test:e2e",
     "test:e2e": "pnpm build && node tests/e2e/run.ts",
+    "test:integration": "run-s test:e2e test:web",
     "test:unit": "vitest",
+    "test:web": "pnpm build && pnpm build:web-test && node tests/web/run.ts",
     "typecheck": "tsgo --noEmit",
     "vscode:prepublish": "pnpm run build"
   },
@@ -75,6 +78,7 @@
     "@types/vscode": "^1.125.0",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "@vscode/test-electron": "^3.0.0",
+    "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",
     "bumpp": "^11.1.0",
     "husky": "^9.1.7",
@@ -358,6 +362,73 @@
             "flat"
           ],
           "description": "Default grouping mode for the Code Beacon TreeView."
+        },
+        "code-beacon.explorer.scope": {
+          "type": "string",
+          "default": "workspace",
+          "enum": [
+            "workspace",
+            "activeFile",
+            "openEditors"
+          ],
+          "description": "Limits Code Beacon Explorer results to the workspace, active file, or visible editors."
+        },
+        "code-beacon.explorer.categories": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "fixme",
+              "bug",
+              "hack",
+              "note",
+              "review",
+              "security",
+              "perf",
+              "question",
+              "custom"
+            ]
+          },
+          "description": "Categories shown in the Code Beacon Explorer. Leave empty to show all categories."
+        },
+        "code-beacon.explorer.severities": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "enum": [
+              "hint",
+              "information",
+              "warning",
+              "error"
+            ]
+          },
+          "description": "Severities shown in the Code Beacon Explorer. Leave empty to show all severities."
+        },
+        "code-beacon.explorer.owners": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Owners shown in the Code Beacon Explorer. Leave empty to show all owners."
+        },
+        "code-beacon.explorer.query": {
+          "type": "string",
+          "default": "",
+          "description": "Case-insensitive text query for Code Beacon Explorer results."
+        },
+        "code-beacon.explorer.includeResolved": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show resolved beacons in the Code Beacon Explorer."
+        },
+        "code-beacon.explorer.includeIgnored": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show ignored beacons in the Code Beacon Explorer."
         },
         "code-beacon.codelens.enabled": {
           "type": "boolean",

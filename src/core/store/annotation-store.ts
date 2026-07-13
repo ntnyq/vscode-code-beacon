@@ -1,4 +1,5 @@
 import type { BeaconAnnotation } from '../../types/annotation'
+import type { BeaconAnnotationState } from './annotation-state'
 
 /**
  * Callback invoked whenever the annotation store changes.
@@ -31,6 +32,16 @@ export interface AnnotationStore {
    * Marks an annotation ignored or unignored by id.
    */
   markIgnored: (id: string, ignored: boolean) => void
+
+  /**
+   * Returns the resolved and ignored annotation identifiers.
+   */
+  getState: () => BeaconAnnotationState
+
+  /**
+   * Replaces resolved and ignored annotation state.
+   */
+  restoreState: (state: BeaconAnnotationState) => void
 
   /**
    * Returns annotations for one URI.
@@ -130,6 +141,16 @@ export function createAnnotationStore(): AnnotationStore {
     },
 
     /**
+     * Returns the resolved and ignored annotation identifiers.
+     */
+    getState() {
+      return {
+        ignoredIds: [...ignoredIds].sort(),
+        resolvedIds: [...resolvedIds].sort(),
+      }
+    },
+
+    /**
      * Replaces annotations for one URI and notifies subscribers.
      */
     setForUri(uri, annotations) {
@@ -175,6 +196,25 @@ export function createAnnotationStore(): AnnotationStore {
         resolvedIds.add(id)
       } else {
         resolvedIds.delete(id)
+      }
+
+      refreshStoredState()
+      notify()
+    },
+
+    /**
+     * Replaces resolved and ignored annotation state.
+     */
+    restoreState(state) {
+      resolvedIds.clear()
+      ignoredIds.clear()
+
+      for (const id of state.resolvedIds) {
+        resolvedIds.add(id)
+      }
+
+      for (const id of state.ignoredIds) {
+        ignoredIds.add(id)
       }
 
       refreshStoredState()

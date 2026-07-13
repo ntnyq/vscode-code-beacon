@@ -10,6 +10,7 @@ import {
 import { commands } from '../../meta'
 import type { BeaconAnnotation } from '../../types/annotation'
 import { formatBeaconLink } from '../../utils/ranges'
+import { compareBeaconAnnotations } from './filter'
 
 /**
  * Supported TreeView grouping modes for beacon annotations.
@@ -189,7 +190,9 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
     const groupBy = this.getGroupBy()
     const groups = new Map<string, BeaconAnnotation[]>()
 
-    for (const annotation of this.getAnnotations()) {
+    for (const annotation of this.getAnnotations().toSorted(
+      compareBeaconAnnotations,
+    )) {
       const label = groupLabel(annotation, groupBy)
       groups.set(label, [...(groups.get(label) ?? []), annotation])
     }

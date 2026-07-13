@@ -743,33 +743,33 @@ codeBeacon.activeAnnotation
 
 ### Phase 2：工作区工作流
 
-- workspace index。
-- FileSystemWatcher 增量更新。
-- group/filter/sort。
-- export Markdown/JSON/CSV。
-- Problems workspace mode。
-- CodeLens。
-- ignored/resolved 本地状态。
-- Notebook cell 支持。
-- Settings UI 完善。
-- Web/Virtual Workspace 测试。
+- [x] workspace index 和工作区扫描。
+- [x] FileSystemWatcher 增量更新。
+- [x] Explorer group/filter/sort，包括 scope、category、severity、owner、query 和 resolved/ignored 可见性。
+- [x] export Markdown/JSON/CSV。
+- [x] Problems workspace mode。
+- [x] CodeLens。
+- [x] 按工作区持久化的 ignored/resolved 状态。
+- [x] Settings schema。
+- [x] Notebook cell 支持。
+- [x] 专用 Web/Virtual Workspace 自动化测试。
 
 ### Phase 3：Git 和团队协作
 
-- Git blame provider。
-- stale/ownerless filters。
-- Create Issue body generator。
-- changed files scope。
-- source control integration。
-- richer hover and tree metadata。
+- [ ] Git blame provider。
+- [ ] stale/ownerless filters。
+- [ ] Create Issue body generator。
+- [ ] changed files scope。
+- [ ] source control integration。
+- [ ] richer hover and tree metadata。
 
 ### Phase 4：AI
 
-- Language Model Tool contribution。
-- explain/generate fix/summarize commands。
-- TODO quality scoring。
-- Workspace annotation digest。
-- AI action telemetry opt-in。
+- [ ] Language Model Tool contribution。
+- [ ] explain/generate fix/summarize commands。
+- [ ] TODO quality scoring。
+- [ ] Workspace annotation digest。
+- [ ] AI action telemetry opt-in。
 
 ## 11. 测试计划
 

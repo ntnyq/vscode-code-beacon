@@ -13,8 +13,11 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 - Highlight built-in and custom annotation rules in visible editors.
 - Browse annotations in the Code Beacon explorer and reveal a beacon in its source file.
 - Scan the active file, visible editors, or the full workspace with include/exclude controls.
+- Scan opened notebook cells through the normal Explorer, Problems, and CodeLens paths.
 - Optionally publish annotations to VS Code Problems.
 - Copy links or Markdown and export all beacons as Markdown, JSON, or CSV.
+- Resolve or ignore beacons with state persisted for the current workspace; reopen or unignore them when the work resumes.
+- Filter Explorer results by scope, category, severity, owner, or text query, and choose whether resolved and ignored beacons remain visible.
 - Run in desktop VS Code, VS Code Web, and virtual workspaces where files are readable through the VS Code workspace API.
 
 ## Custom Rules
@@ -167,6 +170,48 @@ Description: Default grouping mode for the Code Beacon TreeView.
 Type: `string`  
 Default: `"file"`
 
+#### `code-beacon.explorer.scope`
+
+Description: Limits Code Beacon Explorer results to the workspace, active file, or visible editors.  
+Type: `string`  
+Default: `"workspace"`
+
+#### `code-beacon.explorer.categories`
+
+Description: Categories shown in the Code Beacon Explorer. Leave empty to show all categories.  
+Type: `array`  
+Default: `[]`
+
+#### `code-beacon.explorer.severities`
+
+Description: Severities shown in the Code Beacon Explorer. Leave empty to show all severities.  
+Type: `array`  
+Default: `[]`
+
+#### `code-beacon.explorer.owners`
+
+Description: Owners shown in the Code Beacon Explorer. Leave empty to show all owners.  
+Type: `array`  
+Default: `[]`
+
+#### `code-beacon.explorer.query`
+
+Description: Case-insensitive text query for Code Beacon Explorer results.  
+Type: `string`  
+Default: `""`
+
+#### `code-beacon.explorer.includeResolved`
+
+Description: Show resolved beacons in the Code Beacon Explorer.  
+Type: `boolean`  
+Default: `false`
+
+#### `code-beacon.explorer.includeIgnored`
+
+Description: Show ignored beacons in the Code Beacon Explorer.  
+Type: `boolean`  
+Default: `false`
+
 #### `code-beacon.codelens.enabled`
 
 Description: Enable CodeLens actions above annotation lines.  
@@ -185,6 +230,7 @@ Default: `true`
 
 This extension supports browser-based VS Code environments, including [vscode.dev](https://vscode.dev) and [github.dev](https://github.dev).
 Runtime file access uses VS Code workspace APIs, so workspace scans work with web and virtual workspace file systems when those files are readable by VS Code.
+Automated checks cover both the desktop Extension Host and browser-host virtual workspaces.
 
 ## License
 

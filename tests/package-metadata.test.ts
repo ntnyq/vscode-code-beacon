@@ -81,6 +81,13 @@ describe('package metadata', () => {
       'code-beacon.diagnostics.mode',
       'code-beacon.explorer.enabled',
       'code-beacon.explorer.groupBy',
+      'code-beacon.explorer.scope',
+      'code-beacon.explorer.categories',
+      'code-beacon.explorer.severities',
+      'code-beacon.explorer.owners',
+      'code-beacon.explorer.query',
+      'code-beacon.explorer.includeResolved',
+      'code-beacon.explorer.includeIgnored',
       'code-beacon.codelens.enabled',
       'code-beacon.hover.enabled',
     ])

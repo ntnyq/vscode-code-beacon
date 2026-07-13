@@ -138,6 +138,31 @@ describe('annotation store', () => {
     })
   })
 
+  it('snapshots and restores resolved and ignored annotation state', () => {
+    const store = createAnnotationStore()
+
+    store.markResolved('a', true)
+    store.markIgnored('b', true)
+
+    const restoredStore = createAnnotationStore()
+    restoredStore.restoreState(store.getState())
+    restoredStore.setForUri('file:///workspace/src/a.ts', [
+      createAnnotation('a'),
+      createAnnotation('b'),
+    ])
+
+    expect(store.getState()).toStrictEqual({
+      ignoredIds: ['b'],
+      resolvedIds: ['a'],
+    })
+    expect(restoredStore.getForUri('file:///workspace/src/a.ts')).toMatchObject(
+      [
+        { id: 'a', ignored: false, resolved: true },
+        { id: 'b', ignored: true, resolved: false },
+      ],
+    )
+  })
+
   it('formats file links with one-based line and column numbers', async () => {
     const { formatBeaconLink } = await import('../src/utils/ranges')
 

@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { access, readFile } from 'node:fs/promises'
+import { access, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { promisify } from 'node:util'
@@ -82,11 +82,19 @@ await runCommand('pnpm', [
 ])
 assert(await pathExists(packageOutputPath), 'vsce package must create a VSIX')
 
-await runTests({
-  extensionDevelopmentPath: root,
-  extensionTestsEnv: {
-    CODE_BEACON_E2E_WORKSPACE: playgroundPath,
-  },
-  extensionTestsPath,
-  launchArgs: [playgroundPath],
-})
+const userDataDir = await mkdtemp(
+  resolve(process.platform === 'win32' ? tmpdir() : '/tmp', 'code-beacon-e2e-'),
+)
+
+try {
+  await runTests({
+    extensionDevelopmentPath: root,
+    extensionTestsEnv: {
+      CODE_BEACON_E2E_WORKSPACE: playgroundPath,
+    },
+    extensionTestsPath,
+    launchArgs: [playgroundPath, `--user-data-dir=${userDataDir}`],
+  })
+} finally {
+  await rm(userDataDir, { force: true, recursive: true })
+}

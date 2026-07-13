@@ -6,12 +6,14 @@ import {
   window,
   workspace,
 } from 'vscode'
+import type { Memento } from 'vscode'
 import { config } from '../config'
 import {
   formatAnnotations,
   formatAnnotationsAsMarkdown,
   type BeaconExportFormat,
 } from '../core/export/format'
+import { createMementoAnnotationStateStorage } from '../core/store/annotation-state'
 import { annotationStore } from '../core/store/annotation-store'
 import { commands, extensionId } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
@@ -43,7 +45,20 @@ async function openExportDocument(format: BeaconExportFormat, content: string) {
 /**
  * Registers user-facing Code Beacon commands.
  */
-export function useBeaconCommands() {
+export function useBeaconCommands(workspaceState: Memento) {
+  const storage = createMementoAnnotationStateStorage(workspaceState)
+  let saveChain = Promise.resolve()
+
+  annotationStore.restoreState(storage.load())
+  useDisposable({
+    dispose: annotationStore.subscribe(() => {
+      const state = annotationStore.getState()
+      saveChain = saveChain
+        .then(() => storage.save(state))
+        .catch(() => undefined)
+    }),
+  })
+
   /**
    * Exports current store contents in the requested format.
    */

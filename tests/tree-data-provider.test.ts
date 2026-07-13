@@ -126,6 +126,26 @@ describe(BeaconTreeDataProvider, () => {
     ])
   })
 
+  it('returns leaves in source-location order', async () => {
+    const provider = new BeaconTreeDataProvider(() => [
+      createAnnotation('later-column', { column: 8, line: 1 }),
+      createAnnotation('second-file', {
+        column: 0,
+        line: 0,
+        uri: 'file:///workspace/src/b.ts',
+      }),
+      createAnnotation('earlier-line', { column: 9, line: 0 }),
+      createAnnotation('earlier-column', { column: 2, line: 1 }),
+    ])
+
+    const roots = (await provider.getChildren()) as BeaconTreeElement[]
+    const leaves = (await provider.getChildren(roots[0])) as BeaconTreeElement[]
+
+    expect(
+      leaves.map(item => (item.type === 'beacon' ? item.annotation.id : '')),
+    ).toStrictEqual(['earlier-line', 'earlier-column', 'later-column'])
+  })
+
   it('creates revealable beacon tree items', () => {
     const annotation = createAnnotation('a')
     const provider = new BeaconTreeDataProvider(() => [annotation])

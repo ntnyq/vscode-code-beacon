@@ -166,6 +166,9 @@ export type ConfigKey =
   | "code-beacon.explorer.query"
   | "code-beacon.explorer.includeResolved"
   | "code-beacon.explorer.includeIgnored"
+  | "code-beacon.explorer.onlyStale"
+  | "code-beacon.explorer.onlyOwnerless"
+  | "code-beacon.git.staleDays"
   | "code-beacon.codelens.enabled"
   | "code-beacon.hover.enabled"
 
@@ -192,6 +195,9 @@ export interface ConfigKeyTypeMap {
   "code-beacon.explorer.query": string,
   "code-beacon.explorer.includeResolved": boolean,
   "code-beacon.explorer.includeIgnored": boolean,
+  "code-beacon.explorer.onlyStale": boolean,
+  "code-beacon.explorer.onlyOwnerless": boolean,
+  "code-beacon.git.staleDays": unknown,
   "code-beacon.codelens.enabled": boolean,
   "code-beacon.hover.enabled": boolean,
 }
@@ -219,6 +225,9 @@ export interface ConfigShorthandMap {
   explorerQuery: "code-beacon.explorer.query",
   explorerIncludeResolved: "code-beacon.explorer.includeResolved",
   explorerIncludeIgnored: "code-beacon.explorer.includeIgnored",
+  explorerOnlyStale: "code-beacon.explorer.onlyStale",
+  explorerOnlyOwnerless: "code-beacon.explorer.onlyOwnerless",
+  gitStaleDays: "code-beacon.git.staleDays",
   codelensEnabled: "code-beacon.codelens.enabled",
   hoverEnabled: "code-beacon.hover.enabled",
 }
@@ -246,6 +255,9 @@ export interface ConfigShorthandTypeMap {
   explorerQuery: string,
   explorerIncludeResolved: boolean,
   explorerIncludeIgnored: boolean,
+  explorerOnlyStale: boolean,
+  explorerOnlyOwnerless: boolean,
+  gitStaleDays: unknown,
   codelensEnabled: boolean,
   hoverEnabled: boolean,
 }
@@ -481,6 +493,36 @@ export const configs = {
     default: false,
   } as ConfigItem<"code-beacon.explorer.includeIgnored">,
   /**
+   * Show only beacons with a valid Git commit date older than the configured stale threshold.
+   * @key `code-beacon.explorer.onlyStale`
+   * @default `false`
+   * @type `boolean`
+   */
+  explorerOnlyStale: {
+    key: "code-beacon.explorer.onlyStale",
+    default: false,
+  } as ConfigItem<"code-beacon.explorer.onlyStale">,
+  /**
+   * Show only beacons with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign a beacon.
+   * @key `code-beacon.explorer.onlyOwnerless`
+   * @default `false`
+   * @type `boolean`
+   */
+  explorerOnlyOwnerless: {
+    key: "code-beacon.explorer.onlyOwnerless",
+    default: false,
+  } as ConfigItem<"code-beacon.explorer.onlyOwnerless">,
+  /**
+   * Number of days after which a valid Git commit date is considered stale.
+   * @key `code-beacon.git.staleDays`
+   * @default `90`
+   * @type `integer`
+   */
+  gitStaleDays: {
+    key: "code-beacon.git.staleDays",
+    default: 90,
+  } as ConfigItem<"code-beacon.git.staleDays">,
+  /**
    * Enable CodeLens actions above annotation lines.
    * @key `code-beacon.codelens.enabled`
    * @default `false`
@@ -525,6 +567,9 @@ export interface ScopedConfigKeyTypeMap {
   "explorer.query": string,
   "explorer.includeResolved": boolean,
   "explorer.includeIgnored": boolean,
+  "explorer.onlyStale": boolean,
+  "explorer.onlyOwnerless": boolean,
+  "git.staleDays": unknown,
   "codelens.enabled": boolean,
   "hover.enabled": boolean,
 }
@@ -554,6 +599,9 @@ export const scopedConfigs = {
     "explorer.query": "",
     "explorer.includeResolved": false,
     "explorer.includeIgnored": false,
+    "explorer.onlyStale": false,
+    "explorer.onlyOwnerless": false,
+    "git.staleDays": 90,
     "codelens.enabled": false,
     "hover.enabled": true,
   } satisfies ScopedConfigKeyTypeMap,
@@ -588,6 +636,11 @@ export interface NestedConfigs {
       "query": string,
       "includeResolved": boolean,
       "includeIgnored": boolean,
+      "onlyStale": boolean,
+      "onlyOwnerless": boolean,
+    },
+    "git": {
+      "staleDays": unknown,
     },
     "codelens": {
       "enabled": boolean,
@@ -626,6 +679,11 @@ export interface NestedScopedConfigs {
     "query": string,
     "includeResolved": boolean,
     "includeIgnored": boolean,
+    "onlyStale": boolean,
+    "onlyOwnerless": boolean,
+  },
+  "git": {
+    "staleDays": unknown,
   },
   "codelens": {
     "enabled": boolean,
@@ -634,4 +692,3 @@ export interface NestedScopedConfigs {
     "enabled": boolean,
   },
 }
-

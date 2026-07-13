@@ -5,6 +5,7 @@ const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
   activationEvents: string[]
   categories: string[]
   keywords: string[]
+  scripts: Record<string, string>
   extensionKind?: string[]
   capabilities: {
     virtualWorkspaces: { supported: boolean }
@@ -88,9 +89,35 @@ describe('package metadata', () => {
       'code-beacon.explorer.query',
       'code-beacon.explorer.includeResolved',
       'code-beacon.explorer.includeIgnored',
+      'code-beacon.explorer.onlyStale',
+      'code-beacon.explorer.onlyOwnerless',
+      'code-beacon.git.staleDays',
       'code-beacon.codelens.enabled',
       'code-beacon.hover.enabled',
     ])
+  })
+
+  it('requires a positive integer stale-days setting', () => {
+    const staleDays = pkg.contributes.configuration.properties[
+      'code-beacon.git.staleDays'
+    ] as {
+      default?: unknown
+      minimum?: unknown
+      type?: unknown
+    }
+
+    expect(staleDays).toMatchObject({
+      default: 90,
+      minimum: 1,
+      type: 'integer',
+    })
+    expect(staleDays.type).not.toBe('number')
+  })
+
+  it('normalizes generated metadata outputs', () => {
+    expect(pkg.scripts['generate:meta']).toBe(
+      'vscode-ext-gen --output src/meta.ts --scope=code-beacon && node scripts/normalize-generated-meta.mjs && oxfmt README.md',
+    )
   })
 
   it('declares the Code Beacon TreeView contribution', () => {

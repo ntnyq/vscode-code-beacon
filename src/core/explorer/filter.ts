@@ -3,6 +3,7 @@ import type {
   BeaconCategory,
   BeaconSeverity,
 } from '../../types/annotation'
+import type { BeaconGitMetadata } from '../git/blame'
 
 /**
  * Scope used to select the annotations displayed in the Code Beacon Explorer.
@@ -20,8 +21,29 @@ export interface BeaconExplorerFilter {
   readonly query: string
   readonly includeResolved: boolean
   readonly includeIgnored: boolean
+  readonly onlyOwnerless: boolean
+  readonly onlyStale: boolean
+  readonly staleDays: number
+  readonly now: Date
+  readonly metadataByAnnotationId: ReadonlyMap<string, BeaconGitMetadata>
   readonly activeUri: string | undefined
   readonly openUris: readonly string[]
+}
+
+export function isBeaconOwnerless(annotation: BeaconAnnotation): boolean {
+  return (
+    annotation.owner?.trim() === undefined || annotation.owner.trim() === ''
+  )
+}
+
+export function isBeaconStale(
+  metadata: BeaconGitMetadata | undefined,
+  staleDays: number,
+  now: Date,
+): boolean {
+  const commitTime = metadata ? Date.parse(metadata.commitDate) : Number.NaN
+  const cutoff = now.getTime() - staleDays * 24 * 60 * 60 * 1000
+  return Number.isFinite(commitTime) && commitTime < cutoff
 }
 
 /**
@@ -66,6 +88,21 @@ export function filterBeaconAnnotations(
       }
 
       if (filter.scope === 'openEditors' && !openUris.has(annotation.uri)) {
+        return false
+      }
+
+      if (filter.onlyOwnerless && !isBeaconOwnerless(annotation)) {
+        return false
+      }
+
+      if (
+        filter.onlyStale &&
+        !isBeaconStale(
+          filter.metadataByAnnotationId.get(annotation.id),
+          filter.staleDays,
+          filter.now,
+        )
+      ) {
         return false
       }
 

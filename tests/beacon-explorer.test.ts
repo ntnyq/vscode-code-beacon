@@ -2,12 +2,14 @@ import type * as ReactiveVscode from 'reactive-vscode'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import { useBeaconExplorer } from '../src/composables/use-beacon-explorer'
+import type * as BeaconGit from '../src/composables/use-beacon-git'
 import { config } from '../src/config'
 import type * as CodeBeaconConfig from '../src/config'
 import {
   BeaconTreeDataProvider,
   type BeaconLeafTreeElement,
 } from '../src/core/explorer/tree-data-provider'
+import type { BeaconGitMetadata } from '../src/core/git/blame'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { commands } from '../src/meta'
 import type { BeaconAnnotation } from '../src/types/annotation'
@@ -18,6 +20,7 @@ const {
   createTreeView,
   editorState,
   executeCommand,
+  getMetadataForAnnotations,
   activeEditorListeners,
   configurationListeners,
   openTextDocument,
@@ -25,6 +28,7 @@ const {
   showTextDocument,
   treeDataProviders,
   visibleEditorsListeners,
+  workspaceState,
 } = vi.hoisted(() => {
   const activeEditorListenerCallbacks: unknown[] = []
   const handlers = new Map<string, (...args: unknown[]) => unknown>()
@@ -41,6 +45,7 @@ const {
   const revealRangeMock = vi.fn<() => void>()
   const capturedTreeDataProviders: unknown[] = []
   const visibleEditorsListenerCallbacks: unknown[] = []
+  const state = { isTrusted: true }
 
   return {
     activeEditorListeners: activeEditorListenerCallbacks,
@@ -59,6 +64,12 @@ const {
     }),
     editorState: explorerEditorState,
     executeCommand: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    getMetadataForAnnotations: vi.fn<
+      (
+        document: Vscode.TextDocument,
+        annotations: readonly BeaconAnnotation[],
+      ) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
+    >(() => Promise.resolve(new Map<string, BeaconGitMetadata>())),
     openTextDocument: vi.fn<(uri: unknown) => Promise<{ uri: unknown }>>(uri =>
       Promise.resolve({ uri }),
     ),
@@ -72,6 +83,7 @@ const {
     ),
     treeDataProviders: capturedTreeDataProviders,
     visibleEditorsListeners: visibleEditorsListenerCallbacks,
+    workspaceState: state,
   }
 })
 
@@ -93,13 +105,26 @@ vi.mock(
           groupBy: 'file',
           includeIgnored: false,
           includeResolved: false,
+          onlyOwnerless: false,
+          onlyStale: false,
           owners: [],
           query: '',
           scope: 'workspace',
           severities: [],
         },
+        git: {
+          staleDays: 90,
+        },
       },
     }) as unknown as Partial<typeof CodeBeaconConfig>,
+)
+
+vi.mock(
+  import('../src/composables/use-beacon-git'),
+  () =>
+    ({
+      useBeaconGit: () => ({ getMetadataForAnnotations }),
+    }) as unknown as Partial<typeof BeaconGit>,
 )
 
 vi.mock(
@@ -193,6 +218,9 @@ vi.mock(
         showTextDocument,
       },
       workspace: {
+        get isTrusted() {
+          return workspaceState.isTrusted
+        },
         onDidChangeConfiguration: (listener: unknown) => {
           configurationListeners.push(listener)
 
@@ -240,6 +268,34 @@ function createEditor(uri: string) {
   }
 }
 
+function gitMetadata(commitDate: string) {
+  return {
+    authorName: 'Ada Lovelace',
+    commitDate,
+    hash: 'a1b2c3d4',
+    summary: 'Add metadata',
+  }
+}
+
+function isoDaysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+}
+
+interface Deferred<T> {
+  readonly promise: Promise<T>
+  readonly resolve: (value: T) => void
+}
+
+function deferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  // oxlint-disable-next-line promise/avoid-new -- Tests control document-open completion explicitly.
+  const promise = new Promise<T>(_resolve => {
+    resolve = _resolve
+  })
+
+  return { promise, resolve }
+}
+
 function createdProvider(): BeaconTreeDataProvider {
   const provider = treeDataProviders.at(-1)
 
@@ -282,10 +338,15 @@ function resetExplorerConfig() {
     groupBy: 'file',
     includeIgnored: false,
     includeResolved: false,
+    onlyOwnerless: false,
+    onlyStale: false,
     owners: [],
     query: '',
     scope: 'workspace',
     severities: [],
+  })
+  Object.assign(config.git, {
+    staleDays: 90,
   })
 }
 
@@ -317,12 +378,18 @@ describe('beacon explorer commands', () => {
     editorState.activeTextEditor = undefined
     editorState.visibleTextEditors = []
     executeCommand.mockClear()
-    openTextDocument.mockClear()
+    getMetadataForAnnotations.mockReset()
+    getMetadataForAnnotations.mockResolvedValue(
+      new Map<string, BeaconGitMetadata>(),
+    )
+    openTextDocument.mockReset()
+    openTextDocument.mockImplementation(uri => Promise.resolve({ uri }))
     resetExplorerConfig()
     revealRange.mockClear()
     showTextDocument.mockClear()
     treeDataProviders.length = 0
     visibleEditorsListeners.length = 0
+    workspaceState.isTrusted = true
   })
 
   it('filters the composed Explorer provider by scope and refreshes from VS Code listeners', () => {
@@ -389,6 +456,227 @@ describe('beacon explorer commands', () => {
       'workspace',
     ])
     expect(refresh).toHaveBeenCalledTimes(3)
+  })
+
+  it('passes the ownerless setting to the composed Explorer filter', () => {
+    const ownerless = createAnnotation({ id: 'ownerless', owner: ' ' })
+    const owned = createAnnotation({ id: 'owned', owner: 'Alice' })
+    annotationStore.setForUri(ownerless.uri, [ownerless, owned])
+    Object.assign(config.explorer, { onlyOwnerless: true })
+
+    useBeaconExplorer()
+
+    expect(providerAnnotationIds(createdProvider())).toStrictEqual([
+      'ownerless',
+    ])
+    expect(openTextDocument).not.toHaveBeenCalled()
+    expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+  })
+
+  it('hydrates grouped documents for stale filtering and refreshes matching annotations', async () => {
+    const staleFirst = createAnnotation({ id: 'stale-first' })
+    const staleSecond = createAnnotation({ id: 'stale-second', line: 2 })
+    const fresh = createAnnotation({
+      id: 'fresh',
+      uri: 'file:///workspace/src/b.ts',
+    })
+    annotationStore.setForUri(staleFirst.uri, [staleFirst, staleSecond])
+    annotationStore.setForUri(fresh.uri, [fresh])
+    Object.assign(config.explorer, { onlyStale: true })
+    getMetadataForAnnotations.mockImplementation((_document, annotations) =>
+      Promise.resolve(
+        new Map(
+          annotations.map(annotation => [
+            annotation.id,
+            gitMetadata(
+              annotation.id === 'fresh'
+                ? '2026-07-11T00:00:00.000Z'
+                : '2020-01-01T00:00:00.000Z',
+            ),
+          ]),
+        ),
+      ),
+    )
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+    const refresh = vi.spyOn(provider, 'refresh')
+
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
+
+    await vi.waitFor(() => {
+      expect(openTextDocument).toHaveBeenNthCalledWith(1, {
+        value: staleFirst.uri,
+      })
+      expect(openTextDocument).toHaveBeenNthCalledWith(2, {
+        value: fresh.uri,
+      })
+      expect(getMetadataForAnnotations).toHaveBeenNthCalledWith(
+        1,
+        { uri: { value: staleFirst.uri } },
+        [
+          expect.objectContaining({ id: 'stale-first' }),
+          expect.objectContaining({ id: 'stale-second' }),
+        ],
+      )
+      expect(getMetadataForAnnotations).toHaveBeenNthCalledWith(
+        2,
+        { uri: { value: fresh.uri } },
+        [expect.objectContaining({ id: 'fresh' })],
+      )
+      expect(providerAnnotationIds(provider)).toStrictEqual([
+        'stale-first',
+        'stale-second',
+      ])
+      expect(refresh).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('falls back to 90 stale days for a fractional stale-days setting', async () => {
+    const candidate = createAnnotation({ id: 'candidate' })
+    const recentMetadata = gitMetadata(isoDaysAgo(1))
+    annotationStore.setForUri(candidate.uri, [candidate])
+    Object.assign(config.explorer, { onlyStale: true })
+    Object.assign(config.git, { staleDays: 0.5 })
+    getMetadataForAnnotations.mockResolvedValue(
+      new Map([[candidate.id, recentMetadata]]),
+    )
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+    const refresh = vi.spyOn(provider, 'refresh')
+
+    await vi.waitFor(() => {
+      expect(refresh).toHaveBeenCalledExactlyOnceWith()
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
+  })
+
+  it('uses a valid 90-day stale-days setting', async () => {
+    const candidate = createAnnotation({ id: 'candidate' })
+    const oldMetadata = gitMetadata(isoDaysAgo(91))
+    annotationStore.setForUri(candidate.uri, [candidate])
+    Object.assign(config.explorer, { onlyStale: true })
+    Object.assign(config.git, { staleDays: 90 })
+    getMetadataForAnnotations.mockResolvedValue(
+      new Map([[candidate.id, oldMetadata]]),
+    )
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+    const refresh = vi.spyOn(provider, 'refresh')
+
+    await vi.waitFor(() => {
+      expect(refresh).toHaveBeenCalledExactlyOnceWith()
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual(['candidate'])
+  })
+
+  it('does not open later documents after stale hydration is superseded', async () => {
+    const first = createAnnotation({
+      id: 'first',
+      uri: 'file:///workspace/src/a.ts',
+    })
+    const second = createAnnotation({
+      id: 'second',
+      uri: 'file:///workspace/src/b.ts',
+    })
+    const firstDocument = deferred<{ uri: unknown }>()
+    annotationStore.setForUri(first.uri, [first])
+    annotationStore.setForUri(second.uri, [second])
+    Object.assign(config.explorer, { onlyStale: true })
+    openTextDocument.mockReturnValueOnce(firstDocument.promise)
+
+    useBeaconExplorer()
+
+    await vi.waitFor(() => {
+      expect(openTextDocument).toHaveBeenCalledExactlyOnceWith({
+        value: first.uri,
+      })
+    })
+
+    Object.assign(config.explorer, { onlyStale: false })
+    latestListener<
+      (event: { affectsConfiguration: (section: string) => boolean }) => void
+    >(configurationListeners)({
+      affectsConfiguration: section => section === 'code-beacon',
+    })
+    firstDocument.resolve({ uri: { value: first.uri } })
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(openTextDocument).toHaveBeenCalledExactlyOnceWith({
+      value: first.uri,
+    })
+    expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+  })
+
+  it('does not hydrate stale metadata in an untrusted workspace', () => {
+    const staleCandidate = createAnnotation({ id: 'candidate' })
+    annotationStore.setForUri(staleCandidate.uri, [staleCandidate])
+    Object.assign(config.explorer, { onlyStale: true })
+    workspaceState.isTrusted = false
+
+    useBeaconExplorer()
+
+    expect(openTextDocument).not.toHaveBeenCalled()
+    expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+  })
+
+  it('keeps the Explorer operational when stale metadata hydration rejects', async () => {
+    const staleCandidate = createAnnotation({ id: 'candidate' })
+    annotationStore.setForUri(staleCandidate.uri, [staleCandidate])
+    Object.assign(config.explorer, { onlyStale: true })
+    getMetadataForAnnotations.mockRejectedValue(new Error('Git unavailable'))
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+
+    await vi.waitFor(() => {
+      expect(getMetadataForAnnotations).toHaveBeenCalledExactlyOnceWith(
+        { uri: { value: staleCandidate.uri } },
+        [expect.objectContaining({ id: 'candidate' })],
+      )
+    })
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
+
+    Object.assign(config.explorer, { onlyStale: false })
+    latestListener<
+      (event: { affectsConfiguration: (section: string) => boolean }) => void
+    >(configurationListeners)({
+      affectsConfiguration: section => section === 'code-beacon',
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual(['candidate'])
+  })
+
+  it('keeps the Explorer operational when a stale-filter document cannot open', async () => {
+    const staleCandidate = createAnnotation({ id: 'candidate' })
+    annotationStore.setForUri(staleCandidate.uri, [staleCandidate])
+    Object.assign(config.explorer, { onlyStale: true })
+    openTextDocument.mockRejectedValue(new Error('Cannot open document'))
+
+    useBeaconExplorer()
+    const provider = createdProvider()
+
+    await vi.waitFor(() => {
+      expect(openTextDocument).toHaveBeenCalledExactlyOnceWith({
+        value: staleCandidate.uri,
+      })
+    })
+    expect(getMetadataForAnnotations).not.toHaveBeenCalled()
+    expect(providerAnnotationIds(provider)).toStrictEqual([])
+
+    Object.assign(config.explorer, { onlyStale: false })
+    latestListener<
+      (event: { affectsConfiguration: (section: string) => boolean }) => void
+    >(configurationListeners)({
+      affectsConfiguration: section => section === 'code-beacon',
+    })
+
+    expect(providerAnnotationIds(provider)).toStrictEqual(['candidate'])
   })
 
   it('copies a beacon link when invoked from a tree context menu item', async () => {

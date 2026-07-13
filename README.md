@@ -213,6 +213,24 @@ Description: Show ignored beacons in the Code Beacon Explorer.
 Type: `boolean`  
 Default: `false`
 
+#### `code-beacon.explorer.onlyStale`
+
+Description: Show only beacons with a valid Git commit date older than the configured stale threshold.  
+Type: `boolean`  
+Default: `false`
+
+#### `code-beacon.explorer.onlyOwnerless`
+
+Description: Show only beacons with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign a beacon.  
+Type: `boolean`  
+Default: `false`
+
+#### `code-beacon.git.staleDays`
+
+Description: Number of days after which a valid Git commit date is considered stale.  
+Type: `integer`  
+Default: `90`
+
 #### `code-beacon.codelens.enabled`
 
 Description: Enable CodeLens actions above annotation lines.  
@@ -226,6 +244,14 @@ Type: `boolean`
 Default: `true`
 
 <!-- configs-list -->
+
+## Explorer stale and ownerless filters
+
+`code-beacon.explorer.onlyOwnerless` considers only an annotation's explicit `owner` value: an omitted or whitespace-only value is ownerless, and a Git commit author does not assign it.
+
+When `code-beacon.explorer.onlyStale` is enabled, Code Beacon looks up blame metadata in batches through VS Code's built-in Git API and compares valid commit dates against `code-beacon.git.staleDays`. This requires a trusted local desktop workspace with an available non-virtual Git repository. Git metadata is not requested when the stale filter is off.
+
+If metadata is unavailable, invalid, or cannot be resolved, the beacon is treated as having an unknown age and is not included by the stale filter. The rest of the Explorer remains available.
 
 ## VS Code Web
 

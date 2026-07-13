@@ -69,8 +69,8 @@ function document(
   } as Vscode.TextDocument
 }
 
-function annotation(line = 4): BeaconAnnotation {
-  return { line } as BeaconAnnotation
+function annotation(line = 4, id = `annotation-${line}`): BeaconAnnotation {
+  return { id, line } as BeaconAnnotation
 }
 
 function repository(rootUri = uri('/workspace')): TestRepository {
@@ -324,5 +324,127 @@ describe('beacon Git metadata', () => {
 
     expect(testRepository.blame).toHaveBeenCalledTimes(1)
     expect(testRepository.getCommit).toHaveBeenCalledTimes(1)
+  })
+
+  it('resolves multiple annotations with one blame and one commit lookup per hash', async () => {
+    const testRepository = repository()
+    testRepository.blame.mockResolvedValue(
+      [
+        'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 1) const one = 1;',
+        'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 2) const two = 2;',
+        'f5e6d7c8 (Grace Hopper 2026-07-12 12:00:00 +0800 3) const three = 3;',
+      ].join('\n'),
+    )
+    testRepository.getCommit.mockImplementation(hash =>
+      Promise.resolve({
+        authorDate: new Date('2026-07-12T04:00:00.000Z'),
+        authorEmail:
+          hash === 'a1b2c3d4' ? 'ada@example.com' : 'grace@example.com',
+        authorName: hash === 'a1b2c3d4' ? 'Ada Lovelace' : 'Grace Hopper',
+        hash,
+        message: hash === 'a1b2c3d4' ? 'Add beacon metadata' : 'Fix compiler',
+      }),
+    )
+    const extension = gitExtension(testRepository)
+    const testDocument = document()
+    const annotations = [
+      annotation(0, 'first'),
+      annotation(1, 'second'),
+      annotation(2, 'third'),
+    ]
+    getExtension.mockReturnValue(extension)
+
+    const result = await useBeaconGit().getMetadataForAnnotations(
+      testDocument,
+      annotations,
+    )
+
+    expect(testRepository.blame).toHaveBeenCalledTimes(1)
+    expect(testRepository.blame).toHaveBeenCalledWith('src/example.ts')
+    expect(testRepository.getCommit).toHaveBeenCalledTimes(2)
+    expect(testRepository.getCommit).toHaveBeenCalledWith('a1b2c3d4')
+    expect(testRepository.getCommit).toHaveBeenCalledWith('f5e6d7c8')
+    expect(result).toStrictEqual(
+      new Map([
+        [
+          'first',
+          {
+            authorEmail: 'ada@example.com',
+            authorName: 'Ada Lovelace',
+            commitDate: '2026-07-12T04:00:00.000Z',
+            hash: 'a1b2c3d4',
+            summary: 'Add beacon metadata',
+          },
+        ],
+        [
+          'second',
+          {
+            authorEmail: 'ada@example.com',
+            authorName: 'Ada Lovelace',
+            commitDate: '2026-07-12T04:00:00.000Z',
+            hash: 'a1b2c3d4',
+            summary: 'Add beacon metadata',
+          },
+        ],
+        [
+          'third',
+          {
+            authorEmail: 'grace@example.com',
+            authorName: 'Grace Hopper',
+            commitDate: '2026-07-12T04:00:00.000Z',
+            hash: 'f5e6d7c8',
+            summary: 'Fix compiler',
+          },
+        ],
+      ]),
+    )
+  })
+
+  it('returns same-version cached batch metadata without Git lookups', async () => {
+    const testRepository = repository()
+    const extension = gitExtension(testRepository)
+    const git = useBeaconGit()
+    const testDocument = document()
+    const annotations = [annotation(0, 'first'), annotation(1, 'second')]
+    getExtension.mockReturnValue(extension)
+
+    await git.getMetadataForAnnotations(testDocument, annotations)
+    testRepository.blame.mockClear()
+    testRepository.getCommit.mockClear()
+    await git.getMetadataForAnnotations(testDocument, annotations)
+
+    expect(testRepository.blame).not.toHaveBeenCalled()
+    expect(testRepository.getCommit).not.toHaveBeenCalled()
+  })
+
+  it('retains cached batch metadata when a later blame lookup fails', async () => {
+    const testRepository = repository()
+    const extension = gitExtension(testRepository)
+    const git = useBeaconGit()
+    const testDocument = document()
+    getExtension.mockReturnValue(extension)
+
+    await git.getMetadataForAnnotations(testDocument, [annotation(0, 'cached')])
+    testRepository.blame.mockRejectedValueOnce(new Error('blame failed'))
+
+    const result = await git.getMetadataForAnnotations(testDocument, [
+      annotation(0, 'cached'),
+      annotation(1, 'missing'),
+    ])
+
+    expect(result).toStrictEqual(
+      new Map([
+        [
+          'cached',
+          {
+            authorEmail: 'ada@example.com',
+            authorName: 'Ada Lovelace',
+            commitDate: '2026-07-12T04:00:00.000Z',
+            hash: 'a1b2c3d4',
+            summary: 'Add beacon metadata',
+          },
+        ],
+      ]),
+    )
   })
 })

@@ -127,72 +127,108 @@ function toMetadata(commit: Commit): BeaconGitMetadata {
 export function useBeaconGit() {
   const cache = new BeaconGitMetadataCache()
 
+  async function getMetadataForAnnotations(
+    document: TextDocument,
+    annotations: readonly BeaconAnnotation[],
+  ): Promise<ReadonlyMap<string, BeaconGitMetadata>> {
+    const metadataByAnnotationId = new Map<string, BeaconGitMetadata>()
+
+    if (!workspace.isTrusted) {
+      return metadataByAnnotationId
+    }
+
+    try {
+      const extension = extensions.getExtension<unknown>('vscode.git')
+      if (!extension) {
+        return metadataByAnnotationId
+      }
+
+      const gitExtension = await extension.activate()
+      if (!isGitExtension(gitExtension)) {
+        return metadataByAnnotationId
+      }
+
+      const api = gitExtension.getAPI(1)
+      if (!isAPI(api)) {
+        return metadataByAnnotationId
+      }
+
+      const repository = api.getRepository(document.uri)
+      if (!isRepository(repository) || repository.isUsingVirtualFileSystem) {
+        return metadataByAnnotationId
+      }
+
+      const uncachedAnnotations: BeaconAnnotation[] = []
+      const documentUri = document.uri.toString()
+
+      for (const annotation of annotations) {
+        const cached = cache.get(documentUri, document.version, annotation.line)
+        if (cached) {
+          metadataByAnnotationId.set(annotation.id, cached)
+        } else {
+          uncachedAnnotations.push(annotation)
+        }
+      }
+
+      if (uncachedAnnotations.length === 0) {
+        return metadataByAnnotationId
+      }
+
+      const path = repositoryRelativePath(document.uri, repository.rootUri)
+      if (!path) {
+        return metadataByAnnotationId
+      }
+
+      const blame = await repository.blame(path)
+      const annotationsByHash = new Map<string, BeaconAnnotation[]>()
+
+      for (const annotation of uncachedAnnotations) {
+        const hash = parseBlameCommitHash(blame, annotation.line)
+        if (!hash) {
+          continue
+        }
+
+        const annotationsForHash = annotationsByHash.get(hash)
+        if (annotationsForHash) {
+          annotationsForHash.push(annotation)
+        } else {
+          annotationsByHash.set(hash, [annotation])
+        }
+      }
+
+      for (const [hash, annotationsForHash] of annotationsByHash) {
+        try {
+          const commit = await repository.getCommit(hash)
+          if (!isCommit(commit)) {
+            continue
+          }
+
+          const metadata = toMetadata(commit)
+          for (const annotation of annotationsForHash) {
+            cache.set(documentUri, document.version, annotation.line, metadata)
+            metadataByAnnotationId.set(annotation.id, metadata)
+          }
+        } catch {
+          continue
+        }
+      }
+
+      return metadataByAnnotationId
+    } catch {
+      return metadataByAnnotationId
+    }
+  }
+
   return {
     async getMetadata(
       document: TextDocument,
       annotation: BeaconAnnotation,
     ): Promise<BeaconGitMetadata | undefined> {
-      if (!workspace.isTrusted) {
-        return undefined
-      }
-
-      try {
-        const extension = extensions.getExtension<unknown>('vscode.git')
-        if (!extension) {
-          return undefined
-        }
-
-        const gitExtension = await extension.activate()
-        if (!isGitExtension(gitExtension)) {
-          return undefined
-        }
-
-        const api = gitExtension.getAPI(1)
-        if (!isAPI(api)) {
-          return undefined
-        }
-
-        const repository = api.getRepository(document.uri)
-        if (!isRepository(repository) || repository.isUsingVirtualFileSystem) {
-          return undefined
-        }
-
-        const cached = cache.get(
-          document.uri.toString(),
-          document.version,
-          annotation.line,
-        )
-        if (cached) {
-          return cached
-        }
-
-        const path = repositoryRelativePath(document.uri, repository.rootUri)
-        if (!path) {
-          return undefined
-        }
-
-        const blame = await repository.blame(path)
-        const hash = parseBlameCommitHash(blame, annotation.line)
-        if (!hash) {
-          return undefined
-        }
-
-        const commit = await repository.getCommit(hash)
-        if (!isCommit(commit)) {
-          return undefined
-        }
-
-        const metadata = toMetadata(commit)
-        cache.set(
-          document.uri.toString(),
-          document.version,
-          annotation.line,
-          metadata,
-        )
-        return metadata
-      } catch {
-        return undefined
-      }
+      const metadataByAnnotationId = await getMetadataForAnnotations(document, [
+        annotation,
+      ])
+      return metadataByAnnotationId.get(annotation.id)
     },
+    getMetadataForAnnotations,
   }
 }

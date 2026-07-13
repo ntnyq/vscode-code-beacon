@@ -52,7 +52,7 @@
     "dev": "tsdown --watch",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "generate:meta": "vscode-ext-gen --output src/meta.ts --scope=code-beacon",
+    "generate:meta": "vscode-ext-gen --output src/meta.ts --scope=code-beacon && node scripts/normalize-generated-meta.mjs && oxfmt README.md",
     "lint": "oxlint",
     "pack": "vsce package --no-dependencies",
     "prepare": "husky",
@@ -429,6 +429,22 @@
           "type": "boolean",
           "default": false,
           "description": "Show ignored beacons in the Code Beacon Explorer."
+        },
+        "code-beacon.explorer.onlyStale": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show only beacons with a valid Git commit date older than the configured stale threshold."
+        },
+        "code-beacon.explorer.onlyOwnerless": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show only beacons with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign a beacon."
+        },
+        "code-beacon.git.staleDays": {
+          "type": "integer",
+          "default": 90,
+          "minimum": 1,
+          "description": "Number of days after which a valid Git commit date is considered stale."
         },
         "code-beacon.codelens.enabled": {
           "type": "boolean",

@@ -6,9 +6,11 @@ import {
   env,
   window,
   workspace,
+  type TextDocument,
 } from 'vscode'
 import { config } from '../config'
 import { filterBeaconAnnotations } from '../core/explorer/filter'
+import { BeaconExplorerGitMetadataIndex } from '../core/explorer/git-metadata-index'
 import {
   BeaconTreeDataProvider,
   type BeaconLeafTreeElement,
@@ -17,11 +19,22 @@ import { annotationStore } from '../core/store/annotation-store'
 import { commands } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
 import { formatBeaconLink, toVscodeRange } from '../utils/ranges'
+import { useBeaconGit } from './use-beacon-git'
 
 /**
  * Stable VS Code view id for the Code Beacon annotations view.
  */
 const BEACON_VIEW_ID = 'codeBeacon.annotations'
+const DEFAULT_STALE_DAYS = 90
+
+function normalizeStaleDays(value: unknown): number {
+  return typeof value === 'number' &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= 1
+    ? value
+    : DEFAULT_STALE_DAYS
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -86,6 +99,8 @@ async function revealAnnotation(value?: unknown) {
  * Registers the Code Beacon TreeView and related navigation commands.
  */
 export function useBeaconExplorer() {
+  const gitMetadataIndex = new BeaconExplorerGitMetadataIndex<TextDocument>()
+  const { getMetadataForAnnotations } = useBeaconGit()
   const provider = new BeaconTreeDataProvider(
     () =>
       filterBeaconAnnotations(annotationStore.getAll(), {
@@ -93,6 +108,10 @@ export function useBeaconExplorer() {
         categories: config.explorer.categories,
         includeIgnored: config.explorer.includeIgnored,
         includeResolved: config.explorer.includeResolved,
+        metadataByAnnotationId: gitMetadataIndex.metadataByAnnotationId,
+        now: new Date(),
+        onlyOwnerless: config.explorer.onlyOwnerless,
+        onlyStale: config.explorer.onlyStale,
         openUris: window.visibleTextEditors.map(editor =>
           editor.document.uri.toString(),
         ),
@@ -100,9 +119,77 @@ export function useBeaconExplorer() {
         query: config.explorer.query,
         scope: config.explorer.scope,
         severities: config.explorer.severities,
+        staleDays: normalizeStaleDays(config.git.staleDays),
       }),
     () => config.explorer.groupBy,
   )
+
+  let hydrationRequest = 0
+
+  async function hydrateGitMetadata() {
+    const request = hydrationRequest + 1
+    hydrationRequest = request
+    gitMetadataIndex.clear()
+
+    if (!config.explorer.onlyStale || !workspace.isTrusted) {
+      return
+    }
+
+    const annotationsByUri = new Map<string, BeaconAnnotation[]>()
+    for (const annotation of annotationStore.getAll()) {
+      annotationsByUri.set(annotation.uri, [
+        ...(annotationsByUri.get(annotation.uri) ?? []),
+        annotation,
+      ])
+    }
+
+    const targets: {
+      document: TextDocument
+      annotations: readonly BeaconAnnotation[]
+    }[] = []
+    for (const [uri, annotations] of annotationsByUri) {
+      if (
+        request !== hydrationRequest ||
+        !config.explorer.onlyStale ||
+        !workspace.isTrusted
+      ) {
+        return
+      }
+
+      try {
+        const document = await workspace.openTextDocument(Uri.parse(uri))
+        if (
+          request !== hydrationRequest ||
+          !config.explorer.onlyStale ||
+          !workspace.isTrusted
+        ) {
+          return
+        }
+
+        targets.push({ annotations, document })
+      } catch {
+        continue
+      }
+    }
+
+    if (
+      request !== hydrationRequest ||
+      !config.explorer.onlyStale ||
+      !workspace.isTrusted
+    ) {
+      return
+    }
+
+    await gitMetadataIndex.hydrate(targets, getMetadataForAnnotations, () =>
+      provider.refresh(),
+    )
+  }
+
+  function refreshExplorer() {
+    provider.refresh()
+    // oxlint-disable-next-line no-void -- VS Code listeners cannot await hydration.
+    void hydrateGitMetadata()
+  }
 
   const view = window.createTreeView(BEACON_VIEW_ID, {
     showCollapseAll: true,
@@ -111,14 +198,14 @@ export function useBeaconExplorer() {
 
   useDisposable(view)
   useDisposable({
-    dispose: annotationStore.subscribe(() => provider.refresh()),
+    dispose: annotationStore.subscribe(refreshExplorer),
   })
-  useDisposable(window.onDidChangeActiveTextEditor(() => provider.refresh()))
-  useDisposable(window.onDidChangeVisibleTextEditors(() => provider.refresh()))
+  useDisposable(window.onDidChangeActiveTextEditor(refreshExplorer))
+  useDisposable(window.onDidChangeVisibleTextEditors(refreshExplorer))
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration('code-beacon')) {
-        provider.refresh()
+        refreshExplorer()
       }
     }),
   )
@@ -139,6 +226,9 @@ export function useBeaconExplorer() {
         : undefined
     }),
   )
+
+  // oxlint-disable-next-line no-void -- Explorer setup cannot await hydration.
+  void hydrateGitMetadata()
 
   return {
     provider,

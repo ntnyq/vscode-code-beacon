@@ -757,7 +757,7 @@ codeBeacon.activeAnnotation
 ### Phase 3：Git 和团队协作
 
 - [x] Git blame metadata foundation（trusted desktop hover）。
-- [ ] stale/ownerless filters。
+- [x] stale/ownerless filters。
 - [ ] Create Issue body generator。
 - [ ] changed files scope。
 - [ ] source control integration。

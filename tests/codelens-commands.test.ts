@@ -1,0 +1,40 @@
+import { describe, expect, it } from 'vitest'
+import { createBeaconCodeLensCommands } from '../src/core/codelens/commands'
+import { commands } from '../src/meta'
+import type { BeaconAnnotation } from '../src/types/annotation'
+
+function createAnnotation(): BeaconAnnotation {
+  return {
+    category: 'todo',
+    column: 3,
+    id: 'annotation-1',
+    keyword: 'TODO:',
+    keywordRange: {
+      end: { character: 8, line: 1 },
+      start: { character: 3, line: 1 },
+    },
+    languageId: 'typescript',
+    line: 1,
+    message: 'Ship it',
+    range: {
+      end: { character: 8, line: 1 },
+      start: { character: 3, line: 1 },
+    },
+    ruleId: 'todo',
+    severity: 'information',
+    source: 'visibleEditor',
+    uri: 'file:///workspace/src/a.ts',
+  }
+}
+
+describe('CodeLens issue command', () => {
+  it('offers Create Issue with the beacon annotation argument', () => {
+    const annotation = createAnnotation()
+
+    expect(createBeaconCodeLensCommands(annotation)).toContainEqual({
+      arguments: [annotation],
+      command: commands.createIssue,
+      title: 'Create Issue',
+    })
+  })
+})

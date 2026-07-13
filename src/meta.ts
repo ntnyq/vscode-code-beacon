@@ -24,6 +24,7 @@ export type CommandKey =
   | "code-beacon.reveal"
   | "code-beacon.copyLink"
   | "code-beacon.copyMarkdown"
+  | "code-beacon.createIssue"
   | "code-beacon.resolve"
   | "code-beacon.unresolve"
   | "code-beacon.ignore"
@@ -93,6 +94,11 @@ export const commands = {
    * @value `code-beacon.copyMarkdown`
    */
   copyMarkdown: "code-beacon.copyMarkdown",
+  /**
+   * Create Issue Body
+   * @value `code-beacon.createIssue`
+   */
+  createIssue: "code-beacon.createIssue",
   /**
    * Resolve Beacon
    * @value `code-beacon.resolve`

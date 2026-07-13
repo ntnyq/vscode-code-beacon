@@ -46,6 +46,11 @@ export function createBeaconCodeLensCommands(
     },
     {
       arguments: [annotation],
+      command: commands.createIssue,
+      title: 'Create Issue',
+    },
+    {
+      arguments: [annotation],
       command: commands.reveal,
       title: 'Reveal',
     },

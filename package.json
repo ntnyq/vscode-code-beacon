@@ -516,6 +516,11 @@
       },
       {
         "category": "Code Beacon",
+        "command": "code-beacon.createIssue",
+        "title": "Create Issue Body"
+      },
+      {
+        "category": "Code Beacon",
         "command": "code-beacon.resolve",
         "title": "Resolve Beacon"
       },
@@ -602,6 +607,10 @@
           "command": "code-beacon.copyLink",
           "when": "view == codeBeacon.annotations && viewItem =~ /^beacon/",
           "group": "inline"
+        },
+        {
+          "command": "code-beacon.createIssue",
+          "when": "view == codeBeacon.annotations && viewItem =~ /^beacon/"
         },
         {
           "command": "code-beacon.resolve",

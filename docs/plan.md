@@ -758,7 +758,7 @@ codeBeacon.activeAnnotation
 
 - [x] Git blame metadata foundation（trusted desktop hover）。
 - [x] stale/ownerless filters。
-- [ ] Create Issue body generator。
+- [x] Create Issue body generator。
 - [ ] changed files scope。
 - [ ] source control integration。
 - [ ] richer hover and tree metadata。

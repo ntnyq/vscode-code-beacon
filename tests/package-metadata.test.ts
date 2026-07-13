@@ -19,6 +19,13 @@ const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
     configuration: { properties: Record<string, unknown> }
     viewsContainers?: { activitybar: { id: string; title: string }[] }
     views?: { codeBeacon: { id: string; name: string; when?: string }[] }
+    menus?: {
+      'view/item/context': {
+        command: string
+        group?: string
+        when: string
+      }[]
+    }
   }
 }
 
@@ -51,6 +58,7 @@ describe('package metadata', () => {
       'code-beacon.reveal',
       'code-beacon.copyLink',
       'code-beacon.copyMarkdown',
+      'code-beacon.createIssue',
       'code-beacon.resolve',
       'code-beacon.unresolve',
       'code-beacon.ignore',
@@ -137,5 +145,12 @@ describe('package metadata', () => {
         when: 'config.code-beacon.explorer.enabled',
       },
     ])
+  })
+
+  it('declares Create Issue Body for beacon items in the Explorer', () => {
+    expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
+      command: 'code-beacon.createIssue',
+      when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+    })
   })
 })

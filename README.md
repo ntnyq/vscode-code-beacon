@@ -65,6 +65,7 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 | `code-beacon.reveal`          | Code Beacon: Reveal Beacon                 |
 | `code-beacon.copyLink`        | Code Beacon: Copy Beacon Link              |
 | `code-beacon.copyMarkdown`    | Code Beacon: Copy Beacon as Markdown       |
+| `code-beacon.createIssue`     | Code Beacon: Create Issue Body             |
 | `code-beacon.resolve`         | Code Beacon: Resolve Beacon                |
 | `code-beacon.unresolve`       | Code Beacon: Reopen Beacon                 |
 | `code-beacon.ignore`          | Code Beacon: Ignore Beacon                 |
@@ -76,6 +77,12 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 | `code-beacon.clearCache`      | Code Beacon: Clear Code Beacon Cache       |
 
 <!-- commands -->
+
+## Create Issue Body
+
+In the Code Beacon Explorer, select a beacon and invoke **Code Beacon: Create Issue Body**. The command copies GitHub-compatible Markdown for that beacon to your clipboard, ready to edit and paste into an issue.
+
+Create Issue Body only copies local Markdown: it does not create a remote issue, send a network request, or require an issue-tracker account.
 
 ## Configs
 

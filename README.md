@@ -66,6 +66,7 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 | `code-beacon.copyLink`        | Code Beacon: Copy Beacon Link              |
 | `code-beacon.copyMarkdown`    | Code Beacon: Copy Beacon as Markdown       |
 | `code-beacon.createIssue`     | Code Beacon: Create Issue Body             |
+| `code-beacon.explain`         | Code Beacon: Explain Beacon                |
 | `code-beacon.resolve`         | Code Beacon: Resolve Beacon                |
 | `code-beacon.unresolve`       | Code Beacon: Reopen Beacon                 |
 | `code-beacon.ignore`          | Code Beacon: Ignore Beacon                 |
@@ -246,7 +247,7 @@ Default: `false`
 
 #### `code-beacon.ai.enabled`
 
-Description: Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent.  
+Description: Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.  
 Type: `boolean`  
 Default: `false`
 

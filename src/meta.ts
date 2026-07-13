@@ -25,6 +25,7 @@ export type CommandKey =
   | "code-beacon.copyLink"
   | "code-beacon.copyMarkdown"
   | "code-beacon.createIssue"
+  | "code-beacon.explain"
   | "code-beacon.resolve"
   | "code-beacon.unresolve"
   | "code-beacon.ignore"
@@ -99,6 +100,11 @@ export const commands = {
    * @value `code-beacon.createIssue`
    */
   createIssue: "code-beacon.createIssue",
+  /**
+   * Explain Beacon
+   * @value `code-beacon.explain`
+   */
+  explain: "code-beacon.explain",
   /**
    * Resolve Beacon
    * @value `code-beacon.resolve`
@@ -551,7 +557,7 @@ export const configs = {
     default: false,
   } as ConfigItem<"code-beacon.git.showMetadata">,
   /**
-   * Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent.
+   * Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.
    * @key `code-beacon.ai.enabled`
    * @default `false`
    * @type `boolean`

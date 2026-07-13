@@ -61,6 +61,7 @@ describe('package metadata', () => {
       'code-beacon.copyLink',
       'code-beacon.copyMarkdown',
       'code-beacon.createIssue',
+      'code-beacon.explain',
       'code-beacon.resolve',
       'code-beacon.unresolve',
       'code-beacon.ignore',
@@ -71,6 +72,11 @@ describe('package metadata', () => {
       'code-beacon.openSettings',
       'code-beacon.clearCache',
     ])
+    expect(pkg.contributes.commands).toContainEqual({
+      category: 'Code Beacon',
+      command: 'code-beacon.explain',
+      title: 'Explain Beacon',
+    })
   })
 
   it('declares configuration keys used by the MVP runtime', () => {
@@ -151,7 +157,7 @@ describe('package metadata', () => {
     expect(aiEnabled).toStrictEqual({
       default: false,
       description:
-        "Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent.",
+        'Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.',
       type: 'boolean',
     })
     expectTypeOf<false>().toMatchTypeOf<
@@ -267,6 +273,13 @@ describe('package metadata', () => {
   it('declares Create Issue Body for beacon items in the Explorer', () => {
     expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
       command: 'code-beacon.createIssue',
+      when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+    })
+  })
+
+  it('declares Explain Beacon for beacon items in the Explorer', () => {
+    expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
+      command: 'code-beacon.explain',
       when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
     })
   })

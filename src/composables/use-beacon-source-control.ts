@@ -73,37 +73,48 @@ export function useBeaconSourceControl(
     sourceControl = undefined
   }
 
-  function refreshChangedUris() {
+  async function refreshChangedUris() {
     const request = changedUrisRequest + 1
     changedUrisRequest = request
     if (!config.scm.enabled || !sourceControl) {
       return
     }
     const enabledGeneration = generation
-    void git.getChangedUris().then(
-      uris => {
-        if (
-          request !== changedUrisRequest ||
-          enabledGeneration !== generation ||
-          !config.scm.enabled
-        ) {
-          return
-        }
-        changedUris = new Set(uris)
-        render()
-      },
-      () => {
-        if (
-          request !== changedUrisRequest ||
-          enabledGeneration !== generation ||
-          !config.scm.enabled
-        ) {
-          return
-        }
-        changedUris = new Set()
-        render()
-      },
-    )
+    let uris: ReadonlySet<string>
+
+    try {
+      uris = await git.getChangedUris()
+    } catch {
+      uris = new Set()
+    }
+
+    if (
+      request !== changedUrisRequest ||
+      enabledGeneration !== generation ||
+      !config.scm.enabled
+    ) {
+      return
+    }
+
+    changedUris = new Set(uris)
+    render()
+  }
+
+  async function subscribeToGitChanges(enabledGeneration: number) {
+    let subscription: Disposable
+
+    try {
+      subscription = await git.subscribeToChangedUris(refreshChangedUris)
+    } catch {
+      return
+    }
+
+    if (enabledGeneration !== generation || !config.scm.enabled) {
+      subscription.dispose()
+      return
+    }
+
+    gitSubscription = subscription
   }
 
   function enable() {
@@ -118,17 +129,7 @@ export function useBeaconSourceControl(
       RESOURCE_GROUP_ID,
       RESOURCE_GROUP_LABEL,
     )
-    const request = generation
-    void git.subscribeToChangedUris(refreshChangedUris).then(
-      subscription => {
-        if (request !== generation || !config.scm.enabled) {
-          subscription.dispose()
-        } else {
-          gitSubscription = subscription
-        }
-      },
-      () => {},
-    )
+    subscribeToGitChanges(generation)
     refreshChangedUris()
   }
 

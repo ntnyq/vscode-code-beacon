@@ -64,7 +64,10 @@ function formatInlineCode(value: string): string {
 function escapeMarkdownText(value: string): string {
   return value
     .replaceAll('&', '&amp;')
-    .replaceAll(/([\\`*_[\]{}()#!<>+.\-|~])/gu, '\\$1')
+    .replaceAll(
+      /(?<punctuation>[\\`*_[\]{}()#!<>+.\-|~])/gu,
+      String.raw`\$<punctuation>`,
+    )
 }
 
 /**

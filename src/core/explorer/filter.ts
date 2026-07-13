@@ -65,6 +65,78 @@ export function compareBeaconAnnotations(
   )
 }
 
+function matchesScope(
+  annotation: BeaconAnnotation,
+  filter: BeaconExplorerFilter,
+  openUris: ReadonlySet<string>,
+): boolean {
+  switch (filter.scope) {
+    case 'activeFile': {
+      return annotation.uri === filter.activeUri
+    }
+    case 'changedFiles': {
+      return filter.changedUris.has(annotation.uri)
+    }
+    case 'openEditors': {
+      return openUris.has(annotation.uri)
+    }
+    case 'workspace': {
+      return true
+    }
+  }
+}
+
+function matchesState(
+  annotation: BeaconAnnotation,
+  filter: BeaconExplorerFilter,
+): boolean {
+  return (
+    (!annotation.resolved || filter.includeResolved) &&
+    (!annotation.ignored || filter.includeIgnored)
+  )
+}
+
+function matchesGitMetadata(
+  annotation: BeaconAnnotation,
+  filter: BeaconExplorerFilter,
+): boolean {
+  return (
+    (!filter.onlyOwnerless || isBeaconOwnerless(annotation)) &&
+    (!filter.onlyStale ||
+      isBeaconStale(
+        filter.metadataByAnnotationId.get(annotation.id),
+        filter.staleDays,
+        filter.now,
+      ))
+  )
+}
+
+function matchesFacets(
+  annotation: BeaconAnnotation,
+  filter: BeaconExplorerFilter,
+): boolean {
+  return (
+    (filter.categories.length === 0 ||
+      filter.categories.includes(annotation.category)) &&
+    (filter.severities.length === 0 ||
+      filter.severities.includes(annotation.severity)) &&
+    (filter.owners.length === 0 ||
+      filter.owners.includes(annotation.owner ?? ''))
+  )
+}
+
+function matchesQuery(annotation: BeaconAnnotation, query: string): boolean {
+  return (
+    query === '' ||
+    [
+      annotation.keyword,
+      annotation.message,
+      annotation.owner ?? '',
+      annotation.ruleId,
+    ].some(value => value.toLowerCase().includes(query))
+  )
+}
+
 /**
  * Returns the annotations matching a plain Explorer filter in source order.
  */
@@ -76,79 +148,13 @@ export function filterBeaconAnnotations(
   const openUris = new Set(filter.openUris)
 
   return annotations
-    .filter(annotation => {
-      if (annotation.resolved && !filter.includeResolved) {
-        return false
-      }
-
-      if (annotation.ignored && !filter.includeIgnored) {
-        return false
-      }
-
-      if (
-        filter.scope === 'activeFile' &&
-        annotation.uri !== filter.activeUri
-      ) {
-        return false
-      }
-
-      if (filter.scope === 'openEditors' && !openUris.has(annotation.uri)) {
-        return false
-      }
-
-      if (
-        filter.scope === 'changedFiles' &&
-        !filter.changedUris.has(annotation.uri)
-      ) {
-        return false
-      }
-
-      if (filter.onlyOwnerless && !isBeaconOwnerless(annotation)) {
-        return false
-      }
-
-      if (
-        filter.onlyStale &&
-        !isBeaconStale(
-          filter.metadataByAnnotationId.get(annotation.id),
-          filter.staleDays,
-          filter.now,
-        )
-      ) {
-        return false
-      }
-
-      if (
-        filter.categories.length > 0 &&
-        !filter.categories.includes(annotation.category)
-      ) {
-        return false
-      }
-
-      if (
-        filter.severities.length > 0 &&
-        !filter.severities.includes(annotation.severity)
-      ) {
-        return false
-      }
-
-      if (
-        filter.owners.length > 0 &&
-        !filter.owners.includes(annotation.owner ?? '')
-      ) {
-        return false
-      }
-
-      if (query === '') {
-        return true
-      }
-
-      return [
-        annotation.keyword,
-        annotation.message,
-        annotation.owner ?? '',
-        annotation.ruleId,
-      ].some(value => value.toLowerCase().includes(query))
-    })
+    .filter(
+      annotation =>
+        matchesState(annotation, filter) &&
+        matchesScope(annotation, filter, openUris) &&
+        matchesGitMetadata(annotation, filter) &&
+        matchesFacets(annotation, filter) &&
+        matchesQuery(annotation, query),
+    )
     .toSorted(compareBeaconAnnotations)
 }

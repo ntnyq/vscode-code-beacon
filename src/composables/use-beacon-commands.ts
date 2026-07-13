@@ -13,7 +13,12 @@ import {
   WorkspaceEdit,
   workspace,
 } from 'vscode'
-import type { LanguageModelChat, Memento, OutputChannel } from 'vscode'
+import type {
+  CancellationToken,
+  LanguageModelChat,
+  Memento,
+  OutputChannel,
+} from 'vscode'
 import { config } from '../config'
 import {
   annotationExplanationPrompt,
@@ -43,6 +48,14 @@ import type { BeaconAnnotation } from '../types/annotation'
 const BEACON_EXPLAIN_COMMAND = 'code-beacon.explain'
 const BEACON_GENERATE_FIX_COMMAND = 'code-beacon.generateFix'
 const BEACON_SUMMARIZE_WORKSPACE_COMMAND = 'code-beacon.summarizeWorkspace'
+
+type GeneratedFixOutcome =
+  | 'applied'
+  | 'apply-failed'
+  | 'document-drift'
+  | 'invalid-proposal'
+  | 'rejected'
+  | undefined
 
 /**
  * Updates the global extension enabled flag.
@@ -147,9 +160,16 @@ function isBeaconSource(value: unknown): boolean {
   )
 }
 
-function isBeaconAnnotation(value: unknown): value is BeaconAnnotation {
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string'
+}
+
+function isOptionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean'
+}
+
+function hasRequiredAnnotationFields(value: Record<string, unknown>): boolean {
   return (
-    isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.ruleId === 'string' &&
     isBeaconCategory(value.category) &&
@@ -166,18 +186,32 @@ function isBeaconAnnotation(value: unknown): value is BeaconAnnotation {
     value.column >= 0 &&
     typeof value.keyword === 'string' &&
     typeof value.message === 'string' &&
-    isBeaconSource(value.source) &&
+    isBeaconSource(value.source)
+  )
+}
+
+function hasValidOptionalAnnotationFields(
+  value: Record<string, unknown>,
+): boolean {
+  return (
     (value.style === undefined || isBeaconStyle(value.style)) &&
     (value.messageRange === undefined ||
       isSerializedRange(value.messageRange)) &&
     (value.diagnostics === undefined ||
       isBeaconDiagnostics(value.diagnostics)) &&
-    (value.owner === undefined || typeof value.owner === 'string') &&
-    (value.dueDate === undefined || typeof value.dueDate === 'string') &&
-    (value.expiresDate === undefined ||
-      typeof value.expiresDate === 'string') &&
-    (value.resolved === undefined || typeof value.resolved === 'boolean') &&
-    (value.ignored === undefined || typeof value.ignored === 'boolean')
+    isOptionalString(value.owner) &&
+    isOptionalString(value.dueDate) &&
+    isOptionalString(value.expiresDate) &&
+    isOptionalBoolean(value.resolved) &&
+    isOptionalBoolean(value.ignored)
+  )
+}
+
+function isBeaconAnnotation(value: unknown): value is BeaconAnnotation {
+  return (
+    isRecord(value) &&
+    hasRequiredAnnotationFields(value) &&
+    hasValidOptionalAnnotationFields(value)
   )
 }
 
@@ -229,6 +263,62 @@ function workspaceSummaryOutputHeading(summary: {
 
 const createLanguageModelUserMessage = LanguageModelChatMessage.User
 
+async function saveAnnotationState(
+  previousSave: Promise<void>,
+  save: () => PromiseLike<void>,
+): Promise<void> {
+  try {
+    await previousSave
+    await save()
+  } catch {
+    // Persistence is best-effort; the in-memory annotation state remains valid.
+  }
+}
+
+function shouldStopGeneratedFix(
+  requestGeneration: number,
+  currentGeneration: number,
+  token: CancellationToken,
+  markCancelled: () => void,
+): boolean {
+  if (token.isCancellationRequested) {
+    markCancelled()
+  }
+
+  return (
+    requestGeneration !== currentGeneration || token.isCancellationRequested
+  )
+}
+
+async function showGeneratedFixOutcome(outcome: GeneratedFixOutcome) {
+  switch (outcome) {
+    case 'applied': {
+      await window.showInformationMessage('Generated fix applied.')
+      break
+    }
+    case 'apply-failed': {
+      await window.showWarningMessage('Unable to apply the generated fix.')
+      break
+    }
+    case 'document-drift': {
+      await window.showInformationMessage(
+        'The annotation document changed; generated fix was not applied.',
+      )
+      break
+    }
+    case 'invalid-proposal': {
+      await window.showWarningMessage(
+        'Generated fix proposal is invalid or no longer safe to apply.',
+      )
+      break
+    }
+    case 'rejected': {
+      await window.showInformationMessage('Generated fix was not applied.')
+      break
+    }
+  }
+}
+
 /**
  * Registers user-facing Code Beacon commands.
  */
@@ -257,7 +347,7 @@ export function useBeaconCommands(workspaceState: Memento) {
   useDisposable({
     dispose: annotationStore.subscribe(() => {
       const state = annotationStore.getState()
-      saveChain = saveChain.then(() => storage.save(state)).catch(() => {})
+      saveChain = saveAnnotationState(saveChain, () => storage.save(state))
     }),
   })
 
@@ -492,13 +582,7 @@ export function useBeaconCommands(workspaceState: Memento) {
 
     let wasCancelled = false
     let progressToken: { readonly isCancellationRequested: boolean } | undefined
-    let outcome:
-      | 'applied'
-      | 'apply-failed'
-      | 'document-drift'
-      | 'invalid-proposal'
-      | 'rejected'
-      | undefined
+    let outcome: GeneratedFixOutcome
 
     try {
       await window.withProgress(
@@ -510,12 +594,17 @@ export function useBeaconCommands(workspaceState: Memento) {
         async (_progress, token) => {
           progressToken = token
 
-          if (requestGeneration !== generateFixRequestGeneration) {
-            return
-          }
+          const shouldStop = () =>
+            shouldStopGeneratedFix(
+              requestGeneration,
+              generateFixRequestGeneration,
+              token,
+              () => {
+                wasCancelled = true
+              },
+            )
 
-          if (token.isCancellationRequested) {
-            wasCancelled = true
+          if (shouldStop()) {
             return
           }
 
@@ -529,12 +618,7 @@ export function useBeaconCommands(workspaceState: Memento) {
           let generatedText = ''
 
           for await (const part of response.stream) {
-            if (requestGeneration !== generateFixRequestGeneration) {
-              return
-            }
-
-            if (token.isCancellationRequested) {
-              wasCancelled = true
+            if (shouldStop()) {
               return
             }
 
@@ -543,12 +627,7 @@ export function useBeaconCommands(workspaceState: Memento) {
             }
           }
 
-          if (requestGeneration !== generateFixRequestGeneration) {
-            return
-          }
-
-          if (token.isCancellationRequested) {
-            wasCancelled = true
+          if (shouldStop()) {
             return
           }
 
@@ -566,11 +645,7 @@ export function useBeaconCommands(workspaceState: Memento) {
             return
           }
 
-          if (
-            requestGeneration !== generateFixRequestGeneration ||
-            token.isCancellationRequested
-          ) {
-            wasCancelled ||= token.isCancellationRequested
+          if (shouldStop()) {
             return
           }
 
@@ -593,11 +668,7 @@ export function useBeaconCommands(workspaceState: Memento) {
             },
           )
 
-          if (
-            requestGeneration !== generateFixRequestGeneration ||
-            token.isCancellationRequested
-          ) {
-            wasCancelled ||= token.isCancellationRequested
+          if (shouldStop()) {
             return
           }
 
@@ -637,21 +708,7 @@ export function useBeaconCommands(workspaceState: Memento) {
       return
     }
 
-    if (outcome === 'invalid-proposal') {
-      await window.showWarningMessage(
-        'Generated fix proposal is invalid or no longer safe to apply.',
-      )
-    } else if (outcome === 'document-drift') {
-      await window.showInformationMessage(
-        'The annotation document changed; generated fix was not applied.',
-      )
-    } else if (outcome === 'rejected') {
-      await window.showInformationMessage('Generated fix was not applied.')
-    } else if (outcome === 'apply-failed') {
-      await window.showWarningMessage('Unable to apply the generated fix.')
-    } else if (outcome === 'applied') {
-      await window.showInformationMessage('Generated fix applied.')
-    }
+    await showGeneratedFixOutcome(outcome)
   }
 
   const summarizeWorkspaceAnnotations = async () => {

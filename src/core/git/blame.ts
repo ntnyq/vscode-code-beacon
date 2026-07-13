@@ -9,6 +9,8 @@ export interface BeaconGitMetadata {
   summary: string
 }
 
+export const MAX_BEACON_GIT_METADATA_CACHE_ENTRIES = 1000
+
 /**
  * Extracts the commit hash from one zero-based line of git blame output.
  */
@@ -40,9 +42,15 @@ export class BeaconGitMetadataCache {
     version: number,
     line: number,
   ): BeaconGitMetadata | undefined {
-    return this.entries.get(
-      BeaconGitMetadataCache.createKey(uri, version, line),
-    )
+    const key = BeaconGitMetadataCache.createKey(uri, version, line)
+    const metadata = this.entries.get(key)
+
+    if (metadata) {
+      this.entries.delete(key)
+      this.entries.set(key, metadata)
+    }
+
+    return metadata
   }
 
   /**
@@ -54,10 +62,17 @@ export class BeaconGitMetadataCache {
     line: number,
     metadata: BeaconGitMetadata,
   ) {
-    this.entries.set(
-      BeaconGitMetadataCache.createKey(uri, version, line),
-      metadata,
-    )
+    const key = BeaconGitMetadataCache.createKey(uri, version, line)
+    this.entries.delete(key)
+    this.entries.set(key, metadata)
+
+    while (this.entries.size > MAX_BEACON_GIT_METADATA_CACHE_ENTRIES) {
+      const oldestKey = this.entries.keys().next().value
+      if (oldestKey === undefined) {
+        break
+      }
+      this.entries.delete(oldestKey)
+    }
   }
 
   private static createKey(uri: string, version: number, line: number): string {

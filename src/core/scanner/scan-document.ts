@@ -132,11 +132,12 @@ function parseAnnotationMessage(
   value: string,
   { extractOwner = false, trim = true }: ParseAnnotationMessageOptions = {},
 ): ParsedAnnotationMessage {
-  const normalizedValue = extractOwner
-    ? value.replace(/^[:\s-]+/u, '').trim()
-    : trim
-      ? value.trim()
-      : value
+  let normalizedValue = value
+  if (extractOwner) {
+    normalizedValue = value.replace(/^[:\s-]+/u, '').trim()
+  } else if (trim) {
+    normalizedValue = value.trim()
+  }
   const ownerPatterns = [
     /^\((?<owner>[^)]+)\)\s*:?\s*(?<message>.*)$/u,
     /^@(?<owner>[\w.-]+)\s*:?\s*(?<message>.*)$/u,
@@ -161,9 +162,14 @@ function parseAnnotationMessage(
   let dueDate: string | undefined
   let expiresDate: string | undefined
   const messageWithoutDirectives = message.replaceAll(
-    /(?:^|\s)(due|expires):(\S+)/giu,
-    (_match, directive: string, directiveValue: string) => {
-      if (directive.toLowerCase() === 'due') {
+    /(?:^|\s)(?:due|expires):\S+/giu,
+    match => {
+      const directive = match.trim()
+      const separator = directive.indexOf(':')
+      const directiveName = directive.slice(0, separator).toLowerCase()
+      const directiveValue = directive.slice(separator + 1)
+
+      if (directiveName === 'due') {
         dueDate = directiveValue
       } else {
         expiresDate = directiveValue

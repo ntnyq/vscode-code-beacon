@@ -39,6 +39,7 @@ const {
   getWorkspaceFolder,
   loggerWarn,
   openTextDocument,
+  progressCancellation,
   RelativePattern,
   useDisposable,
 } = vi.hoisted(() => {
@@ -96,6 +97,7 @@ const {
       vi.fn<
         (uri: TestUri) => Promise<{ getText: () => string; languageId: string }>
       >(),
+    progressCancellation: { isCancellationRequested: false },
     RelativePattern: TestRelativePattern,
     useDisposable: vi.fn<(value: unknown) => unknown>(value => value),
   }
@@ -151,8 +153,11 @@ vi.mock(
       window: {
         withProgress: (
           _options: unknown,
-          task: (progress: { report: () => void }) => unknown,
-        ) => task({ report: () => {} }),
+          task: (
+            progress: { report: () => void },
+            token: { readonly isCancellationRequested: boolean },
+          ) => unknown,
+        ) => task({ report: () => {} }, progressCancellation),
       },
       workspace: {
         asRelativePath: (testUri: TestUri, includeWorkspaceFolder?: boolean) =>
@@ -162,7 +167,7 @@ vi.mock(
         createFileSystemWatcher,
         findFiles,
         getWorkspaceFolder,
-        getConfiguration: () => ({ get: () => undefined }),
+        getConfiguration: () => ({ get: () => {} }),
         isTrusted: true,
         openTextDocument,
         onDidChangeConfiguration: (
@@ -216,6 +221,7 @@ describe('workspace scan file events', () => {
     getWorkspaceFolder.mockReturnValue({ uri: { path: '/workspace' } })
     loggerWarn.mockClear()
     openTextDocument.mockReset()
+    progressCancellation.isCancellationRequested = false
     useDisposable.mockClear()
     Object.assign(config, {
       exclude: [],
@@ -252,6 +258,107 @@ describe('workspace scan file events', () => {
     expect(
       annotationsFor(b).map(annotation => annotation.message),
     ).toStrictEqual(['keep'])
+  })
+
+  it('uses bounded concurrency for full workspace scans', async () => {
+    const files = Array.from({ length: 12 }, (_, index) =>
+      uri(`src/${index}.ts`),
+    )
+    findFiles.mockResolvedValue(files)
+    let activeScans = 0
+    let maximumActiveScans = 0
+    openTextDocument.mockImplementation(async () => {
+      activeScans += 1
+      maximumActiveScans = Math.max(maximumActiveScans, activeScans)
+      await Promise.resolve()
+      activeScans -= 1
+      return { getText: () => 'TODO: concurrent', languageId: 'typescript' }
+    })
+
+    await useWorkspaceScan().scanWorkspace()
+
+    expect(maximumActiveScans).toBeGreaterThan(1)
+    expect(maximumActiveScans).toBeLessThan(files.length)
+  })
+
+  it('does not publish a partial snapshot when a full scan is cancelled', async () => {
+    annotationStore.setForUri(a.toString(), [
+      {
+        category: 'todo',
+        column: 0,
+        id: 'existing',
+        keyword: 'TODO',
+        keywordRange: {
+          end: { character: 4, line: 0 },
+          start: { character: 0, line: 0 },
+        },
+        languageId: 'typescript',
+        line: 0,
+        message: 'existing',
+        range: {
+          end: { character: 4, line: 0 },
+          start: { character: 0, line: 0 },
+        },
+        ruleId: 'todo',
+        severity: 'information',
+        source: 'workspace',
+        uri: a.toString(),
+      },
+    ])
+    findFiles.mockResolvedValue([a, b])
+    openTextDocument.mockImplementation(() => {
+      progressCancellation.isCancellationRequested = true
+      return Promise.resolve({
+        getText: () => 'TODO: replacement',
+        languageId: 'typescript',
+      })
+    })
+
+    await useWorkspaceScan().scanWorkspace()
+
+    expect(annotationsFor(a).map(annotation => annotation.id)).toStrictEqual([
+      'existing',
+    ])
+    expect(annotationsFor(b)).toStrictEqual([])
+  })
+
+  it('does not let a cancelled full scan invalidate an in-flight watcher result', async () => {
+    const scanner = await scanInitialWorkspace(
+      new Map([[a.toString(), 'TODO: initial']]),
+      [a],
+    )
+    openTextDocument.mockClear()
+    let resolveWatcher:
+      | ((value: { getText: () => string; languageId: string }) => void)
+      | undefined
+    openTextDocument
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            resolveWatcher = resolve
+          }),
+      )
+      .mockImplementationOnce(() => {
+        progressCancellation.isCancellationRequested = true
+        return Promise.resolve({
+          getText: () => 'TODO: cancelled',
+          languageId: 'typescript',
+        })
+      })
+
+    const watcherScan = scanner.rescanWorkspaceUri(a as unknown as Vscode.Uri)
+    await vi.waitFor(() => expect(openTextDocument).toHaveBeenCalledTimes(1))
+    const cancelledScan = scanner.scanWorkspace()
+    await vi.waitFor(() => expect(openTextDocument).toHaveBeenCalledTimes(2))
+    resolveWatcher?.({
+      getText: () => 'TODO: watcher result',
+      languageId: 'typescript',
+    })
+
+    await Promise.all([watcherScan, cancelledScan])
+    expect(
+      annotationsFor(a).map(annotation => annotation.message),
+    ).toStrictEqual(['watcher result'])
   })
 
   it('removes only deleted URI workspace annotations', async () => {

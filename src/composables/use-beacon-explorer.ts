@@ -157,7 +157,28 @@ export function useBeaconExplorer(
     disposeChangedUrisSubscription()
   }
 
-  function refreshChangedUris() {
+  async function createChangedUrisSubscription(subscriptionRequest: number) {
+    try {
+      const subscription = await subscribeToChangedUris(refreshExplorer)
+      if (
+        subscriptionRequest !== changedUrisSubscriptionRequest ||
+        !isChangedFilesScope()
+      ) {
+        subscription.dispose()
+        return
+      }
+
+      changedUrisSubscription = subscription
+    } catch {
+      // Git integration is best-effort in unsupported workspace environments.
+    } finally {
+      if (subscriptionRequest === changedUrisSubscriptionRequest) {
+        isChangedUrisSubscriptionPending = false
+      }
+    }
+  }
+
+  async function refreshChangedUris() {
     if (!isChangedFilesScope()) {
       clearChangedUris()
       return
@@ -166,48 +187,25 @@ export function useBeaconExplorer(
     if (!changedUrisSubscription && !isChangedUrisSubscriptionPending) {
       const subscriptionRequest = changedUrisSubscriptionRequest
       isChangedUrisSubscriptionPending = true
-      // oxlint-disable-next-line no-void -- VS Code listeners cannot await Git setup.
-      void subscribeToChangedUris(refreshExplorer)
-        .then(subscription => {
-          if (
-            subscriptionRequest !== changedUrisSubscriptionRequest ||
-            !isChangedFilesScope()
-          ) {
-            subscription.dispose()
-            return
-          }
-
-          changedUrisSubscription = subscription
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (subscriptionRequest === changedUrisSubscriptionRequest) {
-            isChangedUrisSubscriptionPending = false
-          }
-        })
+      createChangedUrisSubscription(subscriptionRequest)
     }
 
     const request = changedUrisRequest + 1
     changedUrisRequest = request
-    // oxlint-disable-next-line no-void -- VS Code listeners cannot await Git snapshots.
-    void getChangedUris().then(
-      uris => {
-        if (request !== changedUrisRequest || !isChangedFilesScope()) {
-          return
-        }
+    let uris: ReadonlySet<string>
 
-        changedUris = new Set(uris)
-        provider.refresh()
-      },
-      () => {
-        if (request !== changedUrisRequest || !isChangedFilesScope()) {
-          return
-        }
+    try {
+      uris = await getChangedUris()
+    } catch {
+      uris = new Set()
+    }
 
-        changedUris = new Set()
-        provider.refresh()
-      },
-    )
+    if (request !== changedUrisRequest || !isChangedFilesScope()) {
+      return
+    }
+
+    changedUris = new Set(uris)
+    provider.refresh()
   }
 
   async function hydrateGitMetadata() {

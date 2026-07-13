@@ -3,6 +3,7 @@ import type {
   BeaconCategory,
   BeaconSeverity,
 } from '../../types/annotation'
+import { escapePromptPayload } from './prompt-payload'
 import { selectBeaconAnnotations } from './select-annotations'
 
 export const MAX_WORKSPACE_ANNOTATION_SUMMARY_PAYLOAD_LENGTH = 12_000
@@ -84,14 +85,17 @@ function serializePayload(
   annotations: readonly WorkspaceSummaryAnnotation[],
   counts: WorkspaceAnnotationSummaryCounts,
 ): string {
-  return JSON.stringify({
-    total,
-    returned,
-    sent: annotations.length,
-    truncated: returned < total || annotations.length < returned,
-    counts,
-    annotations,
-  }).replaceAll('<', String.raw`\u003c`)
+  return escapePromptPayload(
+    JSON.stringify({
+      total,
+      returned,
+      sent: annotations.length,
+      truncated: returned < total || annotations.length < returned,
+      counts,
+      annotations,
+    }),
+    ['</untrusted-workspace-annotations>'],
+  )
 }
 
 export function createWorkspaceAnnotationSummary(

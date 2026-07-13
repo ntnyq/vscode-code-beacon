@@ -65,6 +65,81 @@ export interface AnnotationStore {
 }
 
 /**
+ * Builds a position-independent key used to carry state across document edits.
+ */
+function annotationStateKey(annotation: BeaconAnnotation): string {
+  return JSON.stringify([
+    annotation.uri,
+    annotation.ruleId,
+    annotation.category,
+    annotation.keyword,
+    annotation.message,
+    annotation.owner ?? '',
+    annotation.dueDate ?? '',
+    annotation.expiresDate ?? '',
+  ])
+}
+
+/**
+ * Keeps the first annotation for each logical ID to avoid cross-source duplicates.
+ */
+function uniqueById(
+  annotations: readonly BeaconAnnotation[],
+): readonly BeaconAnnotation[] {
+  const uniqueAnnotations = new Map<string, BeaconAnnotation>()
+
+  for (const annotation of annotations) {
+    if (!uniqueAnnotations.has(annotation.id)) {
+      uniqueAnnotations.set(annotation.id, annotation)
+    }
+  }
+
+  return [...uniqueAnnotations.values()]
+}
+
+function isCloserAnnotation(
+  candidate: BeaconAnnotation,
+  current: BeaconAnnotation,
+  reference: BeaconAnnotation,
+): boolean {
+  const candidateLineDistance = Math.abs(candidate.line - reference.line)
+  const currentLineDistance = Math.abs(current.line - reference.line)
+
+  return (
+    candidateLineDistance < currentLineDistance ||
+    (candidateLineDistance === currentLineDistance &&
+      Math.abs(candidate.column - reference.column) <
+        Math.abs(current.column - reference.column))
+  )
+}
+
+function takeClosestReplacement(
+  annotation: BeaconAnnotation,
+  candidates: BeaconAnnotation[],
+): BeaconAnnotation | undefined {
+  let replacementIndex = candidates.findIndex(
+    candidate => candidate.id === annotation.id,
+  )
+  if (replacementIndex === -1) {
+    replacementIndex = 0
+    let closestCandidate = candidates[0]
+
+    for (let index = 1; index < candidates.length; index += 1) {
+      const candidate = candidates[index]
+      if (
+        candidate &&
+        isCloserAnnotation(candidate, closestCandidate, annotation)
+      ) {
+        closestCandidate = candidate
+        replacementIndex = index
+      }
+    }
+  }
+
+  return candidates.splice(replacementIndex, 1)[0]
+}
+
+/**
  * Creates an isolated annotation store instance for runtime or tests.
  */
 export function createAnnotationStore(): AnnotationStore {
@@ -105,6 +180,72 @@ export function createAnnotationStore(): AnnotationStore {
     ignored: ignoredIds.has(annotation.id),
     resolved: resolvedIds.has(annotation.id),
   })
+
+  /**
+   * Moves state to matching annotations whose generated IDs changed after edits.
+   */
+  const reconcileState = (
+    previous: readonly BeaconAnnotation[],
+    next: readonly BeaconAnnotation[],
+  ) => {
+    const previousByKey = new Map<string, BeaconAnnotation[]>()
+    const nextByKey = new Map<string, BeaconAnnotation[]>()
+
+    for (const annotation of previous) {
+      const key = annotationStateKey(annotation)
+      previousByKey.set(key, [...(previousByKey.get(key) ?? []), annotation])
+    }
+
+    for (const annotation of next) {
+      const key = annotationStateKey(annotation)
+      nextByKey.set(key, [...(nextByKey.get(key) ?? []), annotation])
+    }
+
+    const moveState = (
+      annotation: BeaconAnnotation,
+      replacement: BeaconAnnotation | undefined,
+    ) => {
+      if (!replacement || replacement.id === annotation.id) {
+        return
+      }
+
+      if (resolvedIds.delete(annotation.id)) {
+        resolvedIds.add(replacement.id)
+      }
+
+      if (ignoredIds.delete(annotation.id)) {
+        ignoredIds.add(replacement.id)
+      }
+    }
+
+    for (const [key, previousAnnotations] of previousByKey) {
+      const candidates = nextByKey.get(key)
+      if (!candidates || candidates.length === 0) {
+        continue
+      }
+
+      if (previousAnnotations.length === candidates.length) {
+        for (const [index, annotation] of previousAnnotations.entries()) {
+          if (resolvedIds.has(annotation.id) || ignoredIds.has(annotation.id)) {
+            moveState(annotation, candidates[index])
+          }
+        }
+        continue
+      }
+
+      for (const annotation of previousAnnotations) {
+        if (!resolvedIds.has(annotation.id) && !ignoredIds.has(annotation.id)) {
+          continue
+        }
+
+        if (candidates.length === 0) {
+          continue
+        }
+
+        moveState(annotation, takeClosestReplacement(annotation, candidates))
+      }
+    }
+  }
 
   /**
    * Rewrites all stored annotations with the latest persistent state flags.
@@ -154,6 +295,7 @@ export function createAnnotationStore(): AnnotationStore {
      * Replaces annotations for one URI and notifies subscribers.
      */
     setForUri(uri, annotations) {
+      reconcileState(annotationsByUri.get(uri) ?? [], annotations)
       annotationsByUri.set(uri, annotations.map(withState))
       notify()
     },
@@ -163,14 +305,18 @@ export function createAnnotationStore(): AnnotationStore {
      */
     replaceForSource(source, replacementByUri) {
       for (const [uri, existingAnnotations] of annotationsByUri) {
+        const previousSourceAnnotations = existingAnnotations.filter(
+          annotation => annotation.source === source,
+        )
         const retainedAnnotations = existingAnnotations.filter(
           annotation => annotation.source !== source,
         )
         const replacementAnnotations = replacementByUri.get(uri) ?? []
-        const nextAnnotations = [
-          ...retainedAnnotations,
+        reconcileState(previousSourceAnnotations, replacementAnnotations)
+        const nextAnnotations = uniqueById([
+          ...retainedAnnotations.map(withState),
           ...replacementAnnotations.map(withState),
-        ]
+        ])
 
         if (nextAnnotations.length > 0) {
           annotationsByUri.set(uri, nextAnnotations)

@@ -31,6 +31,8 @@ interface WorkspaceUriScanFailed {
 
 type WorkspaceUriScanResult = WorkspaceUriScanSucceeded | WorkspaceUriScanFailed
 
+const WORKSPACE_SCAN_CONCURRENCY = 8
+
 /**
  * Builds the effective workspace exclude patterns from Code Beacon and VS Code settings.
  */
@@ -313,14 +315,15 @@ export function useWorkspaceScan() {
    */
   const scanWorkspace = () => {
     const configurationGeneration = scanConfigurationGeneration
-    const generation = ++workspaceGeneration
+    const generation = workspaceGeneration
 
     return window.withProgress(
       {
+        cancellable: true,
         location: ProgressLocation.Notification,
         title: 'Scanning Code Beacon annotations',
       },
-      async progress => {
+      async (progress, token) => {
         const { exclude, include } = workspaceScanGlobs()
         const files = await workspace.findFiles(
           include,
@@ -333,23 +336,44 @@ export function useWorkspaceScan() {
         const annotationsByUri = new Map<string, readonly BeaconAnnotation[]>()
         const scanUriGenerations = new Map<string, number>()
 
-        for (const uri of files) {
-          const uriString = uri.toString()
-          const uriGeneration = (uriGenerations.get(uriString) ?? 0) + 1
-          uriGenerations.set(uriString, uriGeneration)
-          scanUriGenerations.set(uriString, uriGeneration)
-          scanned += 1
-          progress.report({
-            message: `${scanned}/${files.length}`,
-          })
+        let nextFileIndex = 0
 
-          const result = await scanUri(uri)
-          annotationsByUri.set(
-            uriString,
-            result.succeeded
-              ? result.annotations
-              : workspaceAnnotationsForUri(uriString),
-          )
+        const scanNextFile = async () => {
+          while (
+            nextFileIndex < files.length &&
+            !token.isCancellationRequested
+          ) {
+            const uri = files[nextFileIndex]
+            nextFileIndex += 1
+            if (!uri) {
+              return
+            }
+
+            const uriString = uri.toString()
+            const uriGeneration = (uriGenerations.get(uriString) ?? 0) + 1
+            scanUriGenerations.set(uriString, uriGeneration)
+
+            const result = await scanUri(uri)
+            annotationsByUri.set(
+              uriString,
+              result.succeeded
+                ? result.annotations
+                : workspaceAnnotationsForUri(uriString),
+            )
+            scanned += 1
+            progress.report({ message: `${scanned}/${files.length}` })
+          }
+        }
+
+        await Promise.all(
+          Array.from(
+            { length: Math.min(WORKSPACE_SCAN_CONCURRENCY, files.length) },
+            scanNextFile,
+          ),
+        )
+
+        if (token.isCancellationRequested) {
+          return
         }
 
         if (
@@ -360,7 +384,8 @@ export function useWorkspaceScan() {
         }
 
         for (const [uri, uriGeneration] of scanUriGenerations) {
-          if (uriGenerations.get(uri) === uriGeneration) {
+          if ((uriGenerations.get(uri) ?? 0) === uriGeneration - 1) {
+            uriGenerations.set(uri, uriGeneration)
             continue
           }
 
@@ -372,6 +397,7 @@ export function useWorkspaceScan() {
           }
         }
 
+        workspaceGeneration += 1
         annotationStore.replaceForSource('workspace', annotationsByUri)
         knownWorkspaceUris.clear()
         for (const uri of files) {

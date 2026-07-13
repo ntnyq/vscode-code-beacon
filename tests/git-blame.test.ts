@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   BeaconGitMetadataCache,
+  MAX_BEACON_GIT_METADATA_CACHE_ENTRIES,
   parseBlameCommitHash,
 } from '../src/core/git/blame'
 import type { BeaconGitMetadata } from '../src/core/git/blame'
@@ -92,5 +93,26 @@ describe(BeaconGitMetadataCache, () => {
     expect(
       cache.get('file:///workspace/answer.ts', version, line),
     ).toBeUndefined()
+  })
+
+  it('evicts the least recently used metadata when capacity is reached', () => {
+    const cache = new BeaconGitMetadataCache()
+
+    for (
+      let index = 0;
+      index <= MAX_BEACON_GIT_METADATA_CACHE_ENTRIES;
+      index++
+    ) {
+      cache.set(`file:///workspace/${index}.ts`, 1, 0, metadata)
+    }
+
+    expect(cache.get('file:///workspace/0.ts', 1, 0)).toBeUndefined()
+    expect(
+      cache.get(
+        `file:///workspace/${MAX_BEACON_GIT_METADATA_CACHE_ENTRIES}.ts`,
+        1,
+        0,
+      ),
+    ).toBe(metadata)
   })
 })

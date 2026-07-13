@@ -66,6 +66,8 @@ interface Commit {
   readonly message: string
 }
 
+const NOOP_DISPOSABLE: Disposable = { dispose: () => false }
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -275,7 +277,7 @@ export function useBeaconGit(): BeaconGitAdapter {
   ): Promise<Disposable> {
     const api = await getChangedUrisAPI()
     if (!api) {
-      return { dispose: () => {} }
+      return NOOP_DISPOSABLE
     }
     const changedUrisApi = api
 
@@ -302,6 +304,12 @@ export function useBeaconGit(): BeaconGitAdapter {
       }
       repositoryDisposables = []
 
+      const notifyWhenActive = () => {
+        if (!disposed) {
+          listener()
+        }
+      }
+
       try {
         for (const repository of changedUrisApi.repositories) {
           if (
@@ -311,11 +319,7 @@ export function useBeaconGit(): BeaconGitAdapter {
             continue
           }
 
-          const disposable = repository.state.onDidChange(() => {
-            if (!disposed) {
-              listener()
-            }
-          })
+          const disposable = repository.state.onDidChange(notifyWhenActive)
           if (
             !isRecord(disposable) ||
             typeof disposable.dispose !== 'function'
@@ -359,13 +363,13 @@ export function useBeaconGit(): BeaconGitAdapter {
       apiDisposables.push(closeDisposable)
 
       if (!rebindRepositoryListeners()) {
-        return { dispose: () => {} }
+        return NOOP_DISPOSABLE
       }
 
       return { dispose }
     } catch {
       dispose()
-      return { dispose: () => {} }
+      return NOOP_DISPOSABLE
     }
   }
 

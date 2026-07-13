@@ -8,6 +8,7 @@ import { useBeaconGit } from './composables/use-beacon-git'
 import { useBeaconHighlight } from './composables/use-beacon-highlight'
 import { useBeaconHover } from './composables/use-beacon-hover'
 import { useBeaconNotebook } from './composables/use-beacon-notebook'
+import { useBeaconSourceControl } from './composables/use-beacon-source-control'
 import { useWorkspaceScan } from './composables/use-workspace-scan'
 import { logger } from './utils/logger'
 
@@ -17,11 +18,13 @@ import { logger } from './utils/logger'
 const { activate, deactivate } = defineExtension(context => {
   useBeaconCommands(context.workspaceState)
   useBeaconDiagnostics()
-  useBeaconExplorer()
+  const beaconGit = useBeaconGit()
+  useBeaconExplorer(beaconGit)
   useWorkspaceScan()
   const beaconHighlight = useBeaconHighlight()
   useBeaconNotebook(beaconHighlight.scanTextDocument)
-  useBeaconHover(useBeaconGit().getMetadata)
+  useBeaconHover(beaconGit.getMetadata)
+  useBeaconSourceControl(beaconGit)
   useBeaconCodeLens()
 
   logger.info(`✅ Activated, version: ${version} `)

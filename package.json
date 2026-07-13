@@ -447,6 +447,11 @@
           "minimum": 1,
           "description": "Number of days after which a valid Git commit date is considered stale."
         },
+        "code-beacon.scm.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list."
+        },
         "code-beacon.codelens.enabled": {
           "type": "boolean",
           "default": false,

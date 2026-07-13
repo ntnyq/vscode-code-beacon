@@ -1,5 +1,5 @@
 import { extensions, workspace } from 'vscode'
-import type { TextDocument } from 'vscode'
+import type { Disposable, TextDocument } from 'vscode'
 import { BeaconGitMetadataCache, parseBlameCommitHash } from '../core/git/blame'
 import type { BeaconGitMetadata } from '../core/git/blame'
 import type { BeaconAnnotation } from '../types/annotation'
@@ -12,13 +12,20 @@ interface API {
   getRepository: (uri: TextDocument['uri']) => Repository | null | undefined
 }
 
-interface Disposable {
-  dispose: () => void
+export interface BeaconGitAdapter {
+  getChangedUris: () => Promise<ReadonlySet<string>>
+  getMetadata: (
+    document: TextDocument,
+    annotation: BeaconAnnotation,
+  ) => Promise<BeaconGitMetadata | undefined>
+  getMetadataForAnnotations: (
+    document: TextDocument,
+    annotations: readonly BeaconAnnotation[],
+  ) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
+  subscribeToChangedUris: (listener: () => void) => Promise<Disposable>
 }
 
-interface Event<T> {
-  (listener: (event: T) => void): Disposable
-}
+type Event<T> = (listener: (event: T) => void) => Disposable
 
 interface Change {
   readonly uri: {
@@ -193,7 +200,7 @@ function toMetadata(commit: Commit): BeaconGitMetadata {
 /**
  * Resolves optional Git blame metadata through VS Code's built-in Git extension.
  */
-export function useBeaconGit() {
+export function useBeaconGit(): BeaconGitAdapter {
   const cache = new BeaconGitMetadataCache()
 
   async function getChangedUrisAPI(): Promise<ChangedUrisAPI | undefined> {

@@ -238,6 +238,12 @@ Description: Number of days after which a valid Git commit date is considered st
 Type: `integer`  
 Default: `90`
 
+#### `code-beacon.scm.enabled`
+
+Description: Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.  
+Type: `boolean`  
+Default: `false`
+
 #### `code-beacon.codelens.enabled`
 
 Description: Enable CodeLens actions above annotation lines.  

@@ -175,6 +175,7 @@ export type ConfigKey =
   | "code-beacon.explorer.onlyStale"
   | "code-beacon.explorer.onlyOwnerless"
   | "code-beacon.git.staleDays"
+  | "code-beacon.scm.enabled"
   | "code-beacon.codelens.enabled"
   | "code-beacon.hover.enabled"
 
@@ -204,6 +205,7 @@ export interface ConfigKeyTypeMap {
   "code-beacon.explorer.onlyStale": boolean,
   "code-beacon.explorer.onlyOwnerless": boolean,
   "code-beacon.git.staleDays": unknown,
+  "code-beacon.scm.enabled": boolean,
   "code-beacon.codelens.enabled": boolean,
   "code-beacon.hover.enabled": boolean,
 }
@@ -234,6 +236,7 @@ export interface ConfigShorthandMap {
   explorerOnlyStale: "code-beacon.explorer.onlyStale",
   explorerOnlyOwnerless: "code-beacon.explorer.onlyOwnerless",
   gitStaleDays: "code-beacon.git.staleDays",
+  scmEnabled: "code-beacon.scm.enabled",
   codelensEnabled: "code-beacon.codelens.enabled",
   hoverEnabled: "code-beacon.hover.enabled",
 }
@@ -264,6 +267,7 @@ export interface ConfigShorthandTypeMap {
   explorerOnlyStale: boolean,
   explorerOnlyOwnerless: boolean,
   gitStaleDays: unknown,
+  scmEnabled: boolean,
   codelensEnabled: boolean,
   hoverEnabled: boolean,
 }
@@ -529,6 +533,16 @@ export const configs = {
     default: 90,
   } as ConfigItem<"code-beacon.git.staleDays">,
   /**
+   * Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.
+   * @key `code-beacon.scm.enabled`
+   * @default `false`
+   * @type `boolean`
+   */
+  scmEnabled: {
+    key: "code-beacon.scm.enabled",
+    default: false,
+  } as ConfigItem<"code-beacon.scm.enabled">,
+  /**
    * Enable CodeLens actions above annotation lines.
    * @key `code-beacon.codelens.enabled`
    * @default `false`
@@ -576,6 +590,7 @@ export interface ScopedConfigKeyTypeMap {
   "explorer.onlyStale": boolean,
   "explorer.onlyOwnerless": boolean,
   "git.staleDays": unknown,
+  "scm.enabled": boolean,
   "codelens.enabled": boolean,
   "hover.enabled": boolean,
 }
@@ -608,6 +623,7 @@ export const scopedConfigs = {
     "explorer.onlyStale": false,
     "explorer.onlyOwnerless": false,
     "git.staleDays": 90,
+    "scm.enabled": false,
     "codelens.enabled": false,
     "hover.enabled": true,
   } satisfies ScopedConfigKeyTypeMap,
@@ -647,6 +663,9 @@ export interface NestedConfigs {
     },
     "git": {
       "staleDays": unknown,
+    },
+    "scm": {
+      "enabled": boolean,
     },
     "codelens": {
       "enabled": boolean,
@@ -690,6 +709,9 @@ export interface NestedScopedConfigs {
   },
   "git": {
     "staleDays": unknown,
+  },
+  "scm": {
+    "enabled": boolean,
   },
   "codelens": {
     "enabled": boolean,

@@ -20,7 +20,7 @@ import { annotationStore } from '../core/store/annotation-store'
 import { commands } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
 import { formatBeaconLink, toVscodeRange } from '../utils/ranges'
-import { useBeaconGit } from './use-beacon-git'
+import type { BeaconGitAdapter } from './use-beacon-git'
 
 /**
  * Stable VS Code view id for the Code Beacon annotations view.
@@ -103,10 +103,15 @@ async function revealAnnotation(value?: unknown) {
 /**
  * Registers the Code Beacon TreeView and related navigation commands.
  */
-export function useBeaconExplorer() {
+export function useBeaconExplorer(
+  git: Pick<
+    BeaconGitAdapter,
+    'getChangedUris' | 'getMetadataForAnnotations' | 'subscribeToChangedUris'
+  >,
+) {
   const gitMetadataIndex = new BeaconExplorerGitMetadataIndex<TextDocument>()
   const { getChangedUris, getMetadataForAnnotations, subscribeToChangedUris } =
-    useBeaconGit()
+    git
   let changedUris = new Set<string>()
   const provider = new BeaconTreeDataProvider(
     () =>
@@ -173,7 +178,7 @@ export function useBeaconExplorer() {
 
           changedUrisSubscription = subscription
         })
-        .catch(() => undefined)
+        .catch(() => {})
         .finally(() => {
           if (subscriptionRequest === changedUrisSubscriptionRequest) {
             isChangedUrisSubscriptionPending = false

@@ -101,6 +101,7 @@ describe('package metadata', () => {
       'code-beacon.explorer.onlyStale',
       'code-beacon.explorer.onlyOwnerless',
       'code-beacon.git.staleDays',
+      'code-beacon.scm.enabled',
       'code-beacon.codelens.enabled',
       'code-beacon.hover.enabled',
     ])
@@ -121,6 +122,18 @@ describe('package metadata', () => {
       type: 'integer',
     })
     expect(staleDays.type).not.toBe('number')
+  })
+
+  it('declares an opt-in read-only Source Control setting', () => {
+    const sourceControl = pkg.contributes.configuration.properties[
+      'code-beacon.scm.enabled'
+    ] as { default?: unknown; description?: unknown; type?: unknown }
+
+    expect(sourceControl).toMatchObject({ default: false, type: 'boolean' })
+    expect(sourceControl.description).toContain('read-only')
+    expectTypeOf<false>().toMatchTypeOf<
+      ConfigKeyTypeMap['code-beacon.scm.enabled']
+    >()
   })
 
   it('supports the changed-files Explorer scope in schema and generated config', () => {

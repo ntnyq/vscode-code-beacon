@@ -1,4 +1,5 @@
 import type { BeaconAnnotation } from '../../types/annotation'
+import type { BeaconGitMetadata } from '../git/blame'
 
 /**
  * Formats a one-based annotation location for hover content.
@@ -12,12 +13,13 @@ function formatAnnotationLocation(annotation: BeaconAnnotation): string {
  */
 export function formatBeaconHoverMarkdown(
   annotation: BeaconAnnotation,
+  metadata?: BeaconGitMetadata,
 ): string {
   const title = annotation.message
     ? `**${annotation.keyword}** ${annotation.message}`
     : `**${annotation.keyword}**`
 
-  return [
+  const details = [
     title,
     '',
     `- Category: \`${annotation.category}\``,
@@ -25,5 +27,18 @@ export function formatBeaconHoverMarkdown(
     `- Rule: \`${annotation.ruleId}\``,
     `- Source: \`${annotation.source}\``,
     `- Location: \`${formatAnnotationLocation(annotation)}\``,
-  ].join('\n')
+  ]
+
+  if (metadata) {
+    details.push(
+      '',
+      '**Git**',
+      `- Author: ${metadata.authorName}`,
+      `- Date: \`${metadata.commitDate}\``,
+      `- Commit: \`${metadata.hash.slice(0, 7)}\``,
+      `- Summary: ${metadata.summary}`,
+    )
+  }
+
+  return details.join('\n')
 }

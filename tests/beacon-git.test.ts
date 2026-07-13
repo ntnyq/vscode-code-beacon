@@ -1,0 +1,328 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as Vscode from 'vscode'
+import { useBeaconGit } from '../src/composables/use-beacon-git'
+import type { BeaconAnnotation } from '../src/types/annotation'
+
+interface TestUri {
+  readonly authority: string
+  readonly path: string
+  readonly scheme: string
+  readonly toString: () => string
+}
+
+interface TestRepository {
+  readonly blame: ReturnType<typeof vi.fn<(path: string) => Promise<string>>>
+  readonly getCommit: ReturnType<
+    typeof vi.fn<(hash: string) => Promise<TestCommit>>
+  >
+  isUsingVirtualFileSystem: boolean
+  readonly rootUri: TestUri
+}
+
+interface TestCommit {
+  readonly authorDate: Date
+  readonly authorEmail: string
+  readonly authorName: string
+  readonly hash: string
+  readonly message: string
+}
+
+const { asRelativePath, getExtension } = vi.hoisted(() => ({
+  asRelativePath: vi.fn<
+    (uri: TestUri, includeWorkspaceFolder?: boolean) => string
+  >(() => 'src/example.ts'),
+  getExtension: vi.fn<(id: string) => unknown>(),
+}))
+
+let isTrusted = true
+
+vi.mock(
+  import('vscode'),
+  () =>
+    ({
+      extensions: { getExtension },
+      workspace: {
+        asRelativePath,
+        get isTrusted() {
+          return isTrusted
+        },
+      },
+    }) as unknown as Partial<typeof Vscode>,
+)
+
+function uri(path: string): TestUri {
+  return {
+    authority: '',
+    path,
+    scheme: 'file',
+    toString: () => `file://${path}`,
+  }
+}
+
+function document(
+  version = 1,
+  path = '/workspace/src/example.ts',
+): Vscode.TextDocument {
+  return {
+    uri: uri(path),
+    version,
+  } as Vscode.TextDocument
+}
+
+function annotation(line = 4): BeaconAnnotation {
+  return { line } as BeaconAnnotation
+}
+
+function repository(rootUri = uri('/workspace')): TestRepository {
+  return {
+    blame: vi.fn<(path: string) => Promise<string>>(() =>
+      Promise.resolve(
+        [
+          'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 1) const one = 1;',
+          'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 2) const two = 2;',
+          'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 3) const three = 3;',
+          'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 4) const four = 4;',
+          'a1b2c3d4 (Ada Lovelace 2026-07-12 12:00:00 +0800 5) const five = 5;',
+        ].join('\n'),
+      ),
+    ),
+    getCommit: vi.fn<(hash: string) => Promise<TestCommit>>(() =>
+      Promise.resolve({
+        authorDate: new Date('2026-07-12T04:00:00.000Z'),
+        authorEmail: 'ada@example.com',
+        authorName: 'Ada Lovelace',
+        hash: 'a1b2c3d4',
+        message: 'Add beacon metadata',
+      }),
+    ),
+    isUsingVirtualFileSystem: false,
+    rootUri,
+  }
+}
+
+function gitExtension(testRepository: TestRepository) {
+  const getRepository = vi.fn<(uri: unknown) => TestRepository | undefined>(
+    () => testRepository,
+  )
+  const getAPI = vi.fn<
+    (version: number) => { getRepository: typeof getRepository }
+  >(() => ({ getRepository }))
+  const activate = vi.fn<() => Promise<{ getAPI: typeof getAPI }>>(() =>
+    Promise.resolve({ getAPI }),
+  )
+
+  return { activate, getAPI, getRepository }
+}
+
+describe('beacon Git metadata', () => {
+  beforeEach(() => {
+    asRelativePath.mockReset()
+    asRelativePath.mockReturnValue('src/example.ts')
+    getExtension.mockReset()
+    isTrusted = true
+  })
+
+  it('resolves a flat built-in Git commit through the blame API', async () => {
+    const testRepository = repository()
+    const extension = gitExtension(testRepository)
+    const testDocument = document()
+    getExtension.mockReturnValue(extension)
+
+    const result = await useBeaconGit().getMetadata(testDocument, annotation())
+
+    expect(getExtension).toHaveBeenCalledWith('vscode.git')
+    expect(extension.activate).toHaveBeenCalledTimes(1)
+    expect(extension.getAPI).toHaveBeenCalledWith(1)
+    expect(extension.getRepository).toHaveBeenCalledWith(testDocument.uri)
+    expect(asRelativePath).not.toHaveBeenCalled()
+    expect(testRepository.blame).toHaveBeenCalledWith('src/example.ts')
+    expect(testRepository.getCommit).toHaveBeenCalledWith('a1b2c3d4')
+    expect(result).toStrictEqual({
+      authorEmail: 'ada@example.com',
+      authorName: 'Ada Lovelace',
+      commitDate: '2026-07-12T04:00:00.000Z',
+      hash: 'a1b2c3d4',
+      summary: 'Add beacon metadata',
+    })
+  })
+
+  it('blames a nested repository document relative to its repository root', async () => {
+    const testRepository = repository(uri('/workspace/packages/foo'))
+    const extension = gitExtension(testRepository)
+    const testDocument = document(1, '/workspace/packages/foo/src/a.ts')
+    asRelativePath.mockReturnValue('packages/foo/src/a.ts')
+    getExtension.mockReturnValue(extension)
+
+    await useBeaconGit().getMetadata(testDocument, annotation())
+
+    expect(asRelativePath).not.toHaveBeenCalled()
+    expect(testRepository.blame).toHaveBeenCalledWith('src/a.ts')
+  })
+
+  it('does not access Git in an untrusted workspace', async () => {
+    isTrusted = false
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(getExtension).not.toHaveBeenCalled()
+    expect(asRelativePath).not.toHaveBeenCalled()
+  })
+
+  it('does not blame a virtual repository', async () => {
+    const testRepository = repository()
+    testRepository.isUsingVirtualFileSystem = true
+    const extension = gitExtension(testRepository)
+    getExtension.mockReturnValue(extension)
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(testRepository.blame).not.toHaveBeenCalled()
+    expect(testRepository.getCommit).not.toHaveBeenCalled()
+    expect(asRelativePath).not.toHaveBeenCalled()
+  })
+
+  it('does not activate a missing Git extension', async () => {
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(asRelativePath).not.toHaveBeenCalled()
+  })
+
+  it('does not call an absent Git API', async () => {
+    const activate = vi.fn<() => Promise<unknown>>(() => Promise.resolve({}))
+    getExtension.mockReturnValue({ activate })
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(activate).toHaveBeenCalledTimes(1)
+    expect(asRelativePath).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { missingRepository: undefined, name: 'undefined' },
+    { missingRepository: null, name: 'null' },
+  ])(
+    'does not query a document with a $name repository',
+    async ({ missingRepository }) => {
+      const getRepository = vi.fn<(uri: unknown) => null | undefined>(
+        () => missingRepository,
+      )
+      const getAPI = vi.fn<
+        (version: number) => { getRepository: typeof getRepository }
+      >(() => ({ getRepository }))
+      const activate = vi.fn<() => Promise<{ getAPI: typeof getAPI }>>(() =>
+        Promise.resolve({ getAPI }),
+      )
+      getExtension.mockReturnValue({ activate })
+
+      await expect(
+        useBeaconGit().getMetadata(document(), annotation()),
+      ).resolves.toBeUndefined()
+
+      expect(getRepository).toHaveBeenCalledTimes(1)
+      expect(asRelativePath).not.toHaveBeenCalled()
+    },
+  )
+
+  it('returns undefined when obtaining the Git API throws', async () => {
+    const getAPI = vi.fn<(version: number) => never>(() => {
+      throw new Error('Git API unavailable')
+    })
+    const activate = vi.fn<() => Promise<{ getAPI: typeof getAPI }>>(() =>
+      Promise.resolve({ getAPI }),
+    )
+    getExtension.mockReturnValue({ activate })
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(asRelativePath).not.toHaveBeenCalled()
+  })
+
+  it('does not resolve a malformed blame row', async () => {
+    const testRepository = repository()
+    testRepository.blame.mockResolvedValue('not-a-hash (Ada Lovelace) TODO')
+    const extension = gitExtension(testRepository)
+    getExtension.mockReturnValue(extension)
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(testRepository.getCommit).not.toHaveBeenCalled()
+  })
+
+  it('does not blame an escaping repository-relative path', async () => {
+    const testRepository = repository()
+    const extension = gitExtension(testRepository)
+    const testDocument = document(1, '/workspace/../outside.ts')
+    getExtension.mockReturnValue(extension)
+
+    await expect(
+      useBeaconGit().getMetadata(testDocument, annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(testRepository.blame).not.toHaveBeenCalled()
+    expect(testRepository.getCommit).not.toHaveBeenCalled()
+  })
+
+  it('returns undefined when Git extension activation rejects', async () => {
+    const activate = vi.fn<() => Promise<unknown>>(() =>
+      Promise.reject(new Error('Git extension disabled')),
+    )
+    getExtension.mockReturnValue({ activate })
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(asRelativePath).not.toHaveBeenCalled()
+  })
+
+  it('returns undefined when blame rejects', async () => {
+    const testRepository = repository()
+    testRepository.blame.mockRejectedValue(new Error('blame failed'))
+    const extension = gitExtension(testRepository)
+    getExtension.mockReturnValue(extension)
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+
+    expect(testRepository.getCommit).not.toHaveBeenCalled()
+  })
+
+  it('returns undefined when commit lookup rejects', async () => {
+    const testRepository = repository()
+    testRepository.getCommit.mockRejectedValue(new Error('commit failed'))
+    const extension = gitExtension(testRepository)
+    getExtension.mockReturnValue(extension)
+
+    await expect(
+      useBeaconGit().getMetadata(document(), annotation()),
+    ).resolves.toBeUndefined()
+  })
+
+  it('reuses metadata cached for the same document version and line', async () => {
+    const testRepository = repository()
+    const extension = gitExtension(testRepository)
+    getExtension.mockReturnValue(extension)
+    const git = useBeaconGit()
+    const sameDocument = document()
+    const sameAnnotation = annotation()
+
+    await git.getMetadata(sameDocument, sameAnnotation)
+    await git.getMetadata(sameDocument, sameAnnotation)
+
+    expect(testRepository.blame).toHaveBeenCalledTimes(1)
+    expect(testRepository.getCommit).toHaveBeenCalledTimes(1)
+  })
+})

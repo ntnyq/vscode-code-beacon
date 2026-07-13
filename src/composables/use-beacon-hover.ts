@@ -1,11 +1,20 @@
 import { useDisposable } from 'reactive-vscode'
 import { Hover, MarkdownString, languages } from 'vscode'
-import type { Position } from 'vscode'
+import type { Position, TextDocument } from 'vscode'
 import { config } from '../config'
+import type { BeaconGitMetadata } from '../core/git/blame'
 import { formatBeaconHoverMarkdown } from '../core/hover/format'
 import { annotationStore } from '../core/store/annotation-store'
 import { beaconDocumentSelector } from '../core/workspace/documents'
 import type { BeaconAnnotation, SerializedRange } from '../types/annotation'
+
+/**
+ * Resolves optional Git metadata for one hovered annotation.
+ */
+export type BeaconGitMetadataLookup = (
+  document: TextDocument,
+  annotation: BeaconAnnotation,
+) => Promise<BeaconGitMetadata | undefined>
 
 /**
  * Checks whether a VS Code position falls inside a serialized range.
@@ -38,10 +47,10 @@ function annotationAtPosition(
 /**
  * Registers hover content for beacon annotations.
  */
-export function useBeaconHover() {
+export function useBeaconHover(getMetadata?: BeaconGitMetadataLookup) {
   useDisposable(
     languages.registerHoverProvider(beaconDocumentSelector, {
-      provideHover(document, position) {
+      async provideHover(document, position) {
         if (!config.enable || !config.hover.enabled) {
           return null
         }
@@ -55,8 +64,15 @@ export function useBeaconHover() {
           return null
         }
 
+        let metadata: BeaconGitMetadata | undefined
+        try {
+          metadata = await getMetadata?.(document, annotation)
+        } catch {
+          metadata = undefined
+        }
+
         return new Hover(
-          new MarkdownString(formatBeaconHoverMarkdown(annotation)),
+          new MarkdownString(formatBeaconHoverMarkdown(annotation, metadata)),
         )
       },
     }),

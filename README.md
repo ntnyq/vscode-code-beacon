@@ -18,6 +18,7 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 - Copy links or Markdown and export all beacons as Markdown, JSON, or CSV.
 - Resolve or ignore beacons with state persisted for the current workspace; reopen or unignore them when the work resumes.
 - Filter Explorer results by scope, category, severity, owner, or text query, and choose whether resolved and ignored beacons remain visible.
+- Enrich annotation hovers with the blamed commit's author, date, short hash, and summary in trusted desktop workspaces.
 - Run in desktop VS Code, VS Code Web, and virtual workspaces where files are readable through the VS Code workspace API.
 
 ## Custom Rules
@@ -230,6 +231,7 @@ Default: `true`
 
 This extension supports browser-based VS Code environments, including [vscode.dev](https://vscode.dev) and [github.dev](https://github.dev).
 Runtime file access uses VS Code workspace APIs, so workspace scans work with web and virtual workspace file systems when those files are readable by VS Code.
+Git hover enrichment uses VS Code's built-in Git API only in trusted desktop workspaces. VS Code Web, virtual workspaces, untrusted workspaces, and unavailable Git metadata retain the base annotation hover without a Git section.
 Automated checks cover both the desktop Extension Host and browser-host virtual workspaces.
 
 ## License

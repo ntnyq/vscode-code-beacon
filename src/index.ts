@@ -4,6 +4,7 @@ import { useBeaconCodeLens } from './composables/use-beacon-codelens'
 import { useBeaconCommands } from './composables/use-beacon-commands'
 import { useBeaconDiagnostics } from './composables/use-beacon-diagnostics'
 import { useBeaconExplorer } from './composables/use-beacon-explorer'
+import { useBeaconGit } from './composables/use-beacon-git'
 import { useBeaconHighlight } from './composables/use-beacon-highlight'
 import { useBeaconHover } from './composables/use-beacon-hover'
 import { useBeaconNotebook } from './composables/use-beacon-notebook'
@@ -20,7 +21,7 @@ const { activate, deactivate } = defineExtension(context => {
   useWorkspaceScan()
   const beaconHighlight = useBeaconHighlight()
   useBeaconNotebook(beaconHighlight.scanTextDocument)
-  useBeaconHover()
+  useBeaconHover(useBeaconGit().getMetadata)
   useBeaconCodeLens()
 
   logger.info(`✅ Activated, version: ${version} `)

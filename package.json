@@ -455,7 +455,7 @@
         "code-beacon.ai.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation."
+          "description": "Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations."
         },
         "code-beacon.scm.enabled": {
           "type": "boolean",
@@ -632,6 +632,11 @@
         "category": "Code Beacon",
         "command": "code-beacon.generateFix",
         "title": "Generate Beacon Fix"
+      },
+      {
+        "category": "Code Beacon",
+        "command": "code-beacon.summarizeWorkspace",
+        "title": "Summarize Workspace Beacons"
       },
       {
         "category": "Code Beacon",

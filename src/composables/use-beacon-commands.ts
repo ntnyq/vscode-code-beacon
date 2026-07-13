@@ -24,6 +24,10 @@ import {
   parseGeneratedFix,
   planGeneratedFix,
 } from '../core/ai/generate-annotation-fix'
+import {
+  createWorkspaceAnnotationSummary,
+  workspaceAnnotationSummaryPrompt,
+} from '../core/ai/workspace-annotation-summary'
 import type { BeaconLeafTreeElement } from '../core/explorer/tree-data-provider'
 import {
   formatAnnotations,
@@ -38,6 +42,7 @@ import type { BeaconAnnotation } from '../types/annotation'
 
 const BEACON_EXPLAIN_COMMAND = 'code-beacon.explain'
 const BEACON_GENERATE_FIX_COMMAND = 'code-beacon.generateFix'
+const BEACON_SUMMARIZE_WORKSPACE_COMMAND = 'code-beacon.summarizeWorkspace'
 
 /**
  * Updates the global extension enabled flag.
@@ -208,6 +213,20 @@ function explanationOutputHeading(annotation: BeaconAnnotation): string {
   ].join('\n')
 }
 
+function workspaceSummaryOutputHeading(summary: {
+  readonly returned: number
+  readonly sent: number
+  readonly total: number
+  readonly truncated: boolean
+}): string {
+  return [
+    '# Code Beacon workspace summary',
+    '',
+    `Annotations — total: ${summary.total}; returned: ${summary.returned}; sent: ${summary.sent}; truncated: ${summary.truncated ? 'yes' : 'no'}`,
+    '',
+  ].join('\n')
+}
+
 const createLanguageModelUserMessage = LanguageModelChatMessage.User
 
 /**
@@ -217,15 +236,20 @@ export function useBeaconCommands(workspaceState: Memento) {
   const storage = createMementoAnnotationStateStorage(workspaceState)
   let saveChain = Promise.resolve()
   let explainOutputChannel: OutputChannel | undefined
+  let workspaceSummaryOutputChannel: OutputChannel | undefined
   let explainRequestGeneration = 0
   let generateFixRequestGeneration = 0
+  let workspaceSummaryRequestGeneration = 0
 
   useDisposable({
     dispose() {
       explainRequestGeneration++
       generateFixRequestGeneration++
+      workspaceSummaryRequestGeneration++
       explainOutputChannel?.dispose()
       explainOutputChannel = undefined
+      workspaceSummaryOutputChannel?.dispose()
+      workspaceSummaryOutputChannel = undefined
     },
   })
 
@@ -630,6 +654,143 @@ export function useBeaconCommands(workspaceState: Memento) {
     }
   }
 
+  const summarizeWorkspaceAnnotations = async () => {
+    if (!config.ai.enabled) {
+      await window.showWarningMessage(
+        'Enable code-beacon.ai.enabled to summarize workspace annotations.',
+      )
+      return
+    }
+
+    const requestGeneration = ++workspaceSummaryRequestGeneration
+    const summary = createWorkspaceAnnotationSummary(annotationStore.getAll())
+
+    if (summary.total === 0) {
+      await window.showInformationMessage(
+        'No unresolved, non-ignored Code Beacon annotations are currently indexed to summarize.',
+      )
+      return
+    }
+
+    const prompt = workspaceAnnotationSummaryPrompt(summary)
+    let model: LanguageModelChat | undefined
+
+    try {
+      ;[model] = await lm.selectChatModels({ vendor: 'copilot' })
+    } catch {
+      if (requestGeneration !== workspaceSummaryRequestGeneration) {
+        return
+      }
+
+      await window.showWarningMessage(
+        'Unable to select a Copilot language model to summarize workspace annotations.',
+      )
+      return
+    }
+
+    if (requestGeneration !== workspaceSummaryRequestGeneration) {
+      return
+    }
+
+    if (!model) {
+      await window.showInformationMessage(
+        'No Copilot language model is available to summarize workspace annotations.',
+      )
+      return
+    }
+
+    let wasCancelled = false
+
+    try {
+      await window.withProgress(
+        {
+          cancellable: true,
+          location: ProgressLocation.Notification,
+          title: 'Summarizing Code Beacon workspace annotations',
+        },
+        async (_progress, token) => {
+          if (requestGeneration !== workspaceSummaryRequestGeneration) {
+            return
+          }
+
+          if (token.isCancellationRequested) {
+            wasCancelled = true
+            return
+          }
+
+          try {
+            const response = await model.sendRequest(
+              [createLanguageModelUserMessage(prompt)],
+              undefined,
+              token,
+            )
+
+            if (requestGeneration !== workspaceSummaryRequestGeneration) {
+              return
+            }
+
+            if (token.isCancellationRequested) {
+              wasCancelled = true
+              return
+            }
+
+            const outputChannel = (workspaceSummaryOutputChannel ??=
+              window.createOutputChannel('Code Beacon Workspace Summary'))
+            outputChannel.clear()
+            outputChannel.append(workspaceSummaryOutputHeading(summary))
+            let receivedText = false
+
+            for await (const part of response.stream) {
+              if (requestGeneration !== workspaceSummaryRequestGeneration) {
+                break
+              }
+
+              if (token.isCancellationRequested) {
+                wasCancelled = true
+                break
+              }
+
+              if (!(part instanceof LanguageModelTextPart)) {
+                continue
+              }
+
+              outputChannel.append(part.value)
+
+              if (!receivedText) {
+                outputChannel.show(true)
+                receivedText = true
+              }
+            }
+          } finally {
+            wasCancelled ||= token.isCancellationRequested
+          }
+        },
+      )
+    } catch {
+      if (requestGeneration !== workspaceSummaryRequestGeneration) {
+        return
+      }
+
+      if (wasCancelled) {
+        await window.showInformationMessage('Workspace summary cancelled.')
+        return
+      }
+
+      await window.showWarningMessage(
+        'Unable to summarize workspace annotations.',
+      )
+      return
+    }
+
+    if (requestGeneration !== workspaceSummaryRequestGeneration) {
+      return
+    }
+
+    if (wasCancelled) {
+      await window.showInformationMessage('Workspace summary cancelled.')
+    }
+  }
+
   useDisposable(
     vscodeCommands.registerCommand(commands.enable, () => updateEnabled(true)),
   )
@@ -720,6 +881,12 @@ export function useBeaconCommands(workspaceState: Memento) {
     vscodeCommands.registerCommand(
       BEACON_GENERATE_FIX_COMMAND,
       generateAnnotationFix,
+    ),
+  )
+  useDisposable(
+    vscodeCommands.registerCommand(
+      BEACON_SUMMARIZE_WORKSPACE_COMMAND,
+      summarizeWorkspaceAnnotations,
     ),
   )
   useDisposable(

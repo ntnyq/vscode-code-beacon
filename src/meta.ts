@@ -27,6 +27,7 @@ export type CommandKey =
   | "code-beacon.createIssue"
   | "code-beacon.explain"
   | "code-beacon.generateFix"
+  | "code-beacon.summarizeWorkspace"
   | "code-beacon.resolve"
   | "code-beacon.unresolve"
   | "code-beacon.ignore"
@@ -111,6 +112,11 @@ export const commands = {
    * @value `code-beacon.generateFix`
    */
   generateFix: "code-beacon.generateFix",
+  /**
+   * Summarize Workspace Beacons
+   * @value `code-beacon.summarizeWorkspace`
+   */
+  summarizeWorkspace: "code-beacon.summarizeWorkspace",
   /**
    * Resolve Beacon
    * @value `code-beacon.resolve`
@@ -563,7 +569,7 @@ export const configs = {
     default: false,
   } as ConfigItem<"code-beacon.git.showMetadata">,
   /**
-   * Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.
+   * Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.
    * @key `code-beacon.ai.enabled`
    * @default `false`
    * @type `boolean`

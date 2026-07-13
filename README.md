@@ -52,31 +52,32 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 
 <!-- commands -->
 
-| Command                       | Title                                      |
-| ----------------------------- | ------------------------------------------ |
-| `code-beacon.enable`          | Code Beacon: Enable Code Beacon            |
-| `code-beacon.disable`         | Code Beacon: Disable Code Beacon           |
-| `code-beacon.toggle`          | Code Beacon: Toggle Code Beacon            |
-| `code-beacon.refresh`         | Code Beacon: Refresh Beacons               |
-| `code-beacon.scanWorkspace`   | Code Beacon: Scan Workspace for Beacons    |
-| `code-beacon.scanActiveFile`  | Code Beacon: Scan Active File for Beacons  |
-| `code-beacon.scanOpenEditors` | Code Beacon: Scan Open Editors for Beacons |
-| `code-beacon.focusExplorer`   | Code Beacon: Focus Code Beacon Explorer    |
-| `code-beacon.reveal`          | Code Beacon: Reveal Beacon                 |
-| `code-beacon.copyLink`        | Code Beacon: Copy Beacon Link              |
-| `code-beacon.copyMarkdown`    | Code Beacon: Copy Beacon as Markdown       |
-| `code-beacon.createIssue`     | Code Beacon: Create Issue Body             |
-| `code-beacon.explain`         | Code Beacon: Explain Beacon                |
-| `code-beacon.generateFix`     | Code Beacon: Generate Beacon Fix           |
-| `code-beacon.resolve`         | Code Beacon: Resolve Beacon                |
-| `code-beacon.unresolve`       | Code Beacon: Reopen Beacon                 |
-| `code-beacon.ignore`          | Code Beacon: Ignore Beacon                 |
-| `code-beacon.unignore`        | Code Beacon: Unignore Beacon               |
-| `code-beacon.exportMarkdown`  | Code Beacon: Export Beacons as Markdown    |
-| `code-beacon.exportJson`      | Code Beacon: Export Beacons as JSON        |
-| `code-beacon.exportCsv`       | Code Beacon: Export Beacons as CSV         |
-| `code-beacon.openSettings`    | Code Beacon: Open Code Beacon Settings     |
-| `code-beacon.clearCache`      | Code Beacon: Clear Code Beacon Cache       |
+| Command                          | Title                                      |
+| -------------------------------- | ------------------------------------------ |
+| `code-beacon.enable`             | Code Beacon: Enable Code Beacon            |
+| `code-beacon.disable`            | Code Beacon: Disable Code Beacon           |
+| `code-beacon.toggle`             | Code Beacon: Toggle Code Beacon            |
+| `code-beacon.refresh`            | Code Beacon: Refresh Beacons               |
+| `code-beacon.scanWorkspace`      | Code Beacon: Scan Workspace for Beacons    |
+| `code-beacon.scanActiveFile`     | Code Beacon: Scan Active File for Beacons  |
+| `code-beacon.scanOpenEditors`    | Code Beacon: Scan Open Editors for Beacons |
+| `code-beacon.focusExplorer`      | Code Beacon: Focus Code Beacon Explorer    |
+| `code-beacon.reveal`             | Code Beacon: Reveal Beacon                 |
+| `code-beacon.copyLink`           | Code Beacon: Copy Beacon Link              |
+| `code-beacon.copyMarkdown`       | Code Beacon: Copy Beacon as Markdown       |
+| `code-beacon.createIssue`        | Code Beacon: Create Issue Body             |
+| `code-beacon.explain`            | Code Beacon: Explain Beacon                |
+| `code-beacon.generateFix`        | Code Beacon: Generate Beacon Fix           |
+| `code-beacon.summarizeWorkspace` | Code Beacon: Summarize Workspace Beacons   |
+| `code-beacon.resolve`            | Code Beacon: Resolve Beacon                |
+| `code-beacon.unresolve`          | Code Beacon: Reopen Beacon                 |
+| `code-beacon.ignore`             | Code Beacon: Ignore Beacon                 |
+| `code-beacon.unignore`           | Code Beacon: Unignore Beacon               |
+| `code-beacon.exportMarkdown`     | Code Beacon: Export Beacons as Markdown    |
+| `code-beacon.exportJson`         | Code Beacon: Export Beacons as JSON        |
+| `code-beacon.exportCsv`          | Code Beacon: Export Beacons as CSV         |
+| `code-beacon.openSettings`       | Code Beacon: Open Code Beacon Settings     |
+| `code-beacon.clearCache`         | Code Beacon: Clear Code Beacon Cache       |
 
 <!-- commands -->
 
@@ -248,7 +249,7 @@ Default: `false`
 
 #### `code-beacon.ai.enabled`
 
-Description: Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.  
+Description: Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.  
 Type: `boolean`  
 Default: `false`
 

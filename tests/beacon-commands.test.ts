@@ -24,6 +24,8 @@ const {
   createOutputChannel,
   outputChannel,
   outputText,
+  summaryOutputChannel,
+  summaryOutputText,
   rangeInstances,
   selectChatModels,
   textPart,
@@ -42,6 +44,17 @@ const {
     }),
     clear: vi.fn<() => void>(() => {
       channelText.length = 0
+    }),
+    dispose: vi.fn<() => void>(),
+    show: vi.fn<(preserveFocus?: boolean) => void>(),
+  }
+  const summaryChannelText: string[] = []
+  const summaryChannel = {
+    append: vi.fn<(value: string) => void>(value => {
+      summaryChannelText.push(value)
+    }),
+    clear: vi.fn<() => void>(() => {
+      summaryChannelText.length = 0
     }),
     dispose: vi.fn<() => void>(),
     show: vi.fn<(preserveFocus?: boolean) => void>(),
@@ -65,13 +78,17 @@ const {
     })),
     commandHandlers: handlers,
     configState: { aiEnabled: true },
-    createOutputChannel: vi.fn<(name: string) => typeof channel>(() => channel),
+    createOutputChannel: vi.fn<(name: string) => typeof channel>(name =>
+      name === 'Code Beacon Workspace Summary' ? summaryChannel : channel,
+    ),
     outputChannel: channel,
     outputText: channelText,
     rangeInstances: ranges,
     selectChatModels: vi.fn<() => Promise<Vscode.LanguageModelChat[]>>(() =>
       Promise.resolve([]),
     ),
+    summaryOutputChannel: summaryChannel,
+    summaryOutputText: summaryChannelText,
     textPart: vi.fn<(value: string) => void>(),
     uriParse: vi.fn<(value: string) => unknown>(value => ({ value })),
     useDisposable: vi.fn<(value: unknown) => unknown>(value => value),
@@ -242,6 +259,12 @@ async function* responseStream() {
 }
 
 async function* emptyTextStream() {}
+
+async function* textResponseStream(...values: readonly string[]) {
+  for (const value of values) {
+    yield new LanguageModelTextPart(value)
+  }
+}
 
 function deferred() {
   let resolveDeferred: (() => void) | undefined
@@ -430,6 +453,11 @@ describe('beacon command persistence', () => {
     outputChannel.dispose.mockClear()
     outputChannel.show.mockClear()
     outputText.length = 0
+    summaryOutputChannel.append.mockClear()
+    summaryOutputChannel.clear.mockClear()
+    summaryOutputChannel.dispose.mockClear()
+    summaryOutputChannel.show.mockClear()
+    summaryOutputText.length = 0
     selectChatModels.mockReset()
     selectChatModels.mockResolvedValue([])
     textPart.mockClear()
@@ -943,6 +971,551 @@ describe('beacon command persistence', () => {
       'Explanation cancelled.',
     )
     expect(window.showWarningMessage).not.toHaveBeenCalled()
+  })
+
+  it('does not select a model, create output, or access a document for an empty workspace summary', async () => {
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'No unresolved, non-ignored Code Beacon annotations are currently indexed to summarize.',
+    )
+    expect(lm.selectChatModels).not.toHaveBeenCalled()
+    expect(createOutputChannel).not.toHaveBeenCalled()
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('does not summarize or access VS Code document APIs while AI is disabled', async () => {
+    configState.aiEnabled = false
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const initialState = annotationStore.getState()
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(window.showWarningMessage).toHaveBeenCalledWith(
+      'Enable code-beacon.ai.enabled to summarize workspace annotations.',
+    )
+    expect(lm.selectChatModels).not.toHaveBeenCalled()
+    expect(createOutputChannel).not.toHaveBeenCalled()
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+    expect(env.clipboard.writeText).not.toHaveBeenCalled()
+    expect(annotationStore.getState()).toStrictEqual(initialState)
+  })
+
+  it('reports unavailable models and selection failures without reading documents or creating edits', async () => {
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    selectChatModels.mockRejectedValueOnce(new Error('Model unavailable'))
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(window.showWarningMessage).toHaveBeenCalledWith(
+      'Unable to select a Copilot language model to summarize workspace annotations.',
+    )
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'No Copilot language model is available to summarize workspace annotations.',
+    )
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('streams only text summary chunks from a bounded store snapshot without workspace mutations', async () => {
+    const annotations = Array.from({ length: 101 }, (_, index) =>
+      createAnnotation({
+        id: `annotation-${index}`,
+        line: index,
+        message: `Annotation ${index}: ${'x'.repeat(200)}`,
+        uri: `file:///workspace/src/${index.toString().padStart(3, '0')}.ts`,
+      }),
+    )
+    annotationStore.setForUri(
+      'file:///workspace/src/annotations.ts',
+      annotations,
+    )
+    const initialState = annotationStore.getState()
+    const model = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: responseStream(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels.mockResolvedValueOnce([model])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(lm.selectChatModels).toHaveBeenCalledWith({ vendor: 'copilot' })
+    expect(withProgress).toHaveBeenCalledWith(
+      {
+        cancellable: true,
+        location: 15,
+        title: 'Summarizing Code Beacon workspace annotations',
+      },
+      expect.any(Function),
+    )
+    expect(chatMessageUser).toHaveBeenCalledTimes(1)
+    const prompt = chatMessageUser.mock.calls[0]?.[0] ?? ''
+    expect(prompt).toContain('<untrusted-workspace-annotations>')
+    expect(prompt).toContain('"total":101')
+    expect(prompt).toContain('"returned":100')
+    expect(prompt).toContain('"truncated":true')
+    expect(prompt.length).toBeLessThanOrEqual(13_000)
+    expect(model.sendRequest).toHaveBeenCalledWith(
+      expect.any(Array),
+      undefined,
+      cancellationToken,
+    )
+    expect(createOutputChannel).toHaveBeenCalledWith(
+      'Code Beacon Workspace Summary',
+    )
+    expect(summaryOutputChannel.append).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('total: 101; returned: 100; sent:'),
+    )
+    expect(summaryOutputChannel.append).toHaveBeenNthCalledWith(
+      2,
+      'First response chunk.',
+    )
+    expect(summaryOutputChannel.append).toHaveBeenNthCalledWith(
+      3,
+      ' Second response chunk.',
+    )
+    expect(summaryOutputText.join('')).not.toContain(
+      'Ignore this non-text part.',
+    )
+    expect(summaryOutputChannel.show).toHaveBeenCalledExactlyOnceWith(true)
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+    expect(env.clipboard.writeText).not.toHaveBeenCalled()
+    expect(annotationStore.getState()).toStrictEqual(initialState)
+  })
+
+  it('reports summary request failures without retrying or mutating the workspace', async () => {
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const model = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.reject(createLanguageModelError('Denied')),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels.mockResolvedValueOnce([model])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(model.sendRequest).toHaveBeenCalledTimes(1)
+    expect(window.showWarningMessage).toHaveBeenCalledWith(
+      'Unable to summarize workspace annotations.',
+    )
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('stops a Summary stream when progress is cancelled', async () => {
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const model = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            yield new LanguageModelTextPart('First summary chunk.')
+            cancellationToken.isCancellationRequested = true
+            yield new LanguageModelTextPart('Cancelled summary chunk.')
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels.mockResolvedValueOnce([model])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(summaryOutputText.join('')).toContain('First summary chunk.')
+    expect(summaryOutputText.join('')).not.toContain('Cancelled summary chunk.')
+    expect(window.showInformationMessage).toHaveBeenCalledWith(
+      'Workspace summary cancelled.',
+    )
+    expect(workspace.openTextDocument).not.toHaveBeenCalled()
+    expect(workspaceEdits).toHaveLength(0)
+    expect(applyEdit).not.toHaveBeenCalled()
+  })
+
+  it('stops a Summary stream when superseded or disposed', async () => {
+    const streamCanYield = deferred()
+    const streamWaiting = deferred()
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const delayedModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            streamWaiting.resolve()
+            await streamCanYield.promise
+            yield new LanguageModelTextPart('Stale summary chunk.')
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    const newerModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({ stream: emptyTextStream(), text: emptyTextStream() }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels
+      .mockResolvedValueOnce([delayedModel])
+      .mockResolvedValueOnce([newerModel])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const first = registeredCommand('code-beacon.summarizeWorkspace')()
+    await streamWaiting.promise
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+    streamCanYield.resolve()
+    await first
+
+    expect(summaryOutputText.join('')).not.toContain('Stale summary chunk.')
+    expect(summaryOutputChannel.show).not.toHaveBeenCalled()
+
+    const disposeStreamCanYield = deferred()
+    const disposeStreamWaiting = deferred()
+    const disposalModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            disposeStreamWaiting.resolve()
+            await disposeStreamCanYield.promise
+            yield new LanguageModelTextPart('Disposed summary chunk.')
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels.mockResolvedValueOnce([disposalModel])
+
+    const disposed = registeredCommand('code-beacon.summarizeWorkspace')()
+    await disposeStreamWaiting.promise
+    for (const [disposable] of useDisposable.mock.calls) {
+      const dispose = (disposable as { dispose?: unknown }).dispose
+
+      if (typeof dispose === 'function') {
+        dispose()
+      }
+    }
+    disposeStreamCanYield.resolve()
+    await disposed
+
+    expect(summaryOutputText.join('')).not.toContain('Disposed summary chunk.')
+    expect(summaryOutputChannel.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps overlapping Explain and Summary output in their dedicated channels', async () => {
+    const summaryStreamCanYield = deferred()
+    const summaryStreamWaiting = deferred()
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const delayedSummaryModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            summaryStreamWaiting.resolve()
+            await summaryStreamCanYield.promise
+            yield new LanguageModelTextPart('Summary-only chunk.')
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    const explainModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: textResponseStream('Explain-only chunk.'),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels
+      .mockResolvedValueOnce([delayedSummaryModel])
+      .mockResolvedValueOnce([explainModel])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const summary = registeredCommand('code-beacon.summarizeWorkspace')()
+    await summaryStreamWaiting.promise
+    await registeredCommand('code-beacon.explain')(createAnnotation())
+    summaryStreamCanYield.resolve()
+    await summary
+
+    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('Explain-only chunk.')
+    expect(outputText.join('')).not.toContain('# Code Beacon workspace summary')
+    expect(outputText.join('')).not.toContain('Summary-only chunk.')
+    expect(summaryOutputText.join('')).toContain(
+      '# Code Beacon workspace summary',
+    )
+    expect(summaryOutputText.join('')).toContain('Summary-only chunk.')
+    expect(summaryOutputText.join('')).not.toContain(
+      '# Code Beacon explanation',
+    )
+    expect(summaryOutputText.join('')).not.toContain('Explain-only chunk.')
+  })
+
+  it('preserves existing Explain output when Summary model selection fails or has no model', async () => {
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const explainModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: textResponseStream('Explanation remains visible.'),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels
+      .mockResolvedValueOnce([explainModel])
+      .mockRejectedValueOnce(new Error('Model unavailable'))
+      .mockResolvedValueOnce([explainModel])
+      .mockResolvedValueOnce([])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('Explanation remains visible.')
+    expect(summaryOutputText).toHaveLength(0)
+
+    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('Explanation remains visible.')
+    expect(summaryOutputText).toHaveLength(0)
+    expect(createOutputChannel).toHaveBeenCalledTimes(1)
+  })
+
+  it('preserves Explain output and does not append or show Summary output when a Summary request fails', async () => {
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const explainModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: textResponseStream('Explanation remains visible.'),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    const rejectedSummaryModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.reject(createLanguageModelError('Denied')),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels
+      .mockResolvedValueOnce([explainModel])
+      .mockResolvedValueOnce([rejectedSummaryModel])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.explain')(createAnnotation())
+    const explanationOutput = [...outputText]
+    const explainAppendCount = outputChannel.append.mock.calls.length
+    const explainClearCount = outputChannel.clear.mock.calls.length
+    const explainShowCount = outputChannel.show.mock.calls.length
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(outputText).toStrictEqual(explanationOutput)
+    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('Explanation remains visible.')
+    expect(outputChannel.append).toHaveBeenCalledTimes(explainAppendCount)
+    expect(outputChannel.clear).toHaveBeenCalledTimes(explainClearCount)
+    expect(outputChannel.show).toHaveBeenCalledTimes(explainShowCount)
+    expect(summaryOutputChannel.append).not.toHaveBeenCalled()
+    expect(summaryOutputChannel.show).not.toHaveBeenCalled()
+    expect(window.showWarningMessage).toHaveBeenCalledWith(
+      'Unable to summarize workspace annotations.',
+    )
+  })
+
+  it('keeps prior Summary output unchanged when selection or request failures occur', async () => {
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createAnnotation(),
+    ])
+    const successfulSummaryModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: textResponseStream('Prior summary remains visible.'),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    const rejectedSummaryModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.reject(createLanguageModelError('Denied')),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels
+      .mockResolvedValueOnce([successfulSummaryModel])
+      .mockRejectedValueOnce(new Error('Model unavailable'))
+      .mockResolvedValueOnce([successfulSummaryModel])
+      .mockResolvedValueOnce([rejectedSummaryModel])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+    const selectionFailureOutput = [...summaryOutputText]
+    const selectionFailureClearCount =
+      summaryOutputChannel.clear.mock.calls.length
+    const selectionFailureAppendCount =
+      summaryOutputChannel.append.mock.calls.length
+    const selectionFailureShowCount =
+      summaryOutputChannel.show.mock.calls.length
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(summaryOutputText).toStrictEqual(selectionFailureOutput)
+    expect(summaryOutputChannel.clear).toHaveBeenCalledTimes(
+      selectionFailureClearCount,
+    )
+    expect(summaryOutputChannel.append).toHaveBeenCalledTimes(
+      selectionFailureAppendCount,
+    )
+    expect(summaryOutputChannel.show).toHaveBeenCalledTimes(
+      selectionFailureShowCount,
+    )
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+    const requestFailureOutput = [...summaryOutputText]
+    const requestFailureClearCount =
+      summaryOutputChannel.clear.mock.calls.length
+    const requestFailureAppendCount =
+      summaryOutputChannel.append.mock.calls.length
+    const requestFailureShowCount = summaryOutputChannel.show.mock.calls.length
+
+    await registeredCommand('code-beacon.summarizeWorkspace')()
+
+    expect(summaryOutputText).toStrictEqual(requestFailureOutput)
+    expect(summaryOutputChannel.clear).toHaveBeenCalledTimes(
+      requestFailureClearCount,
+    )
+    expect(summaryOutputChannel.append).toHaveBeenCalledTimes(
+      requestFailureAppendCount,
+    )
+    expect(summaryOutputChannel.show).toHaveBeenCalledTimes(
+      requestFailureShowCount,
+    )
+  })
+
+  it('keeps Summary current while Explain and Generate Fix requests run', async () => {
+    const summaryStreamCanYield = deferred()
+    const summaryStreamWaiting = deferred()
+    const original = '// TODO: replace deprecated parser'
+    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+      createGenerateFixAnnotation(),
+    ])
+    vscodeState.documentText = `${original}\n`
+    const delayedSummaryModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({
+          stream: (async function* stream() {
+            summaryStreamWaiting.resolve()
+            await summaryStreamCanYield.promise
+            yield new LanguageModelTextPart('Summary remains current.')
+          })(),
+          text: emptyTextStream(),
+        }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    const explainModel = {
+      sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
+        Promise.resolve({ stream: emptyTextStream(), text: emptyTextStream() }),
+      ),
+    } as unknown as Vscode.LanguageModelChat
+    selectChatModels
+      .mockResolvedValueOnce([delayedSummaryModel])
+      .mockResolvedValueOnce([explainModel])
+      .mockResolvedValueOnce([
+        generatedFixResponse({
+          original,
+          reason: 'Use supported code.',
+          replacement: '// TODO: use a maintained parser',
+        }),
+      ])
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    const summary = registeredCommand('code-beacon.summarizeWorkspace')()
+    await summaryStreamWaiting.promise
+    await registeredCommand('code-beacon.explain')(
+      createGenerateFixAnnotation(),
+    )
+    await registeredCommand('code-beacon.generateFix')(
+      createGenerateFixAnnotation(),
+    )
+    summaryStreamCanYield.resolve()
+    await summary
+
+    expect(summaryOutputText.join('')).toContain('Summary remains current.')
+    expect(applyEdit).toHaveBeenCalledTimes(1)
   })
 
   it('does not access VS Code data or create edits without a selected beacon or AI opt-in', async () => {

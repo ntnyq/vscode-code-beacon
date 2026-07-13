@@ -63,6 +63,7 @@ describe('package metadata', () => {
       'code-beacon.createIssue',
       'code-beacon.explain',
       'code-beacon.generateFix',
+      'code-beacon.summarizeWorkspace',
       'code-beacon.resolve',
       'code-beacon.unresolve',
       'code-beacon.ignore',
@@ -82,6 +83,11 @@ describe('package metadata', () => {
       category: 'Code Beacon',
       command: 'code-beacon.generateFix',
       title: 'Generate Beacon Fix',
+    })
+    expect(pkg.contributes.commands).toContainEqual({
+      category: 'Code Beacon',
+      command: 'code-beacon.summarizeWorkspace',
+      title: 'Summarize Workspace Beacons',
     })
   })
 
@@ -163,7 +169,7 @@ describe('package metadata', () => {
     expect(aiEnabled).toStrictEqual({
       default: false,
       description:
-        'Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.',
+        'Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.',
       type: 'boolean',
     })
     expectTypeOf<false>().toMatchTypeOf<
@@ -295,5 +301,13 @@ describe('package metadata', () => {
       command: 'code-beacon.generateFix',
       when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
     })
+  })
+
+  it('keeps the workspace-wide summary out of the Explorer item menu', () => {
+    expect(pkg.contributes.menus?.['view/item/context']).not.toContainEqual(
+      expect.objectContaining({
+        command: 'code-beacon.summarizeWorkspace',
+      }),
+    )
   })
 })

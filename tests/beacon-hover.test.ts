@@ -21,6 +21,8 @@ type RegisterHoverProvider = (
   provider: HoverProvider,
 ) => { dispose: () => void }
 
+const missingGitMetadata: { readonly value?: BeaconGitMetadata } = {}
+
 const { hoverProviders, registerHoverProvider, useDisposable } = vi.hoisted(
   () => {
     const providers: HoverProvider[] = []
@@ -173,7 +175,7 @@ describe('beacon hover', () => {
   })
 
   it.each([
-    ['resolves undefined', () => Promise.resolve()],
+    ['resolves undefined', () => Promise.resolve(missingGitMetadata.value)],
     ['rejects', () => Promise.reject(new Error('Git unavailable'))],
   ])('preserves the base hover when metadata lookup %s', async (_, lookup) => {
     const testDocument = document()

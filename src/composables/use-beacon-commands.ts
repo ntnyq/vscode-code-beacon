@@ -21,6 +21,10 @@ import type {
 } from 'vscode'
 import { config } from '../config'
 import {
+  createAiActionExecutor,
+  type AiActionOutcome,
+} from '../core/ai/action-execution'
+import {
   annotationExplanationPrompt,
   annotationSourceWindow,
 } from '../core/ai/explain-annotation'
@@ -130,19 +134,61 @@ async function saveAnnotationState(
   }
 }
 
-function shouldStopGeneratedFix(
-  requestGeneration: number,
-  currentGeneration: number,
-  token: CancellationToken,
-  markCancelled: () => void,
-): boolean {
-  if (token.isCancellationRequested) {
-    markCancelled()
-  }
+function createVscodeAiActionExecutor() {
+  return createAiActionExecutor<LanguageModelChat, CancellationToken>({
+    async selectModel() {
+      const [model] = await lm.selectChatModels({ vendor: 'copilot' })
+      return model
+    },
+    runWithProgress(title, task) {
+      return window.withProgress(
+        {
+          cancellable: true,
+          location: ProgressLocation.Notification,
+          title,
+        },
+        (_progress, token) => task(token),
+      )
+    },
+    textFromPart: part =>
+      part instanceof LanguageModelTextPart ? part.value : undefined,
+  })
+}
 
-  return (
-    requestGeneration !== currentGeneration || token.isCancellationRequested
-  )
+interface AiActionOutcomeMessages {
+  readonly cancelled: string
+  readonly failed: string
+  readonly modelSelectionFailed: string
+  readonly modelUnavailable: string
+  readonly preparationFailed: string
+}
+
+async function showAiActionOutcome(
+  outcome: AiActionOutcome<unknown>,
+  messages: AiActionOutcomeMessages,
+) {
+  switch (outcome.status) {
+    case 'cancelled': {
+      await window.showInformationMessage(messages.cancelled)
+      break
+    }
+    case 'failed': {
+      await window.showWarningMessage(messages.failed)
+      break
+    }
+    case 'model-selection-failed': {
+      await window.showWarningMessage(messages.modelSelectionFailed)
+      break
+    }
+    case 'model-unavailable': {
+      await window.showInformationMessage(messages.modelUnavailable)
+      break
+    }
+    case 'preparation-failed': {
+      await window.showWarningMessage(messages.preparationFailed)
+      break
+    }
+  }
 }
 
 async function showGeneratedFixOutcome(outcome: GeneratedFixOutcome) {
@@ -182,15 +228,15 @@ export function useBeaconCommands(workspaceState: Memento) {
   let saveChain = Promise.resolve()
   let explainOutputChannel: OutputChannel | undefined
   let workspaceSummaryOutputChannel: OutputChannel | undefined
-  let explainRequestGeneration = 0
-  let generateFixRequestGeneration = 0
-  let workspaceSummaryRequestGeneration = 0
+  const explainExecutor = createVscodeAiActionExecutor()
+  const generateFixExecutor = createVscodeAiActionExecutor()
+  const workspaceSummaryExecutor = createVscodeAiActionExecutor()
 
   useDisposable({
     dispose() {
-      explainRequestGeneration++
-      generateFixRequestGeneration++
-      workspaceSummaryRequestGeneration++
+      explainExecutor.dispose()
+      generateFixExecutor.dispose()
+      workspaceSummaryExecutor.dispose()
       explainOutputChannel?.dispose()
       explainOutputChannel = undefined
       workspaceSummaryOutputChannel?.dispose()
@@ -233,138 +279,55 @@ export function useBeaconCommands(workspaceState: Memento) {
       return
     }
 
-    const requestGeneration = ++explainRequestGeneration
     explainOutputChannel?.clear()
-    let document: Awaited<ReturnType<typeof workspace.openTextDocument>>
+    const outcome = await explainExecutor.execute({
+      async prepare() {
+        const document = await workspace.openTextDocument(
+          Uri.parse(annotation.uri),
+        )
+        return {
+          prompt: annotationExplanationPrompt(
+            { ...annotation, languageId: document.languageId },
+            annotationSourceWindow(document.getText(), annotation.line),
+          ),
+        }
+      },
+      progressTitle: 'Explaining Code Beacon annotation',
+      async run({ consumeText, model, prepared, token }) {
+        const outputChannel = (explainOutputChannel ??=
+          window.createOutputChannel('Code Beacon AI'))
+        outputChannel.clear()
+        outputChannel.append(explanationOutputHeading(annotation))
 
-    try {
-      document = await workspace.openTextDocument(Uri.parse(annotation.uri))
-    } catch {
-      if (requestGeneration !== explainRequestGeneration) {
-        return
-      }
+        const response = await model.sendRequest(
+          prepared.prompt.map(message =>
+            createLanguageModelUserMessage(message.content),
+          ),
+          undefined,
+          token,
+        )
+        let receivedText = false
 
-      await window.showWarningMessage(
-        'Unable to open the annotation document to explain it.',
-      )
-      return
-    }
+        await consumeText(response.stream, text => {
+          outputChannel.append(text)
+          if (!receivedText) {
+            outputChannel.show(true)
+            receivedText = true
+          }
+        })
+      },
+    })
 
-    if (requestGeneration !== explainRequestGeneration) {
-      return
-    }
-
-    const prompt = annotationExplanationPrompt(
-      { ...annotation, languageId: document.languageId },
-      annotationSourceWindow(document.getText(), annotation.line),
-    )
-    let model: LanguageModelChat | undefined
-
-    try {
-      ;[model] = await lm.selectChatModels({ vendor: 'copilot' })
-    } catch {
-      if (requestGeneration !== explainRequestGeneration) {
-        return
-      }
-
-      await window.showWarningMessage(
+    await showAiActionOutcome(outcome, {
+      cancelled: 'Explanation cancelled.',
+      failed: 'Unable to explain this annotation.',
+      modelSelectionFailed:
         'Unable to select a Copilot language model to explain this annotation.',
-      )
-      return
-    }
-
-    if (requestGeneration !== explainRequestGeneration) {
-      return
-    }
-
-    if (!model) {
-      await window.showInformationMessage(
+      modelUnavailable:
         'No Copilot language model is available to explain this annotation.',
-      )
-      return
-    }
-
-    let wasCancelled = false
-
-    try {
-      await window.withProgress(
-        {
-          cancellable: true,
-          location: ProgressLocation.Notification,
-          title: 'Explaining Code Beacon annotation',
-        },
-        async (_progress, token) => {
-          if (requestGeneration !== explainRequestGeneration) {
-            return
-          }
-
-          if (token.isCancellationRequested) {
-            wasCancelled = true
-            return
-          }
-
-          const outputChannel = (explainOutputChannel ??=
-            window.createOutputChannel('Code Beacon AI'))
-          outputChannel.clear()
-          outputChannel.append(explanationOutputHeading(annotation))
-
-          try {
-            const response = await model.sendRequest(
-              prompt.map(message =>
-                createLanguageModelUserMessage(message.content),
-              ),
-              undefined,
-              token,
-            )
-            let receivedText = false
-
-            for await (const part of response.stream) {
-              if (requestGeneration !== explainRequestGeneration) {
-                break
-              }
-
-              if (token.isCancellationRequested) {
-                wasCancelled = true
-                break
-              }
-
-              if (!(part instanceof LanguageModelTextPart)) {
-                continue
-              }
-
-              outputChannel.append(part.value)
-
-              if (!receivedText) {
-                outputChannel.show(true)
-                receivedText = true
-              }
-            }
-          } finally {
-            wasCancelled ||= token.isCancellationRequested
-          }
-        },
-      )
-    } catch {
-      if (requestGeneration !== explainRequestGeneration) {
-        return
-      }
-
-      if (wasCancelled) {
-        await window.showInformationMessage('Explanation cancelled.')
-        return
-      }
-
-      await window.showWarningMessage('Unable to explain this annotation.')
-      return
-    }
-
-    if (requestGeneration !== explainRequestGeneration) {
-      return
-    }
-
-    if (wasCancelled) {
-      await window.showInformationMessage('Explanation cancelled.')
-    }
+      preparationFailed:
+        'Unable to open the annotation document to explain it.',
+    })
   }
 
   const generateAnnotationFix = async (value?: unknown) => {
@@ -384,186 +347,100 @@ export function useBeaconCommands(workspaceState: Memento) {
       return
     }
 
-    const requestGeneration = ++generateFixRequestGeneration
-    let document: Awaited<ReturnType<typeof workspace.openTextDocument>>
+    const outcome = await generateFixExecutor.execute({
+      async prepare() {
+        const document = await workspace.openTextDocument(
+          Uri.parse(annotation.uri),
+        )
+        const snapshot = document.getText()
 
-    try {
-      document = await workspace.openTextDocument(Uri.parse(annotation.uri))
-    } catch {
-      if (requestGeneration !== generateFixRequestGeneration) {
-        return
-      }
+        return {
+          document,
+          prompt: annotationFixPrompt(
+            { ...annotation, languageId: document.languageId },
+            annotationSourceWindow(snapshot, annotation.line),
+          ),
+          snapshot,
+        }
+      },
+      progressTitle: 'Generating Code Beacon fix',
+      async run({ consumeText, model, prepared, shouldStop, token }) {
+        const response = await model.sendRequest(
+          prepared.prompt.map(message =>
+            createLanguageModelUserMessage(message.content),
+          ),
+          undefined,
+          token,
+        )
+        const generatedText = await consumeText(response.stream)
 
-      await window.showWarningMessage(
-        'Unable to open the annotation document to generate a fix.',
-      )
-      return
-    }
+        if (shouldStop()) {
+          return
+        }
 
-    if (requestGeneration !== generateFixRequestGeneration) {
-      return
-    }
+        const parsed = parseGeneratedFix(generatedText)
+        if (!parsed.ok) {
+          return 'invalid-proposal'
+        }
 
-    const snapshot = document.getText()
-    const prompt = annotationFixPrompt(
-      { ...annotation, languageId: document.languageId },
-      annotationSourceWindow(snapshot, annotation.line),
-    )
-    let model: LanguageModelChat | undefined
+        const plan = planGeneratedFix(
+          annotation,
+          prepared.snapshot,
+          parsed.proposal,
+        )
+        if (!plan.ok) {
+          return 'invalid-proposal'
+        }
 
-    try {
-      ;[model] = await lm.selectChatModels({ vendor: 'copilot' })
-    } catch {
-      if (requestGeneration !== generateFixRequestGeneration) {
-        return
-      }
+        if (prepared.document.getText() !== plan.snapshot) {
+          return 'document-drift'
+        }
 
-      await window.showWarningMessage(
+        const edit = new WorkspaceEdit()
+        edit.replace(
+          Uri.parse(annotation.uri),
+          new Range(
+            prepared.document.positionAt(plan.start),
+            prepared.document.positionAt(plan.end),
+          ),
+          plan.replacement,
+          {
+            label: 'Apply Code Beacon generated fix',
+            needsConfirmation: true,
+          },
+        )
+
+        if (shouldStop()) {
+          return
+        }
+
+        if (prepared.document.getText() !== plan.snapshot) {
+          return 'document-drift'
+        }
+
+        try {
+          const applied = await workspace.applyEdit(edit)
+          return applied ? 'applied' : 'rejected'
+        } catch {
+          return 'apply-failed'
+        }
+      },
+    })
+
+    await showAiActionOutcome(outcome, {
+      cancelled: 'Generated fix cancelled.',
+      failed: 'Unable to generate a fix.',
+      modelSelectionFailed:
         'Unable to select a Copilot language model to generate a fix.',
-      )
-      return
-    }
-
-    if (requestGeneration !== generateFixRequestGeneration) {
-      return
-    }
-
-    if (!model) {
-      await window.showInformationMessage(
+      modelUnavailable:
         'No Copilot language model is available to generate a fix.',
-      )
-      return
+      preparationFailed:
+        'Unable to open the annotation document to generate a fix.',
+    })
+
+    if (outcome.status === 'completed') {
+      await showGeneratedFixOutcome(outcome.value)
     }
-
-    let wasCancelled = false
-    let progressToken: { readonly isCancellationRequested: boolean } | undefined
-    let outcome: GeneratedFixOutcome
-
-    try {
-      await window.withProgress(
-        {
-          cancellable: true,
-          location: ProgressLocation.Notification,
-          title: 'Generating Code Beacon fix',
-        },
-        async (_progress, token) => {
-          progressToken = token
-
-          const shouldStop = () =>
-            shouldStopGeneratedFix(
-              requestGeneration,
-              generateFixRequestGeneration,
-              token,
-              () => {
-                wasCancelled = true
-              },
-            )
-
-          if (shouldStop()) {
-            return
-          }
-
-          const response = await model.sendRequest(
-            prompt.map(message =>
-              createLanguageModelUserMessage(message.content),
-            ),
-            undefined,
-            token,
-          )
-          let generatedText = ''
-
-          for await (const part of response.stream) {
-            if (shouldStop()) {
-              return
-            }
-
-            if (part instanceof LanguageModelTextPart) {
-              generatedText += part.value
-            }
-          }
-
-          if (shouldStop()) {
-            return
-          }
-
-          const parsed = parseGeneratedFix(generatedText)
-
-          if (!parsed.ok) {
-            outcome = 'invalid-proposal'
-            return
-          }
-
-          const plan = planGeneratedFix(annotation, snapshot, parsed.proposal)
-
-          if (!plan.ok) {
-            outcome = 'invalid-proposal'
-            return
-          }
-
-          if (shouldStop()) {
-            return
-          }
-
-          if (document.getText() !== plan.snapshot) {
-            outcome = 'document-drift'
-            return
-          }
-
-          const edit = new WorkspaceEdit()
-          edit.replace(
-            Uri.parse(annotation.uri),
-            new Range(
-              document.positionAt(plan.start),
-              document.positionAt(plan.end),
-            ),
-            plan.replacement,
-            {
-              label: 'Apply Code Beacon generated fix',
-              needsConfirmation: true,
-            },
-          )
-
-          if (shouldStop()) {
-            return
-          }
-
-          if (document.getText() !== plan.snapshot) {
-            outcome = 'document-drift'
-            return
-          }
-
-          try {
-            const applied = await workspace.applyEdit(edit)
-            outcome = applied ? 'applied' : 'rejected'
-          } catch {
-            outcome = 'apply-failed'
-          }
-        },
-      )
-    } catch {
-      if (requestGeneration !== generateFixRequestGeneration) {
-        return
-      }
-
-      if (wasCancelled || progressToken?.isCancellationRequested) {
-        await window.showInformationMessage('Generated fix cancelled.')
-        return
-      }
-
-      await window.showWarningMessage('Unable to generate a fix.')
-      return
-    }
-
-    if (requestGeneration !== generateFixRequestGeneration) {
-      return
-    }
-
-    if (wasCancelled || progressToken?.isCancellationRequested) {
-      await window.showInformationMessage('Generated fix cancelled.')
-      return
-    }
-
-    await showGeneratedFixOutcome(outcome)
   }
 
   const summarizeWorkspaceAnnotations = async () => {
@@ -574,10 +451,10 @@ export function useBeaconCommands(workspaceState: Memento) {
       return
     }
 
-    const requestGeneration = ++workspaceSummaryRequestGeneration
     const summary = createWorkspaceAnnotationSummary(annotationStore.getAll())
 
     if (summary.total === 0) {
+      workspaceSummaryExecutor.supersede()
       await window.showInformationMessage(
         'No unresolved, non-ignored Code Beacon annotations are currently indexed to summarize.',
       )
@@ -585,122 +462,45 @@ export function useBeaconCommands(workspaceState: Memento) {
     }
 
     const prompt = workspaceAnnotationSummaryPrompt(summary)
-    let model: LanguageModelChat | undefined
+    const outcome = await workspaceSummaryExecutor.execute({
+      prepare: () => ({ prompt, summary }),
+      progressTitle: 'Summarizing Code Beacon workspace annotations',
+      async run({ consumeText, model, prepared, shouldStop, token }) {
+        const response = await model.sendRequest(
+          [createLanguageModelUserMessage(prepared.prompt)],
+          undefined,
+          token,
+        )
 
-    try {
-      ;[model] = await lm.selectChatModels({ vendor: 'copilot' })
-    } catch {
-      if (requestGeneration !== workspaceSummaryRequestGeneration) {
-        return
-      }
+        if (shouldStop()) {
+          return
+        }
 
-      await window.showWarningMessage(
+        const outputChannel = (workspaceSummaryOutputChannel ??=
+          window.createOutputChannel('Code Beacon Workspace Summary'))
+        outputChannel.clear()
+        outputChannel.append(workspaceSummaryOutputHeading(prepared.summary))
+        let receivedText = false
+
+        await consumeText(response.stream, text => {
+          outputChannel.append(text)
+          if (!receivedText) {
+            outputChannel.show(true)
+            receivedText = true
+          }
+        })
+      },
+    })
+
+    await showAiActionOutcome(outcome, {
+      cancelled: 'Workspace summary cancelled.',
+      failed: 'Unable to summarize workspace annotations.',
+      modelSelectionFailed:
         'Unable to select a Copilot language model to summarize workspace annotations.',
-      )
-      return
-    }
-
-    if (requestGeneration !== workspaceSummaryRequestGeneration) {
-      return
-    }
-
-    if (!model) {
-      await window.showInformationMessage(
+      modelUnavailable:
         'No Copilot language model is available to summarize workspace annotations.',
-      )
-      return
-    }
-
-    let wasCancelled = false
-
-    try {
-      await window.withProgress(
-        {
-          cancellable: true,
-          location: ProgressLocation.Notification,
-          title: 'Summarizing Code Beacon workspace annotations',
-        },
-        async (_progress, token) => {
-          if (requestGeneration !== workspaceSummaryRequestGeneration) {
-            return
-          }
-
-          if (token.isCancellationRequested) {
-            wasCancelled = true
-            return
-          }
-
-          try {
-            const response = await model.sendRequest(
-              [createLanguageModelUserMessage(prompt)],
-              undefined,
-              token,
-            )
-
-            if (requestGeneration !== workspaceSummaryRequestGeneration) {
-              return
-            }
-
-            if (token.isCancellationRequested) {
-              wasCancelled = true
-              return
-            }
-
-            const outputChannel = (workspaceSummaryOutputChannel ??=
-              window.createOutputChannel('Code Beacon Workspace Summary'))
-            outputChannel.clear()
-            outputChannel.append(workspaceSummaryOutputHeading(summary))
-            let receivedText = false
-
-            for await (const part of response.stream) {
-              if (requestGeneration !== workspaceSummaryRequestGeneration) {
-                break
-              }
-
-              if (token.isCancellationRequested) {
-                wasCancelled = true
-                break
-              }
-
-              if (!(part instanceof LanguageModelTextPart)) {
-                continue
-              }
-
-              outputChannel.append(part.value)
-
-              if (!receivedText) {
-                outputChannel.show(true)
-                receivedText = true
-              }
-            }
-          } finally {
-            wasCancelled ||= token.isCancellationRequested
-          }
-        },
-      )
-    } catch {
-      if (requestGeneration !== workspaceSummaryRequestGeneration) {
-        return
-      }
-
-      if (wasCancelled) {
-        await window.showInformationMessage('Workspace summary cancelled.')
-        return
-      }
-
-      await window.showWarningMessage(
-        'Unable to summarize workspace annotations.',
-      )
-      return
-    }
-
-    if (requestGeneration !== workspaceSummaryRequestGeneration) {
-      return
-    }
-
-    if (wasCancelled) {
-      await window.showInformationMessage('Workspace summary cancelled.')
-    }
+      preparationFailed: 'Unable to summarize workspace annotations.',
+    })
   }
 
   useDisposable(

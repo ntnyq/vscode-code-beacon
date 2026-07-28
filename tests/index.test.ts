@@ -11,10 +11,13 @@ import type * as BeaconLanguageModelTools from '../src/composables/use-beacon-la
 import type * as BeaconNotebook from '../src/composables/use-beacon-notebook'
 import type * as BeaconSourceControl from '../src/composables/use-beacon-source-control'
 import type * as WorkspaceScan from '../src/composables/use-workspace-scan'
+import type * as ChangedUriIndex from '../src/core/git/changed-uri-index'
 import type * as Logger from '../src/utils/logger'
 
 const {
   beaconGit,
+  changedUriIndex,
+  createChangedUriIndex,
   defineExtension,
   useBeaconCodeLens,
   useBeaconCommands,
@@ -26,14 +29,28 @@ const {
   useBeaconLanguageModelTools,
   useBeaconNotebook,
   useBeaconSourceControl,
+  useDisposable,
   useWorkspaceScan,
 } = vi.hoisted(() => {
   const metadata = vi.fn<() => void>()
   const git = { getMetadata: metadata }
+  const index = {
+    dispose: vi.fn<() => void>(),
+    getAll: vi.fn<() => ReadonlySet<string>>(() => new Set()),
+    subscribe: vi.fn<
+      (listener: () => void) => {
+        dispose: () => void
+      }
+    >(() => ({ dispose: vi.fn<() => void>() })),
+  }
   const scan = vi.fn<() => void>()
 
   return {
     beaconGit: git,
+    changedUriIndex: index,
+    createChangedUriIndex: vi.fn<(source: typeof git) => typeof index>(
+      () => index,
+    ),
     defineExtension: vi.fn<
       (setup: (context: { workspaceState: unknown }) => unknown) => {
         activate: (context: { workspaceState: unknown }) => unknown
@@ -46,7 +63,8 @@ const {
     useBeaconCodeLens: vi.fn<() => void>(),
     useBeaconCommands: vi.fn<(workspaceState: unknown) => void>(),
     useBeaconDiagnostics: vi.fn<() => void>(),
-    useBeaconExplorer: vi.fn<(adapter: typeof git) => void>(),
+    useBeaconExplorer:
+      vi.fn<(adapter: typeof git, changedUris: typeof index) => void>(),
     useBeaconGit: vi.fn<() => typeof git>(() => git),
     useBeaconHighlight: vi.fn<() => { scanTextDocument: typeof scan }>(() => ({
       scanTextDocument: scan,
@@ -54,14 +72,21 @@ const {
     useBeaconHover: vi.fn<(getMetadata: typeof metadata) => void>(),
     useBeaconLanguageModelTools: vi.fn<() => void>(),
     useBeaconNotebook: vi.fn<(scanDocument: typeof scan) => void>(),
-    useBeaconSourceControl: vi.fn<(adapter: typeof git) => void>(),
+    useBeaconSourceControl: vi.fn<(changedUris: typeof index) => void>(),
+    useDisposable: vi.fn<(disposable: typeof index) => typeof index>(
+      disposable => disposable,
+    ),
     useWorkspaceScan: vi.fn<() => void>(),
   }
 })
 
 vi.mock(
   import('reactive-vscode'),
-  () => ({ defineExtension }) as unknown as Partial<typeof ReactiveVscode>,
+  () =>
+    ({
+      defineExtension,
+      useDisposable,
+    }) as unknown as Partial<typeof ReactiveVscode>,
 )
 
 vi.mock(
@@ -132,6 +157,13 @@ vi.mock(
     }) as unknown as Partial<typeof BeaconSourceControl>,
 )
 vi.mock(
+  import('../src/core/git/changed-uri-index'),
+  () =>
+    ({
+      createChangedUriIndex,
+    }) as unknown as Partial<typeof ChangedUriIndex>,
+)
+vi.mock(
   import('../src/composables/use-workspace-scan'),
   () =>
     ({
@@ -153,11 +185,18 @@ describe('extension activation', () => {
     activate({ workspaceState: {} } as never)
 
     expect(useBeaconGit).toHaveBeenCalledExactlyOnceWith()
-    expect(useBeaconExplorer).toHaveBeenCalledExactlyOnceWith(beaconGit)
+    expect(createChangedUriIndex).toHaveBeenCalledExactlyOnceWith(beaconGit)
+    expect(useDisposable).toHaveBeenCalledExactlyOnceWith(changedUriIndex)
+    expect(useBeaconExplorer).toHaveBeenCalledExactlyOnceWith(
+      beaconGit,
+      changedUriIndex,
+    )
     expect(useBeaconHover).toHaveBeenCalledExactlyOnceWith(
       beaconGit.getMetadata,
     )
-    expect(useBeaconSourceControl).toHaveBeenCalledExactlyOnceWith(beaconGit)
+    expect(useBeaconSourceControl).toHaveBeenCalledExactlyOnceWith(
+      changedUriIndex,
+    )
     expect(useBeaconLanguageModelTools).toHaveBeenCalledExactlyOnceWith()
     expect(useBeaconLanguageModelTools).toHaveBeenCalledAfter(useBeaconCodeLens)
   })

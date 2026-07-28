@@ -11,6 +11,7 @@ import {
   type BeaconLeafTreeElement,
 } from '../src/core/explorer/tree-data-provider'
 import type { BeaconGitMetadata } from '../src/core/git/blame'
+import { createChangedUriIndex } from '../src/core/git/changed-uri-index'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { commands } from '../src/meta'
 import type { BeaconAnnotation } from '../src/types/annotation'
@@ -162,6 +163,7 @@ const git = {
   BeaconGitAdapter,
   'getChangedUris' | 'getMetadataForAnnotations' | 'subscribeToChangedUris'
 >
+let changedUriIndex = createChangedUriIndex(git)
 
 vi.mock(
   import('vscode'),
@@ -412,6 +414,7 @@ function registeredCommand(command: string): (...args: unknown[]) => unknown {
 
 describe('beacon explorer commands', () => {
   beforeEach(() => {
+    changedUriIndex.dispose()
     annotationStore.clear()
     activeEditorListeners.length = 0
     clipboardWriteText.mockClear()
@@ -444,6 +447,7 @@ describe('beacon explorer commands', () => {
     treeDataProviders.length = 0
     visibleEditorsListeners.length = 0
     workspaceState.isTrusted = true
+    changedUriIndex = createChangedUriIndex(git)
   })
 
   it('filters the composed Explorer provider by scope and refreshes from VS Code listeners', () => {
@@ -471,7 +475,7 @@ describe('beacon explorer commands', () => {
     annotationStore.setForUri(open.uri, [open])
     annotationStore.setForUri(workspace.uri, [workspace])
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -529,7 +533,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockResolvedValueOnce(new Set([first.uri]))
     getChangedUris.mockResolvedValueOnce(new Set([second.uri]))
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     expect(providerAnnotationIds(provider)).toStrictEqual([])
@@ -576,8 +580,9 @@ describe('beacon explorer commands', () => {
       BeaconGitAdapter,
       'getChangedUris' | 'getMetadataForAnnotations' | 'subscribeToChangedUris'
     >
+    const customChangedUriIndex = createChangedUriIndex(customGit)
 
-    useBeaconExplorer(customGit)
+    useBeaconExplorer(customGit, customChangedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -607,7 +612,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockResolvedValueOnce(new Set([changed.uri]))
     getChangedUris.mockReturnValueOnce(nextSnapshot.promise)
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -658,7 +663,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockReturnValueOnce(initialSnapshot.promise)
     getChangedUris.mockReturnValueOnce(latestSnapshot.promise)
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -691,7 +696,7 @@ describe('beacon explorer commands', () => {
     workspaceState.isTrusted = false
     getChangedUris.mockResolvedValue(new Set())
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -707,7 +712,7 @@ describe('beacon explorer commands', () => {
     annotationStore.setForUri(ownerless.uri, [ownerless, owned])
     Object.assign(config.explorer, { onlyOwnerless: true })
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     expect(providerAnnotationIds(createdProvider())).toStrictEqual([
       'ownerless',
@@ -722,7 +727,7 @@ describe('beacon explorer commands', () => {
     const annotation = createAnnotation()
     annotationStore.setForUri(annotation.uri, [annotation])
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     await flushPromises()
 
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
@@ -737,7 +742,7 @@ describe('beacon explorer commands', () => {
       new Map([[annotation.id, metadata]]),
     )
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     await flushPromises()
 
     expect(getMetadataForAnnotations).toHaveBeenCalledExactlyOnceWith(
@@ -756,7 +761,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.git, { showMetadata: true })
     workspaceState.isTrusted = false
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     await flushPromises()
 
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
@@ -790,7 +795,7 @@ describe('beacon explorer commands', () => {
       ),
     )
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -834,7 +839,7 @@ describe('beacon explorer commands', () => {
       new Map([[candidate.id, recentMetadata]]),
     )
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -855,7 +860,7 @@ describe('beacon explorer commands', () => {
       new Map([[candidate.id, oldMetadata]]),
     )
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -881,7 +886,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     openTextDocument.mockReturnValueOnce(firstDocument.promise)
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledExactlyOnceWith({
@@ -911,7 +916,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     workspaceState.isTrusted = false
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     expect(openTextDocument).not.toHaveBeenCalled()
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
@@ -923,7 +928,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     getMetadataForAnnotations.mockRejectedValue(new Error('Git unavailable'))
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -950,7 +955,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     openTextDocument.mockRejectedValue(new Error('Cannot open document'))
 
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -973,7 +978,7 @@ describe('beacon explorer commands', () => {
 
   it('copies a beacon link when invoked from a tree context menu item', async () => {
     const annotation = createAnnotation()
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.copyLink)(createLeaf(annotation))
 
@@ -985,7 +990,7 @@ describe('beacon explorer commands', () => {
   it('copies the first stored beacon link when invoked without an argument', async () => {
     const annotation = createAnnotation()
     annotationStore.setForUri(annotation.uri, [annotation])
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.copyLink)()
 
@@ -996,7 +1001,7 @@ describe('beacon explorer commands', () => {
 
   it('reveals a beacon when invoked from a tree context menu item', async () => {
     const annotation = createAnnotation()
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.reveal)(createLeaf(annotation))
 
@@ -1010,7 +1015,7 @@ describe('beacon explorer commands', () => {
   it('reveals the first stored beacon when invoked without an argument', async () => {
     const annotation = createAnnotation()
     annotationStore.setForUri(annotation.uri, [annotation])
-    useBeaconExplorer(git)
+    useBeaconExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.reveal)()
 

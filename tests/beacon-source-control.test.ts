@@ -4,6 +4,7 @@ import type * as Vscode from 'vscode'
 import type { BeaconGitAdapter } from '../src/composables/use-beacon-git'
 import { useBeaconSourceControl } from '../src/composables/use-beacon-source-control'
 import type * as CodeBeaconConfig from '../src/config'
+import { createChangedUriIndex } from '../src/core/git/changed-uri-index'
 import { annotationStore } from '../src/core/store/annotation-store'
 import type { BeaconAnnotation } from '../src/types/annotation'
 
@@ -163,8 +164,10 @@ describe('beacon Source Control', () => {
     getChangedUris,
     subscribeToChangedUris,
   }
+  let changedUriIndex = createChangedUriIndex(git)
 
   beforeEach(() => {
+    changedUriIndex.dispose()
     annotationStore.clear()
     configState.enabled = false
     configurationListeners.length = 0
@@ -186,10 +189,11 @@ describe('beacon Source Control', () => {
       return Promise.resolve(subscription)
     })
     useDisposable.mockClear()
+    changedUriIndex = createChangedUriIndex(git)
   })
 
   it('does not create a Source Control provider while disabled', () => {
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
 
     expect(createSourceControl).not.toHaveBeenCalled()
     expect(sourceControl.count).toBe(0)
@@ -207,7 +211,7 @@ describe('beacon Source Control', () => {
       annotation('b-1', { resolved: true, uri: 'file:///b.ts' }),
     ])
 
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
     await flushPromises()
 
     expect(createSourceControl).toHaveBeenCalledWith(
@@ -239,7 +243,7 @@ describe('beacon Source Control', () => {
   it('refreshes from annotation and Git state changes', async () => {
     configState.enabled = true
     getChangedUris.mockResolvedValueOnce(new Set(['file:///a.ts']))
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
     await flushPromises()
 
     expect(sourceControl.count).toBe(0)
@@ -264,7 +268,7 @@ describe('beacon Source Control', () => {
     configState.enabled = true
     getChangedUris.mockResolvedValueOnce(new Set(['file:///a.ts']))
     annotationStore.setForUri('file:///a.ts', [annotation('a-1')])
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
     await flushPromises()
 
     expect(sourceControl.count).toBe(1)
@@ -294,7 +298,7 @@ describe('beacon Source Control', () => {
       annotation('c-1', { uri: 'file:///c.ts' }),
     ])
 
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
     await flushPromises()
     gitChangedUrisListeners[0]!()
 
@@ -328,7 +332,7 @@ describe('beacon Source Control', () => {
 
   it('disposes provider, group, and Git subscription when disabled', async () => {
     configState.enabled = true
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
     await flushPromises()
     const gitSubscription = gitChangedUrisSubscriptions[0]!
 
@@ -351,7 +355,7 @@ describe('beacon Source Control', () => {
     configState.enabled = true
     getChangedUris.mockReturnValueOnce(changedUris.promise)
     subscribeToChangedUris.mockReturnValueOnce(subscription.promise)
-    useBeaconSourceControl(git)
+    useBeaconSourceControl(changedUriIndex)
 
     configState.enabled = false
     configurationListeners[0]!({

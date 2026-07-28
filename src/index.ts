@@ -1,4 +1,4 @@
-import { defineExtension } from 'reactive-vscode'
+import { defineExtension, useDisposable } from 'reactive-vscode'
 import { version } from '../package.json'
 import { useBeaconCodeLens } from './composables/use-beacon-codelens'
 import { useBeaconCommands } from './composables/use-beacon-commands'
@@ -11,6 +11,7 @@ import { useBeaconLanguageModelTools } from './composables/use-beacon-language-m
 import { useBeaconNotebook } from './composables/use-beacon-notebook'
 import { useBeaconSourceControl } from './composables/use-beacon-source-control'
 import { useWorkspaceScan } from './composables/use-workspace-scan'
+import { createChangedUriIndex } from './core/git/changed-uri-index'
 import { logger } from './utils/logger'
 
 /**
@@ -20,12 +21,14 @@ const { activate, deactivate } = defineExtension(context => {
   useBeaconCommands(context.workspaceState)
   useBeaconDiagnostics()
   const beaconGit = useBeaconGit()
-  useBeaconExplorer(beaconGit)
+  const changedUriIndex = createChangedUriIndex(beaconGit)
+  useDisposable(changedUriIndex)
+  useBeaconExplorer(beaconGit, changedUriIndex)
   useWorkspaceScan()
   const beaconHighlight = useBeaconHighlight()
   useBeaconNotebook(beaconHighlight.scanTextDocument)
   useBeaconHover(beaconGit.getMetadata)
-  useBeaconSourceControl(beaconGit)
+  useBeaconSourceControl(changedUriIndex)
   useBeaconCodeLens()
   useBeaconLanguageModelTools()
 

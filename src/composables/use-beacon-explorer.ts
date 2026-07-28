@@ -6,7 +6,6 @@ import {
   env,
   window,
   workspace,
-  type Disposable,
   type TextDocument,
 } from 'vscode'
 import { config } from '../config'
@@ -16,6 +15,10 @@ import {
   BeaconTreeDataProvider,
   type BeaconLeafTreeElement,
 } from '../core/explorer/tree-data-provider'
+import type {
+  ChangedUriIndex,
+  ChangedUriIndexDisposable,
+} from '../core/git/changed-uri-index'
 import { annotationStore } from '../core/store/annotation-store'
 import { commands } from '../meta'
 import type { BeaconAnnotation } from '../types/annotation'
@@ -104,21 +107,17 @@ async function revealAnnotation(value?: unknown) {
  * Registers the Code Beacon TreeView and related navigation commands.
  */
 export function useBeaconExplorer(
-  git: Pick<
-    BeaconGitAdapter,
-    'getChangedUris' | 'getMetadataForAnnotations' | 'subscribeToChangedUris'
-  >,
+  git: Pick<BeaconGitAdapter, 'getMetadataForAnnotations'>,
+  changedUriIndex: ChangedUriIndex,
 ) {
   const gitMetadataIndex = new BeaconExplorerGitMetadataIndex<TextDocument>()
-  const { getChangedUris, getMetadataForAnnotations, subscribeToChangedUris } =
-    git
-  let changedUris = new Set<string>()
+  const { getMetadataForAnnotations } = git
   const provider = new BeaconTreeDataProvider(
     () =>
       filterBeaconAnnotations(annotationStore.getAll(), {
         activeUri: window.activeTextEditor?.document.uri.toString(),
         categories: config.explorer.categories,
-        changedUris,
+        changedUris: changedUriIndex.getAll(),
         includeIgnored: config.explorer.includeIgnored,
         includeResolved: config.explorer.includeResolved,
         metadataByAnnotationId: gitMetadataIndex.metadataByAnnotationId,
@@ -139,73 +138,24 @@ export function useBeaconExplorer(
   )
 
   let hydrationRequest = 0
-  let changedUrisRequest = 0
-  let changedUrisSubscription: Disposable | undefined
-  let changedUrisSubscriptionRequest = 0
-  let isChangedUrisSubscriptionPending = false
+  let changedUriSubscription: ChangedUriIndexDisposable | undefined
 
-  function disposeChangedUrisSubscription() {
-    changedUrisSubscriptionRequest += 1
-    isChangedUrisSubscriptionPending = false
-    changedUrisSubscription?.dispose()
-    changedUrisSubscription = undefined
+  function disposeChangedUriSubscription() {
+    changedUriSubscription?.dispose()
+    changedUriSubscription = undefined
   }
 
-  function clearChangedUris() {
-    changedUrisRequest += 1
-    changedUris = new Set()
-    disposeChangedUrisSubscription()
-  }
-
-  async function createChangedUrisSubscription(subscriptionRequest: number) {
-    try {
-      const subscription = await subscribeToChangedUris(refreshExplorer)
-      if (
-        subscriptionRequest !== changedUrisSubscriptionRequest ||
-        !isChangedFilesScope()
-      ) {
-        subscription.dispose()
-        return
-      }
-
-      changedUrisSubscription = subscription
-    } catch {
-      // Git integration is best-effort in unsupported workspace environments.
-    } finally {
-      if (subscriptionRequest === changedUrisSubscriptionRequest) {
-        isChangedUrisSubscriptionPending = false
-      }
-    }
-  }
-
-  async function refreshChangedUris() {
+  function synchronizeChangedUriSubscription() {
     if (!isChangedFilesScope()) {
-      clearChangedUris()
+      disposeChangedUriSubscription()
       return
     }
 
-    if (!changedUrisSubscription && !isChangedUrisSubscriptionPending) {
-      const subscriptionRequest = changedUrisSubscriptionRequest
-      isChangedUrisSubscriptionPending = true
-      createChangedUrisSubscription(subscriptionRequest)
+    if (!changedUriSubscription) {
+      changedUriSubscription = changedUriIndex.subscribe(() =>
+        provider.refresh(),
+      )
     }
-
-    const request = changedUrisRequest + 1
-    changedUrisRequest = request
-    let uris: ReadonlySet<string>
-
-    try {
-      uris = await getChangedUris()
-    } catch {
-      uris = new Set()
-    }
-
-    if (request !== changedUrisRequest || !isChangedFilesScope()) {
-      return
-    }
-
-    changedUris = new Set(uris)
-    provider.refresh()
   }
 
   async function hydrateGitMetadata() {
@@ -271,8 +221,8 @@ export function useBeaconExplorer(
   }
 
   function refreshExplorer() {
+    synchronizeChangedUriSubscription()
     provider.refresh()
-    refreshChangedUris()
     // oxlint-disable-next-line no-void -- VS Code listeners cannot await hydration.
     void hydrateGitMetadata()
   }
@@ -283,7 +233,7 @@ export function useBeaconExplorer(
   })
 
   useDisposable(view)
-  useDisposable({ dispose: disposeChangedUrisSubscription })
+  useDisposable({ dispose: disposeChangedUriSubscription })
   useDisposable({
     dispose: annotationStore.subscribe(refreshExplorer),
   })
@@ -316,7 +266,7 @@ export function useBeaconExplorer(
 
   // oxlint-disable-next-line no-void -- Explorer setup cannot await hydration.
   void hydrateGitMetadata()
-  refreshChangedUris()
+  synchronizeChangedUriSubscription()
 
   return {
     provider,

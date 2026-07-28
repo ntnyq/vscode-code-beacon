@@ -4,28 +4,25 @@ import {
   Uri,
   scm,
   workspace,
-  type Disposable,
   type SourceControl,
   type SourceControlResourceGroup,
   type SourceControlResourceState,
 } from 'vscode'
 import { config } from '../config'
+import type {
+  ChangedUriIndex,
+  ChangedUriIndexDisposable,
+} from '../core/git/changed-uri-index'
 import { createBeaconSourceControlResources } from '../core/source-control/resources'
 import { annotationStore } from '../core/store/annotation-store'
-import type { BeaconGitAdapter } from './use-beacon-git'
 
 const SOURCE_CONTROL_ID = 'code-beacon'
 const SOURCE_CONTROL_LABEL = 'Code Beacon'
 const RESOURCE_GROUP_ID = 'changedBeacons'
 const RESOURCE_GROUP_LABEL = 'Changed Beacons'
 
-export function useBeaconSourceControl(
-  git: Pick<BeaconGitAdapter, 'getChangedUris' | 'subscribeToChangedUris'>,
-) {
-  let changedUris = new Set<string>()
-  let generation = 0
-  let changedUrisRequest = 0
-  let gitSubscription: Disposable | undefined
+export function useBeaconSourceControl(changedUriIndex: ChangedUriIndex) {
+  let changedUriSubscription: ChangedUriIndexDisposable | undefined
   let group: SourceControlResourceGroup | undefined
   let sourceControl: SourceControl | undefined
 
@@ -35,7 +32,7 @@ export function useBeaconSourceControl(
     }
     const states: SourceControlResourceState[] =
       createBeaconSourceControlResources(
-        changedUris,
+        changedUriIndex.getAll(),
         annotationStore.getAll(),
       ).map(descriptor => {
         const resourceUri = Uri.parse(descriptor.uri)
@@ -58,63 +55,16 @@ export function useBeaconSourceControl(
   }
 
   function disable() {
-    changedUrisRequest += 1
-    if (!sourceControl && !group && !gitSubscription) {
+    if (!sourceControl && !group && !changedUriSubscription) {
       return
     }
 
-    generation += 1
-    changedUris = new Set()
-    gitSubscription?.dispose()
-    gitSubscription = undefined
+    changedUriSubscription?.dispose()
+    changedUriSubscription = undefined
     group?.dispose()
     group = undefined
     sourceControl?.dispose()
     sourceControl = undefined
-  }
-
-  async function refreshChangedUris() {
-    const request = changedUrisRequest + 1
-    changedUrisRequest = request
-    if (!config.scm.enabled || !sourceControl) {
-      return
-    }
-    const enabledGeneration = generation
-    let uris: ReadonlySet<string>
-
-    try {
-      uris = await git.getChangedUris()
-    } catch {
-      uris = new Set()
-    }
-
-    if (
-      request !== changedUrisRequest ||
-      enabledGeneration !== generation ||
-      !config.scm.enabled
-    ) {
-      return
-    }
-
-    changedUris = new Set(uris)
-    render()
-  }
-
-  async function subscribeToGitChanges(enabledGeneration: number) {
-    let subscription: Disposable
-
-    try {
-      subscription = await git.subscribeToChangedUris(refreshChangedUris)
-    } catch {
-      return
-    }
-
-    if (enabledGeneration !== generation || !config.scm.enabled) {
-      subscription.dispose()
-      return
-    }
-
-    gitSubscription = subscription
   }
 
   function enable() {
@@ -129,8 +79,8 @@ export function useBeaconSourceControl(
       RESOURCE_GROUP_ID,
       RESOURCE_GROUP_LABEL,
     )
-    subscribeToGitChanges(generation)
-    refreshChangedUris()
+    changedUriSubscription = changedUriIndex.subscribe(render)
+    render()
   }
 
   function synchronize() {

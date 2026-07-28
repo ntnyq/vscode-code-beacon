@@ -62,7 +62,7 @@ describe('issue formatter', () => {
 
     expect(content.title).toBe('TODO: Replace deprecated parser')
     expect(content.body).toContain(
-      'Replace deprecated parser Keep the current fallback\\.',
+      String.raw`Replace deprecated parser Keep the current fallback\.`,
     )
   })
 
@@ -91,15 +91,15 @@ describe('issue formatter', () => {
     [
       '## Injected heading',
       'TODO: ## Injected heading',
-      '\\#\\# Injected heading',
+      String.raw`\#\# Injected heading`,
     ],
-    ['> Injected quote', 'TODO: > Injected quote', '\\> Injected quote'],
+    ['> Injected quote', 'TODO: > Injected quote', String.raw`\> Injected quote`],
     ['```typescript', 'TODO: ```typescript', '\\`\\`\\`typescript'],
-    ['~~~typescript', 'TODO: ~~~typescript', '\\~\\~\\~typescript'],
+    ['~~~typescript', 'TODO: ~~~typescript', String.raw`\~\~\~typescript`],
     [
       '<script>alert(1)</script>',
       'TODO: <script>alert(1)</script>',
-      '\\<script\\>alert\\(1\\)\\</script\\>',
+      String.raw`\<script\>alert\(1\)\</script\>`,
     ],
   ])(
     'keeps a %s first line as literal annotation text',
@@ -166,7 +166,7 @@ describe('issue formatter', () => {
       '- **Author:** Ada \\`\\`\\`markdown \\#\\# Forged author',
     )
     expect(content.body).toContain(
-      '- **Summary:** Replace parser \\#\\# Forged summary \\~\\~\\~markdown',
+      String.raw`- **Summary:** Replace parser \#\# Forged summary \~\~\~markdown`,
     )
     expect(content.body).not.toContain('\n```markdown')
     expect(content.body).not.toContain('\n## Forged author')

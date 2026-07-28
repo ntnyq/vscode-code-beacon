@@ -27,7 +27,7 @@ function createAnnotation(): BeaconAnnotation {
   }
 }
 
-describe('CodeLens issue command', () => {
+describe('codeLens issue command', () => {
   it('offers Create Issue with the beacon annotation argument', () => {
     const annotation = createAnnotation()
 

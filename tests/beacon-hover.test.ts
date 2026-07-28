@@ -173,7 +173,7 @@ describe('beacon hover', () => {
   })
 
   it.each([
-    ['resolves undefined', () => Promise.resolve(undefined)],
+    ['resolves undefined', () => Promise.resolve()],
     ['rejects', () => Promise.reject(new Error('Git unavailable'))],
   ])('preserves the base hover when metadata lookup %s', async (_, lookup) => {
     const testDocument = document()

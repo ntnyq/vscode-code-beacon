@@ -1,6 +1,6 @@
 # Code Beacon 产品与代码设计计划
 
-更新时间：2026-07-08
+更新时间：2026-07-28
 
 Code Beacon 是一个面向 VS Code 的代码注释信号管理插件。它不只是高亮 TODO，而是把 TODO、FIXME、BUG、NOTE、HACK、REVIEW、SECURITY、PERF 等代码注释信号转成可扫描、可导航、可诊断、可协作、可被 AI 理解的工作流。
 
@@ -528,94 +528,110 @@ export interface BeaconGitInfo {
 
 ## 7. 代码架构
 
-目标是沿用 `vscode-better-color-highlight` 的轻量模块化风格。
+当前实现沿用 `vscode-better-color-highlight` 的轻量模块化风格，并把纯核心逻辑、VS Code 副作用适配和生命周期组合分开。
 
 ```txt
 src/
   index.ts
   config.ts
   meta.ts
-  constants/
-    commands.ts
-    defaults.ts
-    languages.ts
-  types/
-    annotation.ts
-    config.ts
-    scanner.ts
-    tree.ts
-  core/
-    rules/
-      defaults.ts
-      normalize.ts
-      validate.ts
-    scanner/
-      scan-document.ts
-      scan-workspace.ts
-      scanner-registry.ts
-      text-matcher.ts
-      regex-matcher.ts
-      comment-ranges.ts
-      notebook.ts
-    store/
-      annotation-store.ts
-      ignored-store.ts
-      scan-state.ts
-    git/
-      blame.ts
-      git-api.ts
-      cache.ts
-  decorations/
-    decoration-type-cache.ts
-    marker-types.ts
-    apply-decorations.ts
-  providers/
-    tree-data-provider.ts
-    codelens-provider.ts
-    hover-provider.ts
-    diagnostics.ts
-  commands/
-    index.ts
-    scan.ts
-    navigation.ts
-    clipboard.ts
-    resolve.ts
-    export.ts
-    ai.ts
+  adapters/
+    vscode/
+      beacon-command-adapter.ts
   composables/
+    use-beacon-commands.ts
     use-beacon-highlight.ts
-    use-beacon-workspace-index.ts
-    use-beacon-tree.ts
+    use-workspace-scan.ts
+    use-beacon-explorer.ts
     use-beacon-diagnostics.ts
     use-beacon-codelens.ts
     use-beacon-hover.ts
     use-beacon-git.ts
-    use-beacon-ai.ts
+    use-beacon-source-control.ts
+    use-beacon-notebook.ts
+    use-beacon-language-model-tools.ts
+  constants/
+    defaults.ts
+  types/
+    annotation.ts
+  core/
+    ai/
+      action-execution.ts
+      explain-annotation.ts
+      generate-annotation-fix.ts
+      list-annotations.ts
+      quality-check.ts
+      select-annotations.ts
+      workspace-annotation-summary.ts
+    commands/
+      annotation-target.ts
+      beacon-command-handlers.ts
+      register-beacon-commands.ts
+    codelens/
+      commands.ts
+    decorations/
+      apply-decorations.ts
+      decoration-type-cache.ts
+      editor-decoration-caches.ts
+    diagnostics/
+      beacon-diagnostics.ts
+    explorer/
+      filter.ts
+      git-metadata-index.ts
+      tree-data-provider.ts
+    export/
+      format.ts
+    git/
+      blame.ts
+      changed-uri-index.ts
+      presentation.ts
+    hover/
+      format.ts
+    issues/
+      format.ts
+    quality/
+      score-annotations.ts
+    rules/
+      normalize.ts
+    scanner/
+      comment-ranges.ts
+      configured-document-scanner.ts
+      scan-document.ts
+      scan-mode.ts
+    source-control/
+      resources.ts
+    store/
+      annotation-state.ts
+      annotation-store.ts
+    workspace/
+      documents.ts
+      globs.ts
   utils/
-    editor-filter.ts
-    glob.ts
-    ranges.ts
-    uri.ts
     logger.ts
+    ranges.ts
 ```
 
 入口：
 
 ```ts
-const { activate, deactivate } = defineExtension(() => {
-  logger.info(`Activated, version: ${version}`)
-
-  useCommands()
-  useBeaconHighlight()
-  useBeaconWorkspaceIndex()
-  useBeaconTree()
+const { activate, deactivate } = defineExtension(context => {
+  useBeaconCommands(context.workspaceState)
   useBeaconDiagnostics()
+  const beaconGit = useBeaconGit()
+  const changedUriIndex = createChangedUriIndex(beaconGit)
+  useDisposable(changedUriIndex)
+  useBeaconExplorer(beaconGit, changedUriIndex)
+  useWorkspaceScan()
+  const beaconHighlight = useBeaconHighlight()
+  useBeaconNotebook(beaconHighlight.scanTextDocument)
+  useBeaconHover(beaconGit.getMetadata)
+  useBeaconSourceControl(changedUriIndex)
   useBeaconCodeLens()
-  useBeaconHover()
-  useBeaconGit()
-  useBeaconAi()
+  useBeaconLanguageModelTools()
 })
 ```
+
+`core/` 保持可测试的领域逻辑，`adapters/vscode/` 集中命令所需的 VS Code 副作用，`composables/` 负责订阅、配置响应和资源释放，`index.ts` 只组合生命周期与共享依赖。
 
 ## 8. 扫描设计
 
@@ -729,17 +745,17 @@ codeBeacon.activeAnnotation
 
 目标：比 todo-highlight 更稳定、更现代，但范围克制。
 
-- 配置 schema：rules、include/exclude、languages、decorations、diagnostics mode。
-- 默认 rules。
-- visible editors 扫描。
-- comment-only 基础策略。
-- DecorationTypeCache。
-- TreeView：workspace/active file/open editors 基础展示。
-- Commands：enable/disable/toggle/refresh/scan/reveal/copyLink/focusExplorer。
-- Diagnostics：openFiles/off，默认 off。
-- Hover：基础信息。
-- 单测：matcher、comment ranges、rule normalize、decoration cache、store。
-- e2e smoke：打开 playground，确认 TODO 高亮、TreeView 有结果。
+- [x] 配置 schema：rules、include/exclude、languages、decorations、diagnostics mode。
+- [x] 默认 rules。
+- [x] visible editors 扫描。
+- [x] comment-only 基础策略。
+- [x] DecorationTypeCache。
+- [x] TreeView：workspace/active file/open editors 基础展示。
+- [x] Commands：enable/disable/toggle/refresh/scan/reveal/copyLink/focusExplorer。
+- [x] Diagnostics：openFiles/off，默认 off。
+- [x] Hover：基础信息。
+- [x] 单测：matcher、comment ranges、rule normalize、decoration cache、store。
+- [x] e2e smoke：打开 playground，确认 TODO 高亮、TreeView 有结果。
 
 ### Phase 2：工作区工作流
 
@@ -769,20 +785,26 @@ codeBeacon.activeAnnotation
 - [x] explain/generate fix/summarize commands。
 - [x] TODO quality scoring。
 - [x] Workspace annotation digest（`code-beacon.summarizeWorkspace`）。
-- [ ] AI action telemetry opt-in。
+- [ ] AI action telemetry opt-in（等待项目自有遥测目标、凭据、数据保留与隐私策略；条件具备前保持无网络发送）。
 
-## 11. 测试计划
+### Phase 5：0.1.0 Preview 发布收口
 
-- `tests/rules.test.ts`：默认规则、用户规则合并、无效 regex 处理。
-- `tests/matchers.test.ts`：text/regex/wholeWord/colon/caseSensitive。
-- `tests/comment-ranges.test.ts`：line/block/html/markdown/python/yaml。
-- `tests/scan-document.test.ts`：message capture、owner、due、ignore directive。
-- `tests/decoration-cache.test.ts`：同 key 复用、stale dispose。
-- `tests/diagnostics.test.ts`：severity/source/code/range。
-- `tests/tree-provider.test.ts`：group/filter/sort。
-- `tests/workspace-scan.test.ts`：include/exclude/maxFileSize/maxFilesForSearch。
-- `tests/web-compat.test.ts`：避免 Node-only API 泄漏。
-- `tests/e2e/run.ts`：VS Code extension host smoke test。
+- [x] CI 显式验证单测、Desktop Extension Host、Web/Virtual Workspace 和 VSIX 打包。
+- [x] README、CHANGELOG、架构图和路线图与当前实现同步。
+- [ ] 在干净 VS Code Profile 中安装 VSIX，手测 Explorer、状态持久化、Git/SCM、AI、Notebook 和 Web。
+- [ ] 确认 Marketplace 发布凭据与发布方式。
+- [ ] 升级版本并发布 `0.1.0` Preview。
+
+## 11. 测试覆盖
+
+- 扫描与规则：`rules.test.ts`、`comment-ranges.test.ts`、`scan-document.test.ts`、`configured-document-scanner.test.ts`、`scan-mode.test.ts`。
+- 展示与工作流：decoration、diagnostics、CodeLens、Explorer、hover、export、issue format、Source Control。
+- 状态与 Git：annotation store/state、changed URI index、blame、metadata index、Git presentation。
+- AI：annotation selection、quality scoring、Language Model Tools、explain、generate fix、workspace summary、cancellation 和 latest-request-wins。
+- 包元数据与生命周期：`package-metadata.test.ts`、`index.test.ts`。
+- Desktop：`tests/e2e/run.ts` 打包临时 VSIX，并在真实 Extension Host 中验证激活、扫描、Explorer 和 diagnostics。
+- Web/Virtual Workspace：`tests/web/run.ts` 在 Chromium browser host 中验证虚拟文件系统扫描与 diagnostics。
+- CI：格式、lint、类型、构建、单测、Desktop E2E、Web E2E 和显式 VSIX 打包全部作为合并门禁。
 
 ## 12. 风险与取舍
 
@@ -790,49 +812,32 @@ codeBeacon.activeAnnotation
 - comment-only 不可能第一版完美覆盖所有语言：提供 fallback 和 debug，比误称精准更诚实。
 - ripgrep 只做可选加速：大仓库首扫可能不如 Todo Tree 快，但 Web/Remote/Virtual Workspace 更稳。
 - Git blame 成本高：默认关闭，按需、按文件、带缓存。
-- AI 能力后置：先把 annotation 数据模型和 store 做扎实，再接 Language Model Tool。
+- AI 默认关闭且只由用户触发：限制共享上下文、要求工具确认，并在生成修复时使用确认式 `WorkspaceEdit`。
 - 规则配置复杂：必须提供简单默认和 Settings UI 友好 schema，避免用户一开始就读完整类型。
 
-## 13. 第一版 package.json 建议
+## 13. 0.1.0 Preview 发布策略
 
-短期保留当前：
+当前发布元数据已经包含：
 
 - `displayName`: `Code Beacon`
 - `name`: `vscode-code-beacon`
 - `scope`: `code-beacon`
-- `main` / `browser`: `./dist/index.js`
-- `extensionKind`: 建议补充 `["ui", "workspace"]`
+- `main`: `./dist/index.js`
+- `browser`: `./dist/index.cjs`
+- `extensionKind`: `["ui", "workspace"]`
 - `capabilities.virtualWorkspaces.supported`: true
-- `capabilities.untrustedWorkspaces.supported`: `"limited"`，限制 Git、AI、ripgrep、`.gitignore` 读取等能力
+- `capabilities.untrustedWorkspaces.supported`: `"limited"`
+- `preview`: true
 
-分类和关键词建议：
+版本在发布验收完成前保持 `0.0.0`。首个公开预览版升级为 `0.1.0`，保留 `preview: true`，通过 Marketplace 收集真实工作区规模、语言覆盖和交互噪声反馈。
 
-```jsonc
-{
-  "categories": ["Other", "Linters", "Visualization"],
-  "keywords": [
-    "todo",
-    "fixme",
-    "annotation",
-    "comments",
-    "highlight",
-    "tree view",
-    "problems",
-    "codelens",
-    "git blame",
-    "ai",
-  ],
-}
-```
+标签触发的 GitHub workflow 负责生成 GitHub Release；Marketplace 发布当前通过本地 `pnpm release` 完成，需要发布者提供 `vsce` 凭据。正式发布前应决定继续保留人工发布，还是在仓库中配置受保护的发布 secret。
 
-## 14. 推荐的首批实现顺序
+## 14. 下一步实施顺序
 
-1. 先改 `package.json` 配置、命令、views，并重新生成 `src/meta.ts`。
-2. 建 `types/`、`core/rules/`、`core/scanner/`，完成纯函数扫描。
-3. 接入 `useBeaconHighlight()`，先只管 visible editors decoration。
-4. 建 annotation store，再接 TreeView。
-5. 接 diagnostics openFiles mode。
-6. 加 workspace scan command 和 export。
-7. 最后补 CodeLens、Git、AI。
-
-这个顺序能让每一步都有可视结果，同时避免一开始就陷入 workspace scan、TreeView、Problems、AI 全部互相阻塞。
+1. 在干净 VS Code Profile 中安装 CI 同等方式打出的 VSIX。
+2. 手测 Explorer filter/scope、resolved/ignored 持久化、Git metadata、changed-files scope、Source Control provider、AI explain/generate-fix/summary、Notebook 和 Web。
+3. 记录并修复阻断发布的问题，再完整运行 `pnpm release:check` 和 VSIX 打包。
+4. 确认 Marketplace 凭据和人工/自动发布路径。
+5. 升级到 `0.1.0`，更新最终 CHANGELOG，发布 Preview。
+6. 发布后以真实反馈决定性能、匹配准确性、SARIF-lite、multiline annotation 等后续优先级。

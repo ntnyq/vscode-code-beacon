@@ -39,6 +39,7 @@
     "no-inline-comments": "off",
     "no-param-reassign": "off",
     "no-magic-numbers": "off",
+    "one-var": "off",
     "prefer-destructuring": "off",
     "init-declarations": "off",
     "jsdoc/require-param": "off",

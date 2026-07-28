@@ -18,7 +18,10 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 - Copy links or Markdown and export all beacons as Markdown, JSON, or CSV.
 - Resolve or ignore beacons with state persisted for the current workspace; reopen or unignore them when the work resumes.
 - Filter Explorer results by scope, category, severity, owner, or text query, and choose whether resolved and ignored beacons remain visible.
+- Focus the Explorer on staged, unstaged, merge-conflict, and untracked files reported by VS Code's built-in Git extension.
 - Enrich annotation hovers with the blamed commit's author, date, short hash, and summary in trusted desktop workspaces.
+- Optionally expose changed files containing annotations through a read-only Source Control provider.
+- Opt into AI commands and read-only Language Model Tools for explanations, generated-fix previews, workspace summaries, and annotation quality checks.
 - Run in desktop VS Code, VS Code Web, and virtual workspaces where files are readable through the VS Code workspace API.
 
 ## Custom Rules
@@ -86,6 +89,27 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 In the Code Beacon Explorer, select a beacon and invoke **Code Beacon: Create Issue Body**. The command copies GitHub-compatible Markdown for that beacon to your clipboard, ready to edit and paste into an issue.
 
 Create Issue Body only copies local Markdown: it does not create a remote issue, send a network request, or require an issue-tracker account.
+
+## Git-aware workflows
+
+Set `code-beacon.explorer.scope` to `changedFiles` to show annotations only in staged, unstaged, merge-conflict, and untracked files reported by VS Code's built-in Git extension.
+
+Enable `code-beacon.scm.enabled` to add a read-only **Code Beacon** provider to the Source Control view. It lists changed files that contain indexed annotations and opens the selected file; it never stages, unstages, commits, or modifies Git state.
+
+Enable `code-beacon.git.showMetadata` to add the blamed commit's author, date, short hash, and summary to Explorer items. The same metadata is available in annotation hovers without enabling the Explorer setting. Stale filtering uses this metadata when `code-beacon.explorer.onlyStale` is enabled.
+
+These integrations require a trusted local desktop workspace, a non-virtual repository, and VS Code's built-in Git extension. The rest of Code Beacon remains available when Git metadata is unavailable.
+
+## AI-assisted workflows
+
+Set `code-beacon.ai.enabled` to `true` to enable Code Beacon's AI commands and Language Model Tools:
+
+- **Explain Beacon** sends the selected annotation and a bounded source window to a VS Code language model, then opens the explanation locally.
+- **Generate Beacon Fix** requests a bounded replacement proposal. Code Beacon validates it against the current document and applies it through a confirmation-required `WorkspaceEdit`.
+- **Summarize Workspace Beacons** sends a bounded digest of annotations already held in the in-memory index; it does not read arbitrary workspace files.
+- The read-only `code_beacon_list_annotations` and `code_beacon_quality_check` tools share bounded, already-indexed annotation data only after VS Code presents a confirmation prompt.
+
+AI actions run only when explicitly invoked, show cancellable progress, and use VS Code's language model API. Code Beacon does not enable AI-action telemetry or configure a telemetry destination.
 
 ## Configs
 
@@ -285,8 +309,8 @@ If metadata is unavailable, invalid, or cannot be resolved, the beacon is treate
 
 This extension supports browser-based VS Code environments, including [vscode.dev](https://vscode.dev) and [github.dev](https://github.dev).
 Runtime file access uses VS Code workspace APIs, so workspace scans work with web and virtual workspace file systems when those files are readable by VS Code.
-Git hover enrichment uses VS Code's built-in Git API only in trusted desktop workspaces. VS Code Web, virtual workspaces, untrusted workspaces, and unavailable Git metadata retain the base annotation hover without a Git section.
-Automated checks cover both the desktop Extension Host and browser-host virtual workspaces.
+Git-aware Explorer scope, Git metadata, and the Source Control provider use VS Code's built-in Git API only in trusted desktop workspaces. VS Code Web, virtual workspaces, untrusted workspaces, and unavailable Git metadata retain the base scanning, Explorer, diagnostics, and hover workflows without Git enrichment.
+CI checks cover unit tests, the desktop Extension Host, browser-host virtual workspaces, and VSIX packaging.
 
 ## License
 

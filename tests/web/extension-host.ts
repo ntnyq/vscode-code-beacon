@@ -2,6 +2,7 @@ import * as vscode from 'vscode'
 
 const DIAGNOSTIC_TIMEOUT_MS = 10_000
 const DIAGNOSTIC_POLL_INTERVAL_MS = 50
+const WORKBENCH_SETTLE_TIMEOUT_MS = 1000
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -81,4 +82,5 @@ export async function run(): Promise<void> {
   await vscode.commands.executeCommand('code-beacon.scanWorkspace')
 
   await waitForTodoDiagnostic(documentUri)
+  await delay(WORKBENCH_SETTLE_TIMEOUT_MS)
 }

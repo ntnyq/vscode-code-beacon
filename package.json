@@ -70,23 +70,23 @@
     "vscode:prepublish": "pnpm run build"
   },
   "dependencies": {
-    "@ntnyq/utils": "^0.16.0",
+    "@ntnyq/utils": "^0.21.0",
     "reactive-vscode": "^1.0.2"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.1.2",
     "@types/vscode": "^1.125.0",
-    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
-    "@vscode/test-electron": "^3.0.0",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "@vscode/test-electron": "^3.1.0",
     "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",
-    "bumpp": "^11.1.0",
+    "bumpp": "^12.0.0",
     "husky": "^9.1.7",
     "nano-staged": "^1.0.2",
     "npm-run-all2": "^9.0.2",
-    "oxfmt": "^0.58.0",
-    "oxlint": "^1.73.0",
-    "tsdown": "^0.22.4",
+    "oxfmt": "^0.61.0",
+    "oxlint": "^1.76.0",
+    "tsdown": "^0.22.14",
     "vitest": "^4.1.10",
     "vscode-ext-gen": "^1.6.0"
   },
@@ -776,7 +776,7 @@
   "engines": {
     "vscode": "^1.125.0"
   },
-  "packageManager": "pnpm@11.11.0",
+  "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72",
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",

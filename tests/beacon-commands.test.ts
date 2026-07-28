@@ -15,6 +15,7 @@ import { formatBeaconIssue } from '../src/core/issues/format'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { commands } from '../src/meta'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 const {
   cancellationToken,
@@ -267,31 +268,18 @@ async function* textResponseStream(...values: readonly string[]) {
 }
 
 function deferred() {
-  let resolveDeferred: (() => void) | undefined
-  const promise = new Promise<void>(resolve => {
-    resolveDeferred = resolve
-  })
+  const deferredPromise = Promise.withResolvers<null>()
 
   return {
-    promise,
+    promise: deferredPromise.promise,
     resolve() {
-      resolveDeferred?.()
+      deferredPromise.resolve(null)
     },
   }
 }
 
 function deferredValue<Value>() {
-  let resolveDeferred: ((value: Value) => void) | undefined
-  const promise = new Promise<Value>(resolve => {
-    resolveDeferred = resolve
-  })
-
-  return {
-    promise,
-    resolve(value: Value) {
-      resolveDeferred?.(value)
-    },
-  }
+  return Promise.withResolvers<Value>()
 }
 
 interface DeferredUpdate {
@@ -305,7 +293,9 @@ function tick() {
 }
 
 function flushPromises() {
-  return new Promise<void>(resolve => setImmediate(resolve))
+  const deferredPromise = Promise.withResolvers<null>()
+  setImmediate(() => deferredPromise.resolve(null))
+  return deferredPromise.promise
 }
 
 function registeredCommand(command: string): (...args: unknown[]) => unknown {
@@ -815,9 +805,7 @@ describe('beacon command persistence', () => {
     const newerModel = {
       sendRequest: vi.fn<() => Promise<Vscode.LanguageModelChatResponse>>(() =>
         Promise.resolve({
-          stream: (async function* stream() {
-            yield new LanguageModelTextPart('Newest response chunk.')
-          })(),
+          stream: textResponseStream('Newest response chunk.'),
           text: emptyTextStream(),
         }),
       ),
@@ -993,7 +981,7 @@ describe('beacon command persistence', () => {
 
   it('does not summarize or access VS Code document APIs while AI is disabled', async () => {
     configState.aiEnabled = false
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const initialState = annotationStore.getState()
@@ -1017,7 +1005,7 @@ describe('beacon command persistence', () => {
   })
 
   it('reports unavailable models and selection failures without reading documents or creating edits', async () => {
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     selectChatModels.mockRejectedValueOnce(new Error('Model unavailable'))
@@ -1054,7 +1042,8 @@ describe('beacon command persistence', () => {
         uri: `file:///workspace/src/${index.toString().padStart(3, '0')}.ts`,
       }),
     )
-    annotationStore.setForUri(
+    seedAnnotationStore(
+      annotationStore,
       'file:///workspace/src/annotations.ts',
       annotations,
     )
@@ -1123,7 +1112,7 @@ describe('beacon command persistence', () => {
   })
 
   it('reports summary request failures without retrying or mutating the workspace', async () => {
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const model = {
@@ -1149,7 +1138,7 @@ describe('beacon command persistence', () => {
   })
 
   it('stops a Summary stream when progress is cancelled', async () => {
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const model = {
@@ -1185,7 +1174,7 @@ describe('beacon command persistence', () => {
   it('stops a Summary stream when superseded or disposed', async () => {
     const streamCanYield = deferred()
     const streamWaiting = deferred()
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const delayedModel = {
@@ -1257,7 +1246,7 @@ describe('beacon command persistence', () => {
   it('keeps overlapping Explain and Summary output in their dedicated channels', async () => {
     const summaryStreamCanYield = deferred()
     const summaryStreamWaiting = deferred()
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const delayedSummaryModel = {
@@ -1309,7 +1298,7 @@ describe('beacon command persistence', () => {
   })
 
   it('preserves existing Explain output when Summary model selection fails or has no model', async () => {
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const explainModel = {
@@ -1347,7 +1336,7 @@ describe('beacon command persistence', () => {
   })
 
   it('preserves Explain output and does not append or show Summary output when a Summary request fails', async () => {
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const explainModel = {
@@ -1393,7 +1382,7 @@ describe('beacon command persistence', () => {
   })
 
   it('keeps prior Summary output unchanged when selection or request failures occur', async () => {
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createAnnotation(),
     ])
     const successfulSummaryModel = {
@@ -1467,7 +1456,7 @@ describe('beacon command persistence', () => {
     const summaryStreamCanYield = deferred()
     const summaryStreamWaiting = deferred()
     const original = '// TODO: replace deprecated parser'
-    annotationStore.setForUri('file:///workspace/src/parser.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/src/parser.ts', [
       createGenerateFixAnnotation(),
     ])
     vscodeState.documentText = `${original}\n`
@@ -2159,12 +2148,16 @@ describe('beacon command persistence', () => {
     let persistedState: unknown
     useBeaconCommands({
       get: <T>() => undefined as T | undefined,
-      update: (_key: string, state: unknown) =>
-        new Promise<void>((resolve, reject) => {
-          pendingUpdates.push({ reject, resolve, state })
-        }).then(() => {
-          persistedState = state
-        }),
+      async update(_key: string, state: unknown) {
+        const deferredUpdate = Promise.withResolvers<null>()
+        pendingUpdates.push({
+          reject: deferredUpdate.reject,
+          resolve: () => deferredUpdate.resolve(null),
+          state,
+        })
+        await deferredUpdate.promise
+        persistedState = state
+      },
     } as unknown as Vscode.Memento)
 
     annotationStore.markResolved('resolved', true)
@@ -2201,12 +2194,16 @@ describe('beacon command persistence', () => {
     let persistedState: unknown
     useBeaconCommands({
       get: <T>() => undefined as T | undefined,
-      update: (_key: string, state: unknown) =>
-        new Promise<void>((resolve, reject) => {
-          pendingUpdates.push({ reject, resolve, state })
-        }).then(() => {
-          persistedState = state
-        }),
+      async update(_key: string, state: unknown) {
+        const deferredUpdate = Promise.withResolvers<null>()
+        pendingUpdates.push({
+          reject: deferredUpdate.reject,
+          resolve: () => deferredUpdate.resolve(null),
+          state,
+        })
+        await deferredUpdate.promise
+        persistedState = state
+      },
     } as unknown as Vscode.Memento)
 
     annotationStore.markResolved('first', true)

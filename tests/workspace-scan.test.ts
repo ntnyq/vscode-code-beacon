@@ -5,11 +5,17 @@ import { useWorkspaceScan } from '../src/composables/use-workspace-scan'
 import { config } from '../src/config'
 import type * as CodeBeaconConfig from '../src/config'
 import { annotationStore } from '../src/core/store/annotation-store'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 interface TestUri {
   readonly path: string
   readonly workspaceFolderName?: string
   readonly toString: () => string
+}
+
+interface TestDocument {
+  readonly getText: () => string
+  readonly languageId: string
 }
 
 type TestUriListener = (uri: TestUri) => unknown
@@ -282,7 +288,7 @@ describe('workspace scan file events', () => {
   })
 
   it('does not publish a partial snapshot when a full scan is cancelled', async () => {
-    annotationStore.setForUri(a.toString(), [
+    seedAnnotationStore(annotationStore, a.toString(), [
       {
         category: 'todo',
         column: 0,
@@ -328,16 +334,9 @@ describe('workspace scan file events', () => {
       [a],
     )
     openTextDocument.mockClear()
-    let resolveWatcher:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const watcherDocument = Promise.withResolvers<TestDocument>()
     openTextDocument
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            resolveWatcher = resolve
-          }),
-      )
+      .mockReturnValueOnce(watcherDocument.promise)
       .mockImplementationOnce(() => {
         progressCancellation.isCancellationRequested = true
         return Promise.resolve({
@@ -350,7 +349,7 @@ describe('workspace scan file events', () => {
     await vi.waitFor(() => expect(openTextDocument).toHaveBeenCalledTimes(1))
     const cancelledScan = scanner.scanWorkspace()
     await vi.waitFor(() => expect(openTextDocument).toHaveBeenCalledTimes(2))
-    resolveWatcher?.({
+    watcherDocument.resolve({
       getText: () => 'TODO: watcher result',
       languageId: 'typescript',
     })
@@ -406,25 +405,11 @@ describe('workspace scan file events', () => {
     await scanInitialWorkspace(new Map([[a.toString(), 'TODO: initial']]), [a])
     openTextDocument.mockClear()
 
-    let resolveFirst:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
-    let resolveSecond:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const firstDocument = Promise.withResolvers<TestDocument>()
+    const secondDocument = Promise.withResolvers<TestDocument>()
     openTextDocument
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            resolveFirst = resolve
-          }),
-      )
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            resolveSecond = resolve
-          }),
-      )
+      .mockReturnValueOnce(firstDocument.promise)
+      .mockReturnValueOnce(secondDocument.promise)
 
     const handler = changeListeners[0]
     if (!handler) {
@@ -436,14 +421,20 @@ describe('workspace scan file events', () => {
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledTimes(2)
     })
-    resolveSecond?.({ getText: () => 'TODO: newest', languageId: 'typescript' })
+    secondDocument.resolve({
+      getText: () => 'TODO: newest',
+      languageId: 'typescript',
+    })
 
     await vi.waitFor(() => {
       expect(
         annotationsFor(a).map(annotation => annotation.message),
       ).toStrictEqual(['newest'])
     })
-    resolveFirst?.({ getText: () => 'TODO: stale', languageId: 'typescript' })
+    firstDocument.resolve({
+      getText: () => 'TODO: stale',
+      languageId: 'typescript',
+    })
 
     await vi.waitFor(() => {
       expect(
@@ -513,16 +504,9 @@ describe('workspace scan file events', () => {
     )
     openTextDocument.mockClear()
 
-    let resolveStale:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const staleDocument = Promise.withResolvers<TestDocument>()
     openTextDocument
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            resolveStale = resolve
-          }),
-      )
+      .mockReturnValueOnce(staleDocument.promise)
       .mockResolvedValueOnce({
         getText: () => 'TODO: watcher result',
         languageId: 'typescript',
@@ -544,7 +528,7 @@ describe('workspace scan file events', () => {
       ).toStrictEqual(['watcher result'])
     })
 
-    resolveStale?.({
+    staleDocument.resolve({
       getText: () => 'TODO: stale result',
       languageId: 'typescript',
     })
@@ -562,16 +546,9 @@ describe('workspace scan file events', () => {
     )
     openTextDocument.mockClear()
 
-    let resolveWatcher:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const watcherDocument = Promise.withResolvers<TestDocument>()
     openTextDocument
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            resolveWatcher = resolve
-          }),
-      )
+      .mockReturnValueOnce(watcherDocument.promise)
       .mockResolvedValueOnce({
         getText: () => 'TODO: full scan result',
         languageId: 'typescript',
@@ -591,7 +568,7 @@ describe('workspace scan file events', () => {
       annotationsFor(a).map(annotation => annotation.message),
     ).toStrictEqual(['full scan result'])
 
-    resolveWatcher?.({
+    watcherDocument.resolve({
       getText: () => 'TODO: stale watcher result',
       languageId: 'typescript',
     })
@@ -608,16 +585,9 @@ describe('workspace scan file events', () => {
     )
     openTextDocument.mockClear()
 
-    let resolveFirst:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const firstDocument = Promise.withResolvers<TestDocument>()
     openTextDocument
-      .mockImplementationOnce(
-        () =>
-          new Promise(resolve => {
-            resolveFirst = resolve
-          }),
-      )
+      .mockReturnValueOnce(firstDocument.promise)
       .mockResolvedValueOnce({
         getText: () => 'TODO: newest full scan',
         languageId: 'typescript',
@@ -634,7 +604,7 @@ describe('workspace scan file events', () => {
       annotationsFor(a).map(annotation => annotation.message),
     ).toStrictEqual(['newest full scan'])
 
-    resolveFirst?.({
+    firstDocument.resolve({
       getText: () => 'TODO: older full scan',
       languageId: 'typescript',
     })
@@ -652,20 +622,13 @@ describe('workspace scan file events', () => {
     )
     openTextDocument.mockClear()
 
-    let resolveFull:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
-    openTextDocument.mockImplementationOnce(
-      () =>
-        new Promise(resolve => {
-          resolveFull = resolve
-        }),
-    )
+    const fullDocument = Promise.withResolvers<TestDocument>()
+    openTextDocument.mockReturnValueOnce(fullDocument.promise)
     const staleScan = scanner.scanWorkspace()
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledTimes(1)
     })
-    expect(resolveFull).toBeTypeOf('function')
+    expect(fullDocument.resolve).toBeTypeOf('function')
 
     Object.assign(config, { exclude: ['**/src/**'] })
     const listener = configurationListeners[0]
@@ -676,7 +639,7 @@ describe('workspace scan file events', () => {
       affectsConfiguration: section => section === 'code-beacon.exclude',
     })
 
-    resolveFull?.({
+    fullDocument.resolve({
       getText: () => 'TODO: stale full result',
       languageId: 'typescript',
     })
@@ -698,15 +661,8 @@ describe('workspace scan file events', () => {
         Promise.resolve(maxResults === 1 ? [] : [a]),
     )
 
-    let resolveFull:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
-    openTextDocument.mockImplementationOnce(
-      () =>
-        new Promise(resolve => {
-          resolveFull = resolve
-        }),
-    )
+    const fullDocument = Promise.withResolvers<TestDocument>()
+    openTextDocument.mockReturnValueOnce(fullDocument.promise)
     const fullScan = scanner.scanWorkspace()
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledTimes(1)
@@ -714,7 +670,7 @@ describe('workspace scan file events', () => {
 
     await scanner.rescanWorkspaceUri(uri('ignored.ts') as unknown as Vscode.Uri)
     const getText = vi.fn<() => string>(() => 'TODO: full scan result')
-    resolveFull?.({
+    fullDocument.resolve({
       getText,
       languageId: 'typescript',
     })
@@ -855,21 +811,14 @@ describe('workspace scan file events', () => {
       throw new Error('Expected an initial change listener')
     }
 
-    let resolveWatcher:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const watcherDocument = Promise.withResolvers<TestDocument>()
     openTextDocument.mockClear()
-    openTextDocument.mockImplementationOnce(
-      () =>
-        new Promise(resolve => {
-          resolveWatcher = resolve
-        }),
-    )
+    openTextDocument.mockReturnValueOnce(watcherDocument.promise)
     const oldScan = oldHandler(a)
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledTimes(1)
     })
-    expect(resolveWatcher).toBeTypeOf('function')
+    expect(watcherDocument.resolve).toBeTypeOf('function')
 
     Object.assign(config, { include: ['**/*.md'] })
     const listener = configurationListeners[0]
@@ -880,7 +829,7 @@ describe('workspace scan file events', () => {
       affectsConfiguration: section => section === 'code-beacon.include',
     })
 
-    resolveWatcher?.({
+    watcherDocument.resolve({
       getText: () => 'TODO: stale watcher result',
       languageId: 'typescript',
     })
@@ -898,21 +847,14 @@ describe('workspace scan file events', () => {
       throw new Error('Expected an initial change listener')
     }
 
-    let resolveWatcher:
-      | ((value: { getText: () => string; languageId: string }) => void)
-      | undefined
+    const watcherDocument = Promise.withResolvers<TestDocument>()
     openTextDocument.mockClear()
-    openTextDocument.mockImplementationOnce(
-      () =>
-        new Promise(resolve => {
-          resolveWatcher = resolve
-        }),
-    )
+    openTextDocument.mockReturnValueOnce(watcherDocument.promise)
     const oldScan = oldHandler(a)
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledTimes(1)
     })
-    expect(resolveWatcher).toBeTypeOf('function')
+    expect(watcherDocument.resolve).toBeTypeOf('function')
 
     Object.assign(config, { exclude: ['**/src/**'] })
     const listener = configurationListeners[0]
@@ -923,7 +865,7 @@ describe('workspace scan file events', () => {
       affectsConfiguration: section => section === 'code-beacon.exclude',
     })
 
-    resolveWatcher?.({
+    watcherDocument.resolve({
       getText: () => 'TODO: stale watcher result',
       languageId: 'typescript',
     })

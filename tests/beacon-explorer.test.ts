@@ -15,6 +15,7 @@ import { createChangedUriIndex } from '../src/core/git/changed-uri-index'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { commands } from '../src/meta'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 const {
   clipboardWriteText,
@@ -470,10 +471,10 @@ describe('beacon explorer commands', () => {
       source: 'workspace',
       uri: 'file:///workspace/src/workspace.ts',
     })
-    annotationStore.setForUri(active.uri, [active])
-    annotationStore.setForUri(notebook.uri, [notebook])
-    annotationStore.setForUri(open.uri, [open])
-    annotationStore.setForUri(workspace.uri, [workspace])
+    seedAnnotationStore(annotationStore, active.uri, [active])
+    seedAnnotationStore(annotationStore, notebook.uri, [notebook])
+    seedAnnotationStore(annotationStore, open.uri, [open])
+    seedAnnotationStore(annotationStore, workspace.uri, [workspace])
 
     useBeaconExplorer(git, changedUriIndex)
     const provider = createdProvider()
@@ -527,8 +528,8 @@ describe('beacon explorer commands', () => {
       id: 'second',
       uri: 'file:///workspace/src/second.ts',
     })
-    annotationStore.setForUri(first.uri, [first])
-    annotationStore.setForUri(second.uri, [second])
+    seedAnnotationStore(annotationStore, first.uri, [first])
+    seedAnnotationStore(annotationStore, second.uri, [second])
     Object.assign(config.explorer, { scope: 'changedFiles' })
     getChangedUris.mockResolvedValueOnce(new Set([first.uri]))
     getChangedUris.mockResolvedValueOnce(new Set([second.uri]))
@@ -559,7 +560,7 @@ describe('beacon explorer commands', () => {
       id: 'changed',
       uri: 'file:///workspace/src/changed.ts',
     })
-    annotationStore.setForUri(changed.uri, [changed])
+    seedAnnotationStore(annotationStore, changed.uri, [changed])
     Object.assign(config.explorer, { scope: 'changedFiles' })
     const customGetChangedUris = vi.fn<() => Promise<ReadonlySet<string>>>(() =>
       Promise.resolve(new Set([changed.uri])),
@@ -606,8 +607,8 @@ describe('beacon explorer commands', () => {
       uri: 'file:///workspace/src/unchanged.ts',
     })
     const nextSnapshot = deferred<ReadonlySet<string>>()
-    annotationStore.setForUri(changed.uri, [changed])
-    annotationStore.setForUri(unchanged.uri, [unchanged])
+    seedAnnotationStore(annotationStore, changed.uri, [changed])
+    seedAnnotationStore(annotationStore, unchanged.uri, [unchanged])
     Object.assign(config.explorer, { scope: 'changedFiles' })
     getChangedUris.mockResolvedValueOnce(new Set([changed.uri]))
     getChangedUris.mockReturnValueOnce(nextSnapshot.promise)
@@ -657,8 +658,8 @@ describe('beacon explorer commands', () => {
     })
     const initialSnapshot = deferred<ReadonlySet<string>>()
     const latestSnapshot = deferred<ReadonlySet<string>>()
-    annotationStore.setForUri(first.uri, [first])
-    annotationStore.setForUri(second.uri, [second])
+    seedAnnotationStore(annotationStore, first.uri, [first])
+    seedAnnotationStore(annotationStore, second.uri, [second])
     Object.assign(config.explorer, { scope: 'changedFiles' })
     getChangedUris.mockReturnValueOnce(initialSnapshot.promise)
     getChangedUris.mockReturnValueOnce(latestSnapshot.promise)
@@ -691,7 +692,7 @@ describe('beacon explorer commands', () => {
 
   it('keeps the changed-files provider empty for untrusted or empty Git results', async () => {
     const candidate = createAnnotation({ id: 'candidate' })
-    annotationStore.setForUri(candidate.uri, [candidate])
+    seedAnnotationStore(annotationStore, candidate.uri, [candidate])
     Object.assign(config.explorer, { scope: 'changedFiles' })
     workspaceState.isTrusted = false
     getChangedUris.mockResolvedValue(new Set())
@@ -709,7 +710,7 @@ describe('beacon explorer commands', () => {
   it('passes the ownerless setting to the composed Explorer filter', () => {
     const ownerless = createAnnotation({ id: 'ownerless', owner: ' ' })
     const owned = createAnnotation({ id: 'owned', owner: 'Alice' })
-    annotationStore.setForUri(ownerless.uri, [ownerless, owned])
+    seedAnnotationStore(annotationStore, ownerless.uri, [ownerless, owned])
     Object.assign(config.explorer, { onlyOwnerless: true })
 
     useBeaconExplorer(git, changedUriIndex)
@@ -725,7 +726,7 @@ describe('beacon explorer commands', () => {
 
   it('skips Git hydration when stale filtering and Explorer metadata are disabled', async () => {
     const annotation = createAnnotation()
-    annotationStore.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(annotationStore, annotation.uri, [annotation])
 
     useBeaconExplorer(git, changedUriIndex)
     await flushPromises()
@@ -735,7 +736,7 @@ describe('beacon explorer commands', () => {
 
   it('hydrates trusted Explorer metadata when explicitly enabled', async () => {
     const annotation = createAnnotation()
-    annotationStore.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(annotationStore, annotation.uri, [annotation])
     Object.assign(config.git, { showMetadata: true })
     const metadata = gitMetadata(isoDaysAgo(1))
     getMetadataForAnnotations.mockResolvedValue(
@@ -757,7 +758,7 @@ describe('beacon explorer commands', () => {
 
   it('keeps trusted-only Explorer metadata unavailable in untrusted workspaces', async () => {
     const annotation = createAnnotation()
-    annotationStore.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(annotationStore, annotation.uri, [annotation])
     Object.assign(config.git, { showMetadata: true })
     workspaceState.isTrusted = false
 
@@ -777,8 +778,11 @@ describe('beacon explorer commands', () => {
       id: 'fresh',
       uri: 'file:///workspace/src/b.ts',
     })
-    annotationStore.setForUri(staleFirst.uri, [staleFirst, staleSecond])
-    annotationStore.setForUri(fresh.uri, [fresh])
+    seedAnnotationStore(annotationStore, staleFirst.uri, [
+      staleFirst,
+      staleSecond,
+    ])
+    seedAnnotationStore(annotationStore, fresh.uri, [fresh])
     Object.assign(config.explorer, { onlyStale: true })
     getMetadataForAnnotations.mockImplementation((_document, annotations) =>
       Promise.resolve(
@@ -832,7 +836,7 @@ describe('beacon explorer commands', () => {
   it('falls back to 90 stale days for a fractional stale-days setting', async () => {
     const candidate = createAnnotation({ id: 'candidate' })
     const recentMetadata = gitMetadata(isoDaysAgo(1))
-    annotationStore.setForUri(candidate.uri, [candidate])
+    seedAnnotationStore(annotationStore, candidate.uri, [candidate])
     Object.assign(config.explorer, { onlyStale: true })
     Object.assign(config.git, { staleDays: 0.5 })
     getMetadataForAnnotations.mockResolvedValue(
@@ -853,7 +857,7 @@ describe('beacon explorer commands', () => {
   it('uses a valid 90-day stale-days setting', async () => {
     const candidate = createAnnotation({ id: 'candidate' })
     const oldMetadata = gitMetadata(isoDaysAgo(91))
-    annotationStore.setForUri(candidate.uri, [candidate])
+    seedAnnotationStore(annotationStore, candidate.uri, [candidate])
     Object.assign(config.explorer, { onlyStale: true })
     Object.assign(config.git, { staleDays: 90 })
     getMetadataForAnnotations.mockResolvedValue(
@@ -881,8 +885,8 @@ describe('beacon explorer commands', () => {
       uri: 'file:///workspace/src/b.ts',
     })
     const firstDocument = deferred<{ uri: unknown }>()
-    annotationStore.setForUri(first.uri, [first])
-    annotationStore.setForUri(second.uri, [second])
+    seedAnnotationStore(annotationStore, first.uri, [first])
+    seedAnnotationStore(annotationStore, second.uri, [second])
     Object.assign(config.explorer, { onlyStale: true })
     openTextDocument.mockReturnValueOnce(firstDocument.promise)
 
@@ -912,7 +916,7 @@ describe('beacon explorer commands', () => {
 
   it('does not hydrate stale metadata in an untrusted workspace', () => {
     const staleCandidate = createAnnotation({ id: 'candidate' })
-    annotationStore.setForUri(staleCandidate.uri, [staleCandidate])
+    seedAnnotationStore(annotationStore, staleCandidate.uri, [staleCandidate])
     Object.assign(config.explorer, { onlyStale: true })
     workspaceState.isTrusted = false
 
@@ -924,7 +928,7 @@ describe('beacon explorer commands', () => {
 
   it('keeps the Explorer operational when stale metadata hydration rejects', async () => {
     const staleCandidate = createAnnotation({ id: 'candidate' })
-    annotationStore.setForUri(staleCandidate.uri, [staleCandidate])
+    seedAnnotationStore(annotationStore, staleCandidate.uri, [staleCandidate])
     Object.assign(config.explorer, { onlyStale: true })
     getMetadataForAnnotations.mockRejectedValue(new Error('Git unavailable'))
 
@@ -951,7 +955,7 @@ describe('beacon explorer commands', () => {
 
   it('keeps the Explorer operational when a stale-filter document cannot open', async () => {
     const staleCandidate = createAnnotation({ id: 'candidate' })
-    annotationStore.setForUri(staleCandidate.uri, [staleCandidate])
+    seedAnnotationStore(annotationStore, staleCandidate.uri, [staleCandidate])
     Object.assign(config.explorer, { onlyStale: true })
     openTextDocument.mockRejectedValue(new Error('Cannot open document'))
 
@@ -989,7 +993,7 @@ describe('beacon explorer commands', () => {
 
   it('copies the first stored beacon link when invoked without an argument', async () => {
     const annotation = createAnnotation()
-    annotationStore.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(annotationStore, annotation.uri, [annotation])
     useBeaconExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.copyLink)()
@@ -1014,7 +1018,7 @@ describe('beacon explorer commands', () => {
 
   it('reveals the first stored beacon when invoked without an argument', async () => {
     const annotation = createAnnotation()
-    annotationStore.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(annotationStore, annotation.uri, [annotation])
     useBeaconExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.reveal)()

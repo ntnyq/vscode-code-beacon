@@ -261,7 +261,7 @@ describe('document scanner', () => {
         severity: 'information',
       },
     ]).rules
-    const [annotation] = scanDocument({
+    const matchedAnnotation = scanDocument({
       commentOnly: false,
       languageId: 'plaintext',
       maxFileSize: 1_000_000,
@@ -269,11 +269,9 @@ describe('document scanner', () => {
       source: 'visibleEditor',
       text: 'GROUP: @alice: due:2026-01-01 document expires:not-a-date due:later cache',
       uri: 'file:///workspace/group-directives.txt',
-    }).annotations.filter(
-      annotation => annotation.ruleId === 'group-directives',
-    )
+    }).annotations.find(candidate => candidate.ruleId === 'group-directives')
 
-    expect(annotation).toMatchObject({
+    expect(matchedAnnotation).toMatchObject({
       dueDate: 'later',
       expiresDate: 'not-a-date',
       message: '@alice: document cache',
@@ -300,7 +298,7 @@ describe('document scanner', () => {
         severity: 'information',
       },
     ]).rules
-    const [annotation] = scanDocument({
+    const matchedAnnotation = scanDocument({
       commentOnly: false,
       languageId: 'plaintext',
       maxFileSize: 1_000_000,
@@ -308,9 +306,9 @@ describe('document scanner', () => {
       source: 'visibleEditor',
       text: 'RAW:  keep  due:2026-10-01  whitespace expires:not-a-date  ',
       uri: 'file:///workspace/raw-directives.txt',
-    }).annotations.filter(annotation => annotation.ruleId === 'raw-directives')
+    }).annotations.find(candidate => candidate.ruleId === 'raw-directives')
 
-    expect(annotation).toMatchObject({
+    expect(matchedAnnotation).toMatchObject({
       dueDate: '2026-10-01',
       expiresDate: 'not-a-date',
       message: '  keep   whitespace  ',

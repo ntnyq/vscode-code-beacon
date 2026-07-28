@@ -6,8 +6,9 @@ describe('memento annotation state storage', () => {
     let value: unknown
     const storage = createMementoAnnotationStateStorage({
       get: <T>() => value as T | undefined,
-      update: async (_key, nextValue) => {
+      update: (_key, nextValue) => {
         value = nextValue
+        return Promise.resolve()
       },
     })
 
@@ -23,7 +24,7 @@ describe('memento annotation state storage', () => {
   it('returns empty state for an invalid stored payload', () => {
     const storage = createMementoAnnotationStateStorage({
       get: <T>() => ({ ignoredIds: 'b', resolvedIds: ['a'] }) as T | undefined,
-      update: async () => {},
+      update: () => Promise.resolve(),
     })
 
     expect(storage.load()).toStrictEqual({
@@ -39,7 +40,7 @@ describe('memento annotation state storage', () => {
           ignoredIds: ['b', 1, 'b', 'a'],
           resolvedIds: ['a', null, 'a'],
         }) as T | undefined,
-      update: async () => {},
+      update: () => Promise.resolve(),
     })
 
     expect(storage.load()).toStrictEqual({

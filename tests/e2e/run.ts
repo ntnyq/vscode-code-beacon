@@ -40,61 +40,68 @@ async function runCommand(command: string, args: readonly string[]) {
   process.stderr.write(stderr)
 }
 
-const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8')) as {
-  readonly contributes?: {
-    readonly commands?: readonly { readonly command: string }[]
-    readonly views?: Record<string, readonly { readonly id: string }[]>
+async function main() {
+  const packageJson = JSON.parse(await readFile(packageJsonPath, 'utf8')) as {
+    readonly contributes?: {
+      readonly commands?: readonly { readonly command: string }[]
+      readonly views?: Record<string, readonly { readonly id: string }[]>
+    }
+    readonly displayName?: string
   }
-  readonly displayName?: string
+  const commands = new Set(
+    packageJson.contributes?.commands?.map(command => command.command),
+  )
+  const views = packageJson.contributes?.views?.codeBeacon ?? []
+
+  assert(
+    packageJson.displayName === 'Code Beacon',
+    'displayName must be Code Beacon',
+  )
+  assert(await pathExists(distPath), 'dist/index.js must exist after build')
+  assert(await pathExists(readmePath), 'README.md must exist')
+  assert(await pathExists(changelogPath), 'CHANGELOG.md must exist')
+  assert(
+    commands.has('code-beacon.scanWorkspace'),
+    'scanWorkspace command missing',
+  )
+  assert(
+    commands.has('code-beacon.exportMarkdown'),
+    'exportMarkdown command missing',
+  )
+  assert(
+    views.some(view => view.id === 'codeBeacon.annotations'),
+    'Code Beacon annotations view missing',
+  )
+
+  await runCommand('pnpm', [
+    'exec',
+    'vsce',
+    'package',
+    '--no-dependencies',
+    '--out',
+    packageOutputPath,
+  ])
+  assert(await pathExists(packageOutputPath), 'vsce package must create a VSIX')
+
+  const userDataDir = await mkdtemp(
+    resolve(
+      process.platform === 'win32' ? tmpdir() : '/tmp',
+      'code-beacon-e2e-',
+    ),
+  )
+
+  try {
+    await runTests({
+      extensionDevelopmentPath: root,
+      extensionTestsEnv: {
+        CODE_BEACON_E2E_WORKSPACE: playgroundPath,
+      },
+      extensionTestsPath,
+      launchArgs: [playgroundPath, `--user-data-dir=${userDataDir}`],
+    })
+  } finally {
+    await rm(userDataDir, { force: true, recursive: true })
+  }
 }
-const commands = new Set(
-  packageJson.contributes?.commands?.map(command => command.command),
-)
-const views = packageJson.contributes?.views?.codeBeacon ?? []
 
-assert(
-  packageJson.displayName === 'Code Beacon',
-  'displayName must be Code Beacon',
-)
-assert(await pathExists(distPath), 'dist/index.js must exist after build')
-assert(await pathExists(readmePath), 'README.md must exist')
-assert(await pathExists(changelogPath), 'CHANGELOG.md must exist')
-assert(
-  commands.has('code-beacon.scanWorkspace'),
-  'scanWorkspace command missing',
-)
-assert(
-  commands.has('code-beacon.exportMarkdown'),
-  'exportMarkdown command missing',
-)
-assert(
-  views.some(view => view.id === 'codeBeacon.annotations'),
-  'Code Beacon annotations view missing',
-)
-
-await runCommand('pnpm', [
-  'exec',
-  'vsce',
-  'package',
-  '--no-dependencies',
-  '--out',
-  packageOutputPath,
-])
-assert(await pathExists(packageOutputPath), 'vsce package must create a VSIX')
-
-const userDataDir = await mkdtemp(
-  resolve(process.platform === 'win32' ? tmpdir() : '/tmp', 'code-beacon-e2e-'),
-)
-
-try {
-  await runTests({
-    extensionDevelopmentPath: root,
-    extensionTestsEnv: {
-      CODE_BEACON_E2E_WORKSPACE: playgroundPath,
-    },
-    extensionTestsPath,
-    launchArgs: [playgroundPath, `--user-data-dir=${userDataDir}`],
-  })
-} finally {
-  await rm(userDataDir, { force: true, recursive: true })
-}
+setImmediate(main)

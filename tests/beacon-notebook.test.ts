@@ -6,6 +6,7 @@ import { config } from '../src/config'
 import type * as CodeBeaconConfig from '../src/config'
 import { annotationStore } from '../src/core/store/annotation-store'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 const {
   changeListeners,
@@ -158,7 +159,7 @@ describe('beacon notebook lifecycle', () => {
       throw new Error('Expected an open notebook listener')
     }
     openListener(notebookA)
-    annotationStore.setForUri(cellA.document.uri.toString(), [
+    seedAnnotationStore(annotationStore, cellA.document.uri.toString(), [
       annotation(cellA),
     ])
 
@@ -180,7 +181,7 @@ describe('beacon notebook lifecycle', () => {
     expect(
       annotationStore.getForUri(cellA.document.uri.toString()),
     ).toStrictEqual([])
-    annotationStore.setForUri(cellB.document.uri.toString(), [
+    seedAnnotationStore(annotationStore, cellB.document.uri.toString(), [
       annotation(cellB),
     ])
 
@@ -235,7 +236,7 @@ describe('beacon notebook lifecycle', () => {
       throw new Error('Expected an open notebook listener')
     }
     openListener(notebookA)
-    annotationStore.setForUri(cellA.document.uri.toString(), [
+    seedAnnotationStore(annotationStore, cellA.document.uri.toString(), [
       annotation(cellA),
     ])
 

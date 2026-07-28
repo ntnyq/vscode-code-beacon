@@ -17,17 +17,18 @@ function assertEqual<T>(actual: T, expected: T, message: string): void {
   }
 }
 
-function delay(milliseconds: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
+function delay(milliseconds: number): Promise<null> {
+  const deferred = Promise.withResolvers<null>()
+  setTimeout(() => deferred.resolve(null), milliseconds)
+  return deferred.promise
 }
 
 async function waitForVirtualDocument(): Promise<vscode.Uri> {
   const deadline = Date.now() + DIAGNOSTIC_TIMEOUT_MS
 
   while (Date.now() < deadline) {
-    const documentUri = (await vscode.workspace.findFiles('**')).find(uri =>
-      uri.path.endsWith('/src/example.ts'),
-    )
+    const uris = await vscode.workspace.findFiles('**')
+    const documentUri = uris.find(uri => uri.path.endsWith('/src/example.ts'))
 
     if (documentUri) {
       return documentUri

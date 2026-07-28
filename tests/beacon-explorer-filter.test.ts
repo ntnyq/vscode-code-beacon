@@ -101,6 +101,16 @@ function createAnnotation(
   }
 }
 
+function createGitMetadata(commitDate: string): BeaconGitMetadata {
+  return {
+    authorEmail: 'author@example.com',
+    authorName: 'Author',
+    commitDate,
+    hash: 'abc123',
+    summary: 'Test commit',
+  }
+}
+
 function filteredIds(filter: Partial<BeaconExplorerFilter>): string[] {
   return filterBeaconAnnotations(annotations, {
     ...defaultFilter,
@@ -198,20 +208,23 @@ describe(filterBeaconAnnotations, () => {
     const cutoff = '2026-04-13T00:00:00.000Z'
     const oneMillisecondBefore = '2026-04-12T23:59:59.999Z'
     const oneMillisecondAfter = '2026-04-13T00:00:00.001Z'
-    const metadata = (commitDate: string): BeaconGitMetadata => ({
-      authorEmail: 'author@example.com',
-      authorName: 'Author',
-      commitDate,
-      hash: 'abc123',
-      summary: 'Test commit',
-    })
 
     expect(
-      isBeaconStale(metadata(oneMillisecondBefore), 90, defaultFilter.now),
+      isBeaconStale(
+        createGitMetadata(oneMillisecondBefore),
+        90,
+        defaultFilter.now,
+      ),
     ).toBe(true)
-    expect(isBeaconStale(metadata(cutoff), 90, defaultFilter.now)).toBe(false)
     expect(
-      isBeaconStale(metadata(oneMillisecondAfter), 90, defaultFilter.now),
+      isBeaconStale(createGitMetadata(cutoff), 90, defaultFilter.now),
+    ).toBe(false)
+    expect(
+      isBeaconStale(
+        createGitMetadata(oneMillisecondAfter),
+        90,
+        defaultFilter.now,
+      ),
     ).toBe(false)
   })
 
@@ -229,13 +242,6 @@ describe(filterBeaconAnnotations, () => {
   })
 
   it('composes ownerless and stale filters with category filtering using AND', () => {
-    const metadata = (commitDate: string): BeaconGitMetadata => ({
-      authorEmail: 'author@example.com',
-      authorName: 'Author',
-      commitDate,
-      hash: 'abc123',
-      summary: 'Test commit',
-    })
     const matchingAnnotation = createAnnotation('stale-ownerless-todo', {
       category: 'todo',
       owner: ' ',
@@ -250,10 +256,10 @@ describe(filterBeaconAnnotations, () => {
       createAnnotation('stale-ownerless-bug', { category: 'bug' }),
     ]
     const metadataByAnnotationId = new Map<string, BeaconGitMetadata>([
-      ['stale-ownerless-todo', metadata('2026-04-12T23:59:59.999Z')],
-      ['fresh-ownerless-todo', metadata('2026-04-13T00:00:00.000Z')],
-      ['stale-owned-todo', metadata('2026-04-12T23:59:59.999Z')],
-      ['stale-ownerless-bug', metadata('2026-04-12T23:59:59.999Z')],
+      ['stale-ownerless-todo', createGitMetadata('2026-04-12T23:59:59.999Z')],
+      ['fresh-ownerless-todo', createGitMetadata('2026-04-13T00:00:00.000Z')],
+      ['stale-owned-todo', createGitMetadata('2026-04-12T23:59:59.999Z')],
+      ['stale-ownerless-bug', createGitMetadata('2026-04-12T23:59:59.999Z')],
     ])
 
     expect(

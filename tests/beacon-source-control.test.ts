@@ -7,15 +7,10 @@ import type * as CodeBeaconConfig from '../src/config'
 import { createChangedUriIndex } from '../src/core/git/changed-uri-index'
 import { annotationStore } from '../src/core/store/annotation-store'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 function deferred<T>() {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((nextResolve, nextReject) => {
-    resolve = nextResolve
-    reject = nextReject
-  })
-  return { promise, reject, resolve }
+  return Promise.withResolvers<T>()
 }
 
 const {
@@ -203,11 +198,11 @@ describe('beacon Source Control', () => {
   it('lists sorted changed annotation files with standard open commands', async () => {
     configState.enabled = true
     getChangedUris.mockResolvedValue(new Set(['file:///b.ts', 'file:///a.ts']))
-    annotationStore.setForUri('file:///a.ts', [
+    seedAnnotationStore(annotationStore, 'file:///a.ts', [
       annotation('a-1'),
       annotation('a-2'),
     ])
-    annotationStore.setForUri('file:///b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///b.ts', [
       annotation('b-1', { resolved: true, uri: 'file:///b.ts' }),
     ])
 
@@ -247,12 +242,12 @@ describe('beacon Source Control', () => {
     await flushPromises()
 
     expect(sourceControl.count).toBe(0)
-    annotationStore.setForUri('file:///a.ts', [annotation('a-1')])
+    seedAnnotationStore(annotationStore, 'file:///a.ts', [annotation('a-1')])
     expect(sourceControl.count).toBe(1)
     expect(resourceGroup.resourceStates).toHaveLength(1)
 
     getChangedUris.mockResolvedValueOnce(new Set(['file:///b.ts']))
-    annotationStore.setForUri('file:///b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///b.ts', [
       annotation('b-1', { uri: 'file:///b.ts' }),
     ])
     gitChangedUrisListeners[0]!()
@@ -267,7 +262,7 @@ describe('beacon Source Control', () => {
   it('empties resources when Git is unavailable or rejects', async () => {
     configState.enabled = true
     getChangedUris.mockResolvedValueOnce(new Set(['file:///a.ts']))
-    annotationStore.setForUri('file:///a.ts', [annotation('a-1')])
+    seedAnnotationStore(annotationStore, 'file:///a.ts', [annotation('a-1')])
     useBeaconSourceControl(changedUriIndex)
     await flushPromises()
 
@@ -290,11 +285,11 @@ describe('beacon Source Control', () => {
     getChangedUris.mockReturnValueOnce(listenerSnapshot.promise)
     getChangedUris.mockReturnValueOnce(olderRejectedSnapshot.promise)
     getChangedUris.mockReturnValueOnce(latestSnapshot.promise)
-    annotationStore.setForUri('file:///a.ts', [annotation('a-1')])
-    annotationStore.setForUri('file:///b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///a.ts', [annotation('a-1')])
+    seedAnnotationStore(annotationStore, 'file:///b.ts', [
       annotation('b-1', { uri: 'file:///b.ts' }),
     ])
-    annotationStore.setForUri('file:///c.ts', [
+    seedAnnotationStore(annotationStore, 'file:///c.ts', [
       annotation('c-1', { uri: 'file:///c.ts' }),
     ])
 

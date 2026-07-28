@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import { createAnnotationStore } from '../src/core/store/annotation-store'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 vi.mock(
   import('vscode'),
@@ -92,21 +93,30 @@ describe('annotation store', () => {
     const listener = vi.fn<() => void>()
     const dispose = store.subscribe(listener)
 
-    store.setForUri('file:///workspace/src/a.ts', [createAnnotation('a')])
+    seedAnnotationStore(store, 'file:///workspace/src/a.ts', [
+      createAnnotation('a'),
+    ])
 
     expect(store.getForUri('file:///workspace/src/a.ts')).toHaveLength(1)
     expect(store.getAll().map(annotation => annotation.id)).toStrictEqual(['a'])
     expect(listener).toHaveBeenCalledTimes(1)
 
     dispose()
-    store.setForUri('file:///workspace/src/a.ts', [])
+    seedAnnotationStore(
+      store,
+      'file:///workspace/src/a.ts',
+      [],
+      'visibleEditor',
+    )
     expect(listener).toHaveBeenCalledTimes(1)
   })
 
   it('clears all annotations', () => {
     const store = createAnnotationStore()
-    store.setForUri('file:///workspace/src/a.ts', [createAnnotation('a')])
-    store.setForUri('file:///workspace/src/b.ts', [
+    seedAnnotationStore(store, 'file:///workspace/src/a.ts', [
+      createAnnotation('a'),
+    ])
+    seedAnnotationStore(store, 'file:///workspace/src/b.ts', [
       createAnnotation('b', 'file:///workspace/src/b.ts'),
     ])
 
@@ -117,14 +127,14 @@ describe('annotation store', () => {
 
   it('replaces annotations for one source without dropping other sources', () => {
     const store = createAnnotationStore()
-    store.setForUri('file:///workspace/src/a.ts', [
+    seedAnnotationStore(store, 'file:///workspace/src/a.ts', [
       createAnnotation('visible-a'),
       {
         ...createAnnotation('workspace-a'),
         source: 'workspace',
       },
     ])
-    store.setForUri('file:///workspace/src/old.ts', [
+    seedAnnotationStore(store, 'file:///workspace/src/old.ts', [
       {
         ...createAnnotation('workspace-old', 'file:///workspace/src/old.ts'),
         source: 'workspace',
@@ -158,7 +168,7 @@ describe('annotation store', () => {
     const store = createAnnotationStore()
     const visibleAnnotation = createAnnotation('shared')
 
-    store.setForUri(visibleAnnotation.uri, [visibleAnnotation])
+    seedAnnotationStore(store, visibleAnnotation.uri, [visibleAnnotation])
     store.replaceForSource(
       'workspace',
       new Map([
@@ -252,10 +262,10 @@ describe('annotation store', () => {
     const store = createAnnotationStore()
     const annotation = createAnnotation('a')
 
-    store.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(store, annotation.uri, [annotation])
     store.markResolved(annotation.id, true)
     store.markIgnored(annotation.id, true)
-    store.setForUri(annotation.uri, [annotation])
+    seedAnnotationStore(store, annotation.uri, [annotation])
 
     expect(store.getForUri(annotation.uri)[0]).toMatchObject({
       ignored: true,
@@ -280,9 +290,9 @@ describe('annotation store', () => {
       },
     }
 
-    store.setForUri(original.uri, [original])
+    seedAnnotationStore(store, original.uri, [original])
     store.markResolved(original.id, true)
-    store.setForUri(original.uri, [shifted])
+    seedAnnotationStore(store, original.uri, [shifted])
 
     expect(store.getForUri(original.uri)[0]).toMatchObject({
       id: shifted.id,
@@ -318,9 +328,9 @@ describe('annotation store', () => {
       range: first.range,
     }
 
-    store.setForUri(first.uri, [first, second])
+    seedAnnotationStore(store, first.uri, [first, second])
     store.markResolved(second.id, true)
-    store.setForUri(first.uri, [shiftedSecond])
+    seedAnnotationStore(store, first.uri, [shiftedSecond])
 
     expect(store.getForUri(first.uri)[0]).toMatchObject({
       id: shiftedSecond.id,
@@ -350,9 +360,9 @@ describe('annotation store', () => {
       shiftAnnotationLines(second, 15),
     ]
 
-    store.setForUri(first.uri, [first, second])
+    seedAnnotationStore(store, first.uri, [first, second])
     store.markResolved(second.id, true)
-    store.setForUri(first.uri, shifted)
+    seedAnnotationStore(store, first.uri, shifted)
 
     expect(store.getForUri(first.uri)).toMatchObject([
       { id: 'shifted-first', resolved: false },
@@ -368,7 +378,7 @@ describe('annotation store', () => {
 
     const restoredStore = createAnnotationStore()
     restoredStore.restoreState(store.getState())
-    restoredStore.setForUri('file:///workspace/src/a.ts', [
+    seedAnnotationStore(restoredStore, 'file:///workspace/src/a.ts', [
       createAnnotation('a'),
       createAnnotation('b'),
     ])

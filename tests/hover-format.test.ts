@@ -95,7 +95,7 @@ describe('hover formatter', () => {
     expect(markdown).toContain(String.raw`\[link\]\(https://example\.test\)`)
     expect(markdown).toContain('\\`code\\`')
     expect(markdown).toContain(String.raw`\*\*bold\*\*`)
-    expect(markdown).not.toMatch(/(^|[^\\])# heading/u)
+    expect(markdown).not.toMatch(/(?<prefix>^|[^\\])# heading/u)
     expect(markdown).not.toContain('[link](https://example.test)')
   })
 })

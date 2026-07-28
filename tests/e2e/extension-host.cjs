@@ -46,7 +46,7 @@ function hoverContentText(hover) {
     .join('\n')
 }
 
-exports.run = async function run() {
+module.exports.run = async function run() {
   const extension = vscode.extensions.getExtension(extensionId)
   assert.ok(extension, `Expected extension ${extensionId} to be installed`)
   await extension.activate()

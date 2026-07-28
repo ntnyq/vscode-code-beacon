@@ -53,7 +53,7 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "generate:meta": "vscode-ext-gen --output src/meta.ts --scope=code-beacon && node scripts/normalize-generated-meta.mjs && oxfmt README.md",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "pack": "vsce package --no-dependencies",
     "prepare": "husky",
     "release": "run-s release:check release:version release:publish",

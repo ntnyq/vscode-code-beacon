@@ -11,11 +11,6 @@ export type AnnotationStoreListener = () => void
  */
 export interface AnnotationStore {
   /**
-   * Replaces annotations for one URI and notifies subscribers.
-   */
-  setForUri: (uri: string, annotations: readonly BeaconAnnotation[]) => void
-
-  /**
    * Replaces annotations owned by one source for one URI.
    */
   setForSourceUri: (
@@ -447,35 +442,6 @@ export function createAnnotationStore(): AnnotationStore {
         ignoredIds: [...ignoredIds].sort(),
         resolvedIds: [...resolvedIds].sort(),
       }
-    },
-
-    /**
-     * Replaces annotations for one URI and notifies subscribers.
-     */
-    setForUri(uri, annotations) {
-      const nextAnnotations = annotations.map(annotation => ({
-        ...annotation,
-        uri,
-      }))
-      reconcileState(annotationsByUri.get(uri) ?? [], nextAnnotations)
-
-      const sourceSnapshots = new Map<
-        BeaconAnnotation['source'],
-        BeaconAnnotation[]
-      >()
-      for (const annotation of nextAnnotations) {
-        const sourceAnnotations = sourceSnapshots.get(annotation.source) ?? []
-        sourceAnnotations.push(annotation)
-        sourceSnapshots.set(annotation.source, sourceAnnotations)
-      }
-
-      if (sourceSnapshots.size > 0) {
-        sourceSnapshotsByUri.set(uri, sourceSnapshots)
-      } else {
-        sourceSnapshotsByUri.delete(uri)
-      }
-      refreshUri(uri)
-      notify()
     },
 
     /**

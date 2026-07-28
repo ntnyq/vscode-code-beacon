@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { beforeAll, describe, expect, expectTypeOf, it } from 'vitest'
 import type { ConfigKeyTypeMap } from '../src/meta'
 
-const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
+let pkg: {
   activationEvents: string[]
   categories: string[]
   keywords: string[]
@@ -32,6 +32,10 @@ const pkg = JSON.parse(await readFile('package.json', 'utf8')) as {
 }
 
 describe('package metadata', () => {
+  beforeAll(async () => {
+    pkg = JSON.parse(await readFile('package.json', 'utf8')) as typeof pkg
+  })
+
   it('declares marketplace metadata for Code Beacon', () => {
     expect(pkg.categories).toStrictEqual(['Linters', 'Other', 'Visualization'])
     expect(pkg.keywords).toContain('todo')

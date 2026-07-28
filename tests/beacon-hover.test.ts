@@ -8,6 +8,7 @@ import {
 import type { BeaconGitMetadata } from '../src/core/git/blame'
 import { annotationStore } from '../src/core/store/annotation-store'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 interface HoverProvider {
   provideHover: (
@@ -157,7 +158,9 @@ describe('beacon hover', () => {
     const getMetadata = vi.fn<BeaconGitMetadataLookup>(() =>
       Promise.resolve(metadata),
     )
-    annotationStore.setForUri(testDocument.uri.toString(), [testAnnotation])
+    seedAnnotationStore(annotationStore, testDocument.uri.toString(), [
+      testAnnotation,
+    ])
 
     useBeaconHover(getMetadata)
 
@@ -179,7 +182,9 @@ describe('beacon hover', () => {
     ['rejects', () => Promise.reject(new Error('Git unavailable'))],
   ])('preserves the base hover when metadata lookup %s', async (_, lookup) => {
     const testDocument = document()
-    annotationStore.setForUri(testDocument.uri.toString(), [annotation()])
+    seedAnnotationStore(annotationStore, testDocument.uri.toString(), [
+      annotation(),
+    ])
 
     useBeaconHover(lookup)
 

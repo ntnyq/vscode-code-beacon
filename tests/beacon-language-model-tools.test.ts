@@ -10,6 +10,7 @@ import {
 import type { BeaconListAnnotationsInput } from '../src/core/ai/list-annotations'
 import { annotationStore } from '../src/core/store/annotation-store'
 import type { BeaconAnnotation } from '../src/types/annotation'
+import { seedAnnotationStore } from './fixtures/annotation-store'
 
 type RegisteredTool = Vscode.LanguageModelTool<BeaconListAnnotationsInput>
 
@@ -312,8 +313,10 @@ describe(useBeaconLanguageModelTools, () => {
 
   it('returns a bounded all-scope store snapshot when enabled', async () => {
     configState.enabled = true
-    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
-    annotationStore.setForUri('file:///workspace/b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/a.ts', [
+      annotation('a'),
+    ])
+    seedAnnotationStore(annotationStore, 'file:///workspace/b.ts', [
       annotation('b', 'file:///workspace/b.ts'),
     ])
     useBeaconLanguageModelTools()
@@ -330,8 +333,10 @@ describe(useBeaconLanguageModelTools, () => {
 
   it('uses the active editor URI for active-file invocations', async () => {
     configState.enabled = true
-    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
-    annotationStore.setForUri('file:///workspace/b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/a.ts', [
+      annotation('a'),
+    ])
+    seedAnnotationStore(annotationStore, 'file:///workspace/b.ts', [
       annotation('b', 'file:///workspace/b.ts'),
     ])
     vscodeState.activeTextEditor = editor('file:///workspace/b.ts')
@@ -347,11 +352,13 @@ describe(useBeaconLanguageModelTools, () => {
 
   it('uses visible editor URIs for open-editor invocations', async () => {
     configState.enabled = true
-    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
-    annotationStore.setForUri('file:///workspace/b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/a.ts', [
+      annotation('a'),
+    ])
+    seedAnnotationStore(annotationStore, 'file:///workspace/b.ts', [
       annotation('b', 'file:///workspace/b.ts'),
     ])
-    annotationStore.setForUri('file:///workspace/c.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/c.ts', [
       annotation('c', 'file:///workspace/c.ts'),
     ])
     vscodeState.activeTextEditor = editor('file:///workspace/a.ts')
@@ -370,8 +377,10 @@ describe(useBeaconLanguageModelTools, () => {
 
   it('returns a quality JSON result scoped to the active editor when enabled', async () => {
     configState.enabled = true
-    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
-    annotationStore.setForUri('file:///workspace/b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/a.ts', [
+      annotation('a'),
+    ])
+    seedAnnotationStore(annotationStore, 'file:///workspace/b.ts', [
       annotation('b', 'file:///workspace/b.ts'),
     ])
     vscodeState.activeTextEditor = editor('file:///workspace/b.ts')
@@ -401,11 +410,13 @@ describe(useBeaconLanguageModelTools, () => {
 
   it('returns a quality JSON result scoped to visible editors when enabled', async () => {
     configState.enabled = true
-    annotationStore.setForUri('file:///workspace/a.ts', [annotation('a')])
-    annotationStore.setForUri('file:///workspace/b.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/a.ts', [
+      annotation('a'),
+    ])
+    seedAnnotationStore(annotationStore, 'file:///workspace/b.ts', [
       annotation('b', 'file:///workspace/b.ts'),
     ])
-    annotationStore.setForUri('file:///workspace/c.ts', [
+    seedAnnotationStore(annotationStore, 'file:///workspace/c.ts', [
       annotation('c', 'file:///workspace/c.ts'),
     ])
     vscodeState.visibleTextEditors = [

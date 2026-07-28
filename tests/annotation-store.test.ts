@@ -174,6 +174,80 @@ describe('annotation store', () => {
     ])
   })
 
+  it('uses a live source as the authoritative URI snapshot', () => {
+    const store = createAnnotationStore()
+    const visibleAnnotation = createAnnotation('shared')
+    const workspaceAnnotation = {
+      ...createAnnotation('workspace-only'),
+      source: 'workspace',
+    } as const
+
+    store.setForSourceUri('visibleEditor', visibleAnnotation.uri, [
+      visibleAnnotation,
+    ])
+    store.setForSourceUri('workspace', visibleAnnotation.uri, [
+      { ...visibleAnnotation, source: 'workspace' },
+      workspaceAnnotation,
+    ])
+
+    expect(store.getForUri(visibleAnnotation.uri)).toStrictEqual([
+      expect.objectContaining({ id: 'shared', source: 'visibleEditor' }),
+    ])
+
+    store.setForSourceUri('visibleEditor', visibleAnnotation.uri, [])
+
+    expect(store.getForUri(visibleAnnotation.uri)).toStrictEqual([])
+
+    store.removeForSourceUri('visibleEditor', visibleAnnotation.uri)
+
+    expect(store.getForUri(visibleAnnotation.uri)).toStrictEqual([
+      expect.objectContaining({ id: 'shared', source: 'workspace' }),
+      expect.objectContaining({ id: 'workspace-only', source: 'workspace' }),
+    ])
+
+    store.removeForSourceUri('workspace', visibleAnnotation.uri)
+
+    expect(store.getForUri(visibleAnnotation.uri)).toStrictEqual([])
+  })
+
+  it('replaces stale live-document sources for the same URI', () => {
+    const store = createAnnotationStore()
+    const visibleAnnotation = createAnnotation('visible-stale')
+    const openAnnotation = {
+      ...createAnnotation('open-fresh'),
+      source: 'openEditor',
+    } as const
+    const workspaceAnnotation = {
+      ...createAnnotation('workspace-retained'),
+      source: 'workspace',
+    } as const
+
+    store.setForSourceUri('visibleEditor', visibleAnnotation.uri, [
+      visibleAnnotation,
+    ])
+    store.setForSourceUri('workspace', visibleAnnotation.uri, [
+      workspaceAnnotation,
+    ])
+    store.markResolved(visibleAnnotation.id, true)
+    store.setForSourceUri('openEditor', visibleAnnotation.uri, [openAnnotation])
+
+    expect(store.getForUri(visibleAnnotation.uri)).toStrictEqual([
+      expect.objectContaining({
+        id: 'open-fresh',
+        resolved: true,
+        source: 'openEditor',
+      }),
+    ])
+    expect(
+      store.getForSourceUri('workspace', visibleAnnotation.uri),
+    ).toStrictEqual([
+      expect.objectContaining({
+        id: 'workspace-retained',
+        source: 'workspace',
+      }),
+    ])
+  })
+
   it('preserves resolved and ignored state across rescans', () => {
     const store = createAnnotationStore()
     const annotation = createAnnotation('a')

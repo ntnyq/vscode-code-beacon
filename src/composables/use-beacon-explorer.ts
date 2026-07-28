@@ -9,12 +9,10 @@ import {
   type TextDocument,
 } from 'vscode'
 import { config } from '../config'
+import { decodeAnnotationTarget } from '../core/commands/annotation-target'
 import { filterBeaconAnnotations } from '../core/explorer/filter'
 import { BeaconExplorerGitMetadataIndex } from '../core/explorer/git-metadata-index'
-import {
-  BeaconTreeDataProvider,
-  type BeaconLeafTreeElement,
-} from '../core/explorer/tree-data-provider'
+import { BeaconTreeDataProvider } from '../core/explorer/tree-data-provider'
 import type {
   ChangedUriIndex,
   ChangedUriIndexDisposable,
@@ -44,45 +42,12 @@ function isChangedFilesScope(): boolean {
   return config.explorer.scope === 'changedFiles'
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isBeaconAnnotation(value: unknown): value is BeaconAnnotation {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.uri === 'string' &&
-    typeof value.line === 'number' &&
-    typeof value.column === 'number' &&
-    isRecord(value.range)
-  )
-}
-
-function isBeaconLeafTreeElement(
-  value: unknown,
-): value is BeaconLeafTreeElement {
-  return (
-    isRecord(value) &&
-    value.type === 'beacon' &&
-    isBeaconAnnotation(value.annotation)
-  )
-}
-
 function commandAnnotation(value: unknown): BeaconAnnotation | undefined {
-  if (isBeaconAnnotation(value)) {
-    return value
-  }
-
-  if (isBeaconLeafTreeElement(value)) {
-    return value.annotation
-  }
-
   if (value === undefined || value === null) {
     return annotationStore.getAll()[0]
   }
 
-  return undefined
+  return decodeAnnotationTarget(value)
 }
 
 /**

@@ -253,6 +253,32 @@ describe('beacon notebook lifecycle', () => {
     ).toStrictEqual([])
   })
 
+  it('clears open-editor ownership when a notebook closes', () => {
+    useBeaconNotebook(scanTextDocument)
+
+    const openListener = openListeners[0] as
+      | ((notebook: Vscode.NotebookDocument) => void)
+      | undefined
+    const closeListener = closeListeners[0] as
+      | ((notebook: Vscode.NotebookDocument) => void)
+      | undefined
+    if (!openListener || !closeListener) {
+      throw new Error('Expected notebook lifecycle listeners')
+    }
+    openListener(notebookA)
+    annotationStore.setForSourceUri(
+      'openEditor',
+      cellA.document.uri.toString(),
+      [{ ...annotation(cellA), source: 'openEditor' }],
+    )
+
+    closeListener(notebookA)
+
+    expect(
+      annotationStore.getForUri(cellA.document.uri.toString()),
+    ).toStrictEqual([])
+  })
+
   it('rescans changed cell documents in visibleEditors mode', () => {
     Object.assign(config, { scanMode: 'visibleEditors' })
     useBeaconNotebook(scanTextDocument)

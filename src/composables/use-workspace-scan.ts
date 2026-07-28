@@ -8,8 +8,7 @@ import {
 } from 'vscode'
 import type { Disposable, Uri } from 'vscode'
 import { config } from '../config'
-import { normalizeRules } from '../core/rules/normalize'
-import { scanDocument } from '../core/scanner/scan-document'
+import { createConfiguredDocumentScanner } from '../core/scanner/configured-document-scanner'
 import { annotationStore } from '../core/store/annotation-store'
 import {
   enabledExcludePatterns,
@@ -76,25 +75,19 @@ function workspaceScanGlobs() {
  * Creates a scanner that applies the current workspace scan settings to one URI.
  */
 function createWorkspaceUriScanner() {
-  const normalizedRules = normalizeRules(
-    config.rules as readonly BeaconRuleConfig[],
-    {
-      allowCustomRegex: workspace.isTrusted,
-    },
-  )
-
-  for (const error of normalizedRules.errors) {
-    logger.warn(`Rule ${error.ruleId}: ${error.message}`)
-  }
+  const scanner = createConfiguredDocumentScanner({
+    allowCustomRegex: workspace.isTrusted,
+    commentOnly: config.commentOnly,
+    maxFileSize: config.maxFileSize,
+    rules: config.rules as readonly BeaconRuleConfig[],
+    warn: message => logger.warn(message),
+  })
 
   return async (uri: Uri): Promise<WorkspaceUriScanResult> => {
     try {
       const document = await workspace.openTextDocument(uri)
-      const result = scanDocument({
-        commentOnly: config.commentOnly,
+      const result = scanner.scan({
         languageId: document.languageId,
-        maxFileSize: config.maxFileSize,
-        rules: normalizedRules.rules,
         source: 'workspace',
         text: document.getText(),
         uri: uri.toString(),
@@ -117,35 +110,10 @@ function createWorkspaceUriScanner() {
 }
 
 /**
- * Replaces workspace annotations for one URI while retaining other workspace results.
- */
-function replaceWorkspaceAnnotationsForUri(
-  uri: string,
-  annotations: readonly BeaconAnnotation[],
-) {
-  const annotationsByUri = new Map<string, BeaconAnnotation[]>()
-
-  for (const annotation of annotationStore.getAll()) {
-    if (annotation.source !== 'workspace') {
-      continue
-    }
-
-    const existing = annotationsByUri.get(annotation.uri) ?? []
-    existing.push(annotation)
-    annotationsByUri.set(annotation.uri, existing)
-  }
-
-  annotationsByUri.set(uri, [...annotations])
-  annotationStore.replaceForSource('workspace', annotationsByUri)
-}
-
-/**
  * Returns the workspace annotations currently stored for one URI.
  */
 function workspaceAnnotationsForUri(uri: string): readonly BeaconAnnotation[] {
-  return annotationStore
-    .getForUri(uri)
-    .filter(annotation => annotation.source === 'workspace')
+  return annotationStore.getForSourceUri('workspace', uri)
 }
 
 /**
@@ -229,7 +197,11 @@ export function useWorkspaceScan() {
       expectedScanConfigurationGeneration === scanConfigurationGeneration &&
       expectedWatcherGeneration === watcherGeneration
     ) {
-      replaceWorkspaceAnnotationsForUri(uriString, result.annotations)
+      annotationStore.setForSourceUri(
+        'workspace',
+        uriString,
+        result.annotations,
+      )
     }
   }
 
@@ -251,7 +223,7 @@ export function useWorkspaceScan() {
     }
 
     uriGenerations.set(uriString, (uriGenerations.get(uriString) ?? 0) + 1)
-    replaceWorkspaceAnnotationsForUri(uriString, [])
+    annotationStore.removeForSourceUri('workspace', uriString)
   }
 
   /**

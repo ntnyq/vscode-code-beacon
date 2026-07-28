@@ -47,7 +47,7 @@ export function useBeaconNotebook(scanTextDocument: ScanTextDocument) {
   }
 
   const clearCell = (notebook: NotebookDocument, cell: NotebookCell) => {
-    annotationStore.setForUri(cell.document.uri.toString(), [])
+    annotationStore.removeLiveForUri(cell.document.uri.toString())
     cellsByNotebookUri
       .get(notebook.uri.toString())
       ?.delete(cell.document.uri.toString())
@@ -87,7 +87,7 @@ export function useBeaconNotebook(scanTextDocument: ScanTextDocument) {
       const notebookUri = notebook.uri.toString()
 
       for (const cellUri of cellsByNotebookUri.get(notebookUri) ?? []) {
-        annotationStore.setForUri(cellUri, [])
+        annotationStore.removeLiveForUri(cellUri)
       }
 
       cellsByNotebookUri.delete(notebookUri)

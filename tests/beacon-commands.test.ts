@@ -2001,6 +2001,56 @@ describe('beacon command persistence', () => {
     )
   })
 
+  it('updates annotation state when invoked from Explorer beacon leaves', () => {
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+    const annotation = createAnnotation()
+    annotationStore.setForSourceUri('visibleEditor', annotation.uri, [
+      annotation,
+    ])
+    const leaf = createLeaf(annotation)
+
+    registeredCommand(commands.resolve)(leaf)
+    registeredCommand(commands.ignore)(leaf)
+
+    expect(annotationStore.getForUri(annotation.uri)[0]).toMatchObject({
+      ignored: true,
+      resolved: true,
+    })
+
+    registeredCommand(commands.unresolve)(leaf)
+    registeredCommand(commands.unignore)(leaf)
+
+    expect(annotationStore.getForUri(annotation.uri)[0]).toMatchObject({
+      ignored: false,
+      resolved: false,
+    })
+  })
+
+  it('ignores invalid annotation targets for state commands', () => {
+    useBeaconCommands({
+      get: <T>() => undefined as T | undefined,
+      update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
+    } as unknown as Vscode.Memento)
+
+    for (const command of [
+      commands.resolve,
+      commands.unresolve,
+      commands.ignore,
+      commands.unignore,
+    ]) {
+      expect(() => registeredCommand(command)()).not.toThrow()
+      expect(() => registeredCommand(command)({ type: 'beacon' })).not.toThrow()
+    }
+
+    expect(annotationStore.getState()).toStrictEqual({
+      ignoredIds: [],
+      resolvedIds: [],
+    })
+  })
+
   it('copies a scanner-shaped annotation with undefined optional fields', async () => {
     useBeaconCommands({
       get: <T>() => undefined as T | undefined,

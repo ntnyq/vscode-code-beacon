@@ -466,6 +466,32 @@ describe('workspace scan file events', () => {
     )
   })
 
+  it('retains a hidden workspace snapshot when a full scan cannot read its file', async () => {
+    const scanner = await scanInitialWorkspace(
+      new Map([[a.toString(), 'TODO: initial']]),
+      [a],
+    )
+    const workspaceAnnotations = annotationStore.getForSourceUri(
+      'workspace',
+      a.toString(),
+    )
+    annotationStore.setForSourceUri(
+      'visibleEditor',
+      a.toString(),
+      workspaceAnnotations,
+    )
+    findFiles.mockResolvedValue([a])
+    openTextDocument.mockRejectedValueOnce(new Error('temporarily unavailable'))
+
+    await scanner.scanWorkspace()
+
+    expect(
+      annotationStore
+        .getForSourceUri('workspace', a.toString())
+        .map(annotation => annotation.message),
+    ).toStrictEqual(['initial'])
+  })
+
   it('retains prior annotations when the changed-file query fails', async () => {
     await scanInitialWorkspace(new Map([[a.toString(), 'TODO: initial']]), [a])
     findFiles.mockRejectedValueOnce(new Error('search temporarily unavailable'))

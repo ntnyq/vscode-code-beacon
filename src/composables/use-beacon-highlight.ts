@@ -4,8 +4,7 @@ import type { TextDocument, TextEditor } from 'vscode'
 import { config } from '../config'
 import { applyBeaconDecorations } from '../core/decorations/apply-decorations'
 import { EditorDecorationCaches } from '../core/decorations/editor-decoration-caches'
-import { normalizeRules } from '../core/rules/normalize'
-import { scanDocument } from '../core/scanner/scan-document'
+import { createConfiguredDocumentScanner } from '../core/scanner/configured-document-scanner'
 import {
   automaticDocumentChangeScope,
   initialScanTarget,
@@ -37,32 +36,25 @@ function scanTextDocument(
   const uri = document.uri.toString()
 
   if (!config.enable || !isScannableTextDocument(document, config.languages)) {
-    annotationStore.setForUri(uri, [])
+    annotationStore.setForSourceUri(source, uri, [])
     return []
   }
 
-  const normalizedRules = normalizeRules(
-    config.rules as readonly BeaconRuleConfig[],
-    {
-      allowCustomRegex: workspace.isTrusted,
-    },
-  )
-
-  for (const error of normalizedRules.errors) {
-    logger.warn(`Rule ${error.ruleId}: ${error.message}`)
-  }
-
-  const result = scanDocument({
+  const scanner = createConfiguredDocumentScanner({
+    allowCustomRegex: workspace.isTrusted,
     commentOnly: config.commentOnly,
-    languageId: document.languageId,
     maxFileSize: config.maxFileSize,
-    rules: normalizedRules.rules,
+    rules: config.rules as readonly BeaconRuleConfig[],
+    warn: message => logger.warn(message),
+  })
+  const result = scanner.scan({
+    languageId: document.languageId,
     source,
     text: document.getText(),
     uri,
   })
 
-  annotationStore.setForUri(uri, result.annotations)
+  annotationStore.setForSourceUri(source, uri, result.annotations)
 
   return result.annotations
 }

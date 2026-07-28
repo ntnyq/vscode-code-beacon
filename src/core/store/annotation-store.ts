@@ -16,6 +16,15 @@ export interface AnnotationStore {
   setForUri: (uri: string, annotations: readonly BeaconAnnotation[]) => void
 
   /**
+   * Replaces annotations owned by one source for one URI.
+   */
+  setForSourceUri: (
+    source: BeaconAnnotation['source'],
+    uri: string,
+    annotations: readonly BeaconAnnotation[],
+  ) => void
+
+  /**
    * Replaces annotations owned by one source while preserving other sources.
    */
   replaceForSource: (
@@ -47,6 +56,24 @@ export interface AnnotationStore {
    * Returns annotations for one URI.
    */
   getForUri: (uri: string) => readonly BeaconAnnotation[]
+
+  /**
+   * Returns the retained snapshot for one source and URI.
+   */
+  getForSourceUri: (
+    source: BeaconAnnotation['source'],
+    uri: string,
+  ) => readonly BeaconAnnotation[]
+
+  /**
+   * Releases one source's ownership of a URI.
+   */
+  removeForSourceUri: (source: BeaconAnnotation['source'], uri: string) => void
+
+  /**
+   * Releases every live-document source for one URI.
+   */
+  removeLiveForUri: (uri: string) => void
 
   /**
    * Returns every annotation in the store.
@@ -147,6 +174,14 @@ export function createAnnotationStore(): AnnotationStore {
    * Current annotations grouped by document URI.
    */
   const annotationsByUri = new Map<string, readonly BeaconAnnotation[]>()
+
+  /**
+   * Latest source snapshots retained even when a higher-priority source wins.
+   */
+  const sourceSnapshotsByUri = new Map<
+    string,
+    Map<BeaconAnnotation['source'], readonly BeaconAnnotation[]>
+  >()
 
   /**
    * Persistent per-annotation resolved state keyed by annotation id.
@@ -256,12 +291,126 @@ export function createAnnotationStore(): AnnotationStore {
     }
   }
 
+  const sourcePriority: Readonly<Record<BeaconAnnotation['source'], number>> = {
+    notebook: 3,
+    openEditor: 3,
+    visibleEditor: 4,
+    workspace: 1,
+  }
+  const liveDocumentSources = new Set<BeaconAnnotation['source']>([
+    'notebook',
+    'openEditor',
+    'visibleEditor',
+  ])
+
+  /**
+   * Rebuilds the deduplicated public snapshot for one URI.
+   */
+  const refreshUri = (uri: string) => {
+    const sourceSnapshots = sourceSnapshotsByUri.get(uri)
+    if (!sourceSnapshots || sourceSnapshots.size === 0) {
+      annotationsByUri.delete(uri)
+      sourceSnapshotsByUri.delete(uri)
+      return
+    }
+
+    const liveSnapshot = [...sourceSnapshots]
+      .filter(([source]) => liveDocumentSources.has(source))
+      .sort(
+        ([left], [right]) => sourcePriority[right] - sourcePriority[left],
+      )[0]?.[1]
+    const projectedSnapshots = liveSnapshot
+      ? [liveSnapshot]
+      : [...sourceSnapshots.values()]
+    const nextAnnotations = uniqueById(
+      projectedSnapshots
+        .flat()
+        .map(withState)
+        .sort(
+          (left, right) =>
+            sourcePriority[right.source] - sourcePriority[left.source],
+        ),
+    )
+
+    if (nextAnnotations.length > 0) {
+      annotationsByUri.set(uri, nextAnnotations)
+    } else {
+      annotationsByUri.delete(uri)
+    }
+  }
+
+  /**
+   * Publishes one source snapshot for a URI without notifying subscribers.
+   */
+  const setSourceForUri = (
+    source: BeaconAnnotation['source'],
+    uri: string,
+    annotations: readonly BeaconAnnotation[],
+  ) => {
+    const sourceSnapshots =
+      sourceSnapshotsByUri.get(uri) ??
+      new Map<BeaconAnnotation['source'], readonly BeaconAnnotation[]>()
+    const previousSourceAnnotations = liveDocumentSources.has(source)
+      ? [...sourceSnapshots]
+          .filter(([snapshotSource]) => liveDocumentSources.has(snapshotSource))
+          .flatMap(([, snapshotAnnotations]) => snapshotAnnotations)
+      : (sourceSnapshots.get(source) ?? [])
+
+    if (liveDocumentSources.has(source)) {
+      for (const liveSource of liveDocumentSources) {
+        if (liveSource !== source) {
+          sourceSnapshots.delete(liveSource)
+        }
+      }
+    }
+
+    const replacementAnnotations = annotations.map(annotation => ({
+      ...annotation,
+      source,
+      uri,
+    }))
+
+    reconcileState(previousSourceAnnotations, replacementAnnotations)
+
+    if (replacementAnnotations.length > 0 || liveDocumentSources.has(source)) {
+      sourceSnapshots.set(source, replacementAnnotations)
+      sourceSnapshotsByUri.set(uri, sourceSnapshots)
+    } else {
+      sourceSnapshots.delete(source)
+      if (sourceSnapshots.size === 0) {
+        sourceSnapshotsByUri.delete(uri)
+      }
+    }
+
+    refreshUri(uri)
+  }
+
+  /**
+   * Releases one source snapshot without notifying subscribers.
+   */
+  const removeSourceForUri = (
+    source: BeaconAnnotation['source'],
+    uri: string,
+  ) => {
+    const sourceSnapshots = sourceSnapshotsByUri.get(uri)
+    if (!sourceSnapshots) {
+      return
+    }
+
+    sourceSnapshots.delete(source)
+    if (sourceSnapshots.size === 0) {
+      sourceSnapshotsByUri.delete(uri)
+    }
+    refreshUri(uri)
+  }
+
   return {
     /**
      * Clears annotations for every URI.
      */
     clear() {
       annotationsByUri.clear()
+      sourceSnapshotsByUri.clear()
       resolvedIds.clear()
       ignoredIds.clear()
       notify()
@@ -282,6 +431,15 @@ export function createAnnotationStore(): AnnotationStore {
     },
 
     /**
+     * Returns the retained snapshot for one source and URI.
+     */
+    getForSourceUri(source, uri) {
+      return [...(sourceSnapshotsByUri.get(uri)?.get(source) ?? [])].map(
+        withState,
+      )
+    },
+
+    /**
      * Returns the resolved and ignored annotation identifiers.
      */
     getState() {
@@ -295,8 +453,54 @@ export function createAnnotationStore(): AnnotationStore {
      * Replaces annotations for one URI and notifies subscribers.
      */
     setForUri(uri, annotations) {
-      reconcileState(annotationsByUri.get(uri) ?? [], annotations)
-      annotationsByUri.set(uri, annotations.map(withState))
+      const nextAnnotations = annotations.map(annotation => ({
+        ...annotation,
+        uri,
+      }))
+      reconcileState(annotationsByUri.get(uri) ?? [], nextAnnotations)
+
+      const sourceSnapshots = new Map<
+        BeaconAnnotation['source'],
+        BeaconAnnotation[]
+      >()
+      for (const annotation of nextAnnotations) {
+        const sourceAnnotations = sourceSnapshots.get(annotation.source) ?? []
+        sourceAnnotations.push(annotation)
+        sourceSnapshots.set(annotation.source, sourceAnnotations)
+      }
+
+      if (sourceSnapshots.size > 0) {
+        sourceSnapshotsByUri.set(uri, sourceSnapshots)
+      } else {
+        sourceSnapshotsByUri.delete(uri)
+      }
+      refreshUri(uri)
+      notify()
+    },
+
+    /**
+     * Replaces annotations owned by one source for one URI.
+     */
+    setForSourceUri(source, uri, annotations) {
+      setSourceForUri(source, uri, annotations)
+      notify()
+    },
+
+    /**
+     * Releases one source's ownership of a URI.
+     */
+    removeForSourceUri(source, uri) {
+      removeSourceForUri(source, uri)
+      notify()
+    },
+
+    /**
+     * Releases every live-document source for one URI.
+     */
+    removeLiveForUri(uri) {
+      for (const source of liveDocumentSources) {
+        removeSourceForUri(source, uri)
+      }
       notify()
     },
 
@@ -304,30 +508,17 @@ export function createAnnotationStore(): AnnotationStore {
      * Replaces annotations owned by one source while preserving other sources.
      */
     replaceForSource(source, replacementByUri) {
-      for (const [uri, existingAnnotations] of annotationsByUri) {
-        const previousSourceAnnotations = existingAnnotations.filter(
-          annotation => annotation.source === source,
-        )
-        const retainedAnnotations = existingAnnotations.filter(
-          annotation => annotation.source !== source,
-        )
-        const replacementAnnotations = replacementByUri.get(uri) ?? []
-        reconcileState(previousSourceAnnotations, replacementAnnotations)
-        const nextAnnotations = uniqueById([
-          ...retainedAnnotations.map(withState),
-          ...replacementAnnotations.map(withState),
-        ])
+      const existingSourceUris = [...sourceSnapshotsByUri]
+        .filter(([, snapshots]) => snapshots.has(source))
+        .map(([uri]) => uri)
+      const uris = new Set([...existingSourceUris, ...replacementByUri.keys()])
 
-        if (nextAnnotations.length > 0) {
-          annotationsByUri.set(uri, nextAnnotations)
+      for (const uri of uris) {
+        const replacement = replacementByUri.get(uri)
+        if (replacement) {
+          setSourceForUri(source, uri, replacement)
         } else {
-          annotationsByUri.delete(uri)
-        }
-      }
-
-      for (const [uri, replacementAnnotations] of replacementByUri) {
-        if (!annotationsByUri.has(uri) && replacementAnnotations.length > 0) {
-          annotationsByUri.set(uri, replacementAnnotations.map(withState))
+          removeSourceForUri(source, uri)
         }
       }
 

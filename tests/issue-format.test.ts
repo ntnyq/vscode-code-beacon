@@ -93,7 +93,11 @@ describe('issue formatter', () => {
       'TODO: ## Injected heading',
       String.raw`\#\# Injected heading`,
     ],
-    ['> Injected quote', 'TODO: > Injected quote', String.raw`\> Injected quote`],
+    [
+      '> Injected quote',
+      'TODO: > Injected quote',
+      String.raw`\> Injected quote`,
+    ],
     ['```typescript', 'TODO: ```typescript', '\\`\\`\\`typescript'],
     ['~~~typescript', 'TODO: ~~~typescript', String.raw`\~\~\~typescript`],
     [

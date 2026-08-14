@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Aligned the source repository, release documentation, and future release artifacts with the published AnnoPulse identity.
+
+## 0.1.0 - 2026-08-14
+
 - Added incremental workspace indexing, Explorer grouping and filters, workspace diagnostics, CodeLens actions, persistent resolved/ignored state, and Markdown/JSON/CSV exports.
 - Added notebook-cell scanning plus automated desktop Extension Host and Web/Virtual Workspace coverage.
 - Added trusted-desktop Git blame metadata, stale and ownerless filters, changed-files Explorer scope, issue-body generation, and a read-only Source Control provider.

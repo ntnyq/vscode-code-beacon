@@ -792,8 +792,17 @@ annopulse.activeAnnotation
 - [x] CI 显式验证单测、Desktop Extension Host、Web/Virtual Workspace 和 VSIX 打包。
 - [x] README、CHANGELOG、架构图和路线图与当前实现同步。
 - [ ] 在干净 VS Code Profile 中安装 VSIX，手测 Explorer、状态持久化、Git/SCM、AI、Notebook 和 Web。
-- [ ] 确认 Marketplace 发布凭据与发布方式。
-- [ ] 升级版本并发布 `0.1.0` Preview。
+- [x] 确认 Marketplace 发布凭据与发布方式。
+- [x] 升级版本并发布 `0.1.0` Preview。
+
+### Phase 6：0.1.x 发布治理与稳定期
+
+- [ ] 发布 `0.1.1`，使 Git tag、源码、Marketplace 包和 AnnoPulse 身份完全对齐。
+- [ ] 从 tag 构建唯一 VSIX，并为 GitHub Release 附加 VSIX 和 SHA-256 校验和。
+- [ ] 增加 Bug、误报/漏报、性能和功能建议 issue 模板。
+- [ ] 完成 Desktop、Web、Remote 和 Virtual Workspace 的发布后安装验证。
+- [ ] 建立大型工作区扫描与增量更新性能基线。
+- [ ] 根据真实反馈确定 `0.2.0` 的准确性、性能和报告能力优先级。
 
 ## 11. 测试覆盖
 
@@ -829,15 +838,15 @@ annopulse.activeAnnotation
 - `capabilities.untrustedWorkspaces.supported`: `"limited"`
 - `preview`: true
 
-版本在发布验收完成前保持 `0.0.0`。首个公开预览版升级为 `0.1.0`，保留 `preview: true`，通过 Marketplace 收集真实工作区规模、语言覆盖和交互噪声反馈。
+首个公开预览版 `0.1.0` 已于 2026-08-14 发布到 Visual Studio Marketplace，并保留 `preview: true`。发布后仓库和扩展身份从 Code Beacon 统一为 AnnoPulse；由于 GitHub `v0.1.0` tag 早于品牌重命名提交，后续通过 `0.1.1` 重新建立源码、tag 和 Marketplace 包之间的可追溯关系。
 
-标签触发的 GitHub workflow 负责生成 GitHub Release；Marketplace 发布当前通过本地 `pnpm release` 完成，需要发布者提供 `vsce` 凭据。正式发布前应决定继续保留人工发布，还是在仓库中配置受保护的发布 secret。
+标签触发的 GitHub workflow 负责生成 GitHub Release。发布流水线应从 tag 构建一次 VSIX，将同一产物附加到 GitHub Release，并在受保护的 release environment 配置 `VSCE_PAT` 后发布到 Marketplace。在凭据尚未迁移到 GitHub 前，可以下载流水线产物并使用本地 `vsce` 凭据发布。
 
 ## 14. 下一步实施顺序
 
-1. 在干净 VS Code Profile 中安装 CI 同等方式打出的 VSIX。
-2. 手测 Explorer filter/scope、resolved/ignored 持久化、Git metadata、changed-files scope、Source Control provider、AI explain/generate-fix/summary、Notebook 和 Web。
-3. 记录并修复阻断发布的问题，再完整运行 `pnpm release:check` 和 VSIX 打包。
-4. 确认 Marketplace 凭据和人工/自动发布路径。
-5. 升级到 `0.1.0`，更新最终 CHANGELOG，发布 Preview。
-6. 发布后以真实反馈决定性能、匹配准确性、SARIF-lite、multiline annotation 等后续优先级。
+1. 修正 `0.1.0` GitHub Release 说明，不移动或重写已经公开的 tag。
+2. 改造发布流水线，从 tag 构建并保存唯一 VSIX 与 SHA-256 校验和。
+3. 增加结构化反馈模板并完成发布后安装验证。
+4. 发布 `0.1.1`，恢复 GitHub 源码、release artifact 和 Marketplace 包的版本一致性。
+5. 进入 `0.1.x` 稳定期，优先修复缺陷并建立大型工作区性能基线。
+6. 根据真实反馈决定 `0.2.0` 的性能、匹配准确性、SARIF-lite、multiline annotation 等优先级。

@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+## 0.1.1 - 2026-08-14
+
 - Aligned the source repository, release documentation, and future release artifacts with the published AnnoPulse identity.
 - Refreshed the AnnoPulse icon used by the Marketplace and editor surfaces.
+- Added a tag-driven release workflow that builds one VSIX, records its SHA-256 checksum, and reuses the same artifact for GitHub and Marketplace publishing.
+- Added structured issue forms for bug reports, matching problems, performance regressions, and feature requests.
+- Made the release command run validation and versioning before pushing commits and tags.
 
 ## 0.1.0 - 2026-08-14
 

@@ -1,7 +1,7 @@
 {
   "name": "annopulse",
   "displayName": "AnnoPulse",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Highlight, list, diagnose, and export code annotations such as TODO, FIXME, BUG, NOTE, REVIEW, SECURITY, and PERF.",
   "categories": [

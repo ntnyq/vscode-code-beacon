@@ -1,6 +1,6 @@
 # AnnoPulse 产品与代码设计计划
 
-更新时间：2026-07-28
+更新时间：2026-08-14
 
 AnnoPulse 是一个面向 VS Code 的代码注释信号管理插件。它不只是高亮 TODO，而是把 TODO、FIXME、BUG、NOTE、HACK、REVIEW、SECURITY、PERF 等代码注释信号转成可扫描、可导航、可诊断、可协作、可被 AI 理解的工作流。
 
@@ -797,9 +797,9 @@ annopulse.activeAnnotation
 
 ### Phase 6：0.1.x 发布治理与稳定期
 
-- [ ] 发布 `0.1.1`，使 Git tag、源码、Marketplace 包和 AnnoPulse 身份完全对齐。
-- [ ] 从 tag 构建唯一 VSIX，并为 GitHub Release 附加 VSIX 和 SHA-256 校验和。
-- [ ] 增加 Bug、误报/漏报、性能和功能建议 issue 模板。
+- [x] 发布 `0.1.1`，使 Git tag、源码、Marketplace 包和 AnnoPulse 身份完全对齐。
+- [x] 从 tag 构建唯一 VSIX，并为 GitHub Release 附加 VSIX 和 SHA-256 校验和。
+- [x] 增加 Bug、误报/漏报、性能和功能建议 issue 模板。
 - [ ] 完成 Desktop、Web、Remote 和 Virtual Workspace 的发布后安装验证。
 - [ ] 建立大型工作区扫描与增量更新性能基线。
 - [ ] 根据真实反馈确定 `0.2.0` 的准确性、性能和报告能力优先级。
@@ -840,13 +840,10 @@ annopulse.activeAnnotation
 
 首个公开预览版 `0.1.0` 已于 2026-08-14 发布到 Visual Studio Marketplace，并保留 `preview: true`。发布后仓库和扩展身份从 Code Beacon 统一为 AnnoPulse；由于 GitHub `v0.1.0` tag 早于品牌重命名提交，后续通过 `0.1.1` 重新建立源码、tag 和 Marketplace 包之间的可追溯关系。
 
-标签触发的 GitHub workflow 负责生成 GitHub Release。发布流水线应从 tag 构建一次 VSIX，将同一产物附加到 GitHub Release，并在受保护的 release environment 配置 `VSCE_PAT` 后发布到 Marketplace。在凭据尚未迁移到 GitHub 前，可以下载流水线产物并使用本地 `vsce` 凭据发布。
+标签触发的 GitHub workflow 负责生成 GitHub Release。发布流水线从 tag 构建一次 VSIX，将同一产物附加到 GitHub Release，并在受保护的 release environment 配置 `VSCE_PAT` 后发布到 Marketplace。在凭据尚未迁移到 GitHub 前，可以下载流水线产物并使用本地 `vsce` 凭据发布。
 
 ## 14. 下一步实施顺序
 
-1. 修正 `0.1.0` GitHub Release 说明，不移动或重写已经公开的 tag。
-2. 改造发布流水线，从 tag 构建并保存唯一 VSIX 与 SHA-256 校验和。
-3. 增加结构化反馈模板并完成发布后安装验证。
-4. 发布 `0.1.1`，恢复 GitHub 源码、release artifact 和 Marketplace 包的版本一致性。
-5. 进入 `0.1.x` 稳定期，优先修复缺陷并建立大型工作区性能基线。
-6. 根据真实反馈决定 `0.2.0` 的性能、匹配准确性、SARIF-lite、multiline annotation 等优先级。
+1. 完成 Desktop、Web、Remote 和 Virtual Workspace 的发布后安装验证。
+2. 进入 `0.1.x` 稳定期，优先修复缺陷并建立大型工作区性能基线。
+3. 根据真实反馈决定 `0.2.0` 的性能、匹配准确性、SARIF-lite、multiline annotation 等优先级。

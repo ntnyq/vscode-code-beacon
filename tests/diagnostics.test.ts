@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import {
-  createBeaconDiagnostic,
+  createAnnoPulseDiagnostic,
   diagnosticsByUriForAnnotations,
-  diagnosticSeverityForBeacon,
-} from '../src/core/diagnostics/beacon-diagnostics'
-import type { BeaconAnnotation } from '../src/types/annotation'
+  diagnosticSeverityForAnnoPulse,
+} from '../src/core/diagnostics/annopulse-diagnostics'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 vi.mock(
   import('vscode'),
@@ -51,8 +51,8 @@ vi.mock(
 )
 
 function createAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -77,20 +77,20 @@ function createAnnotation(
   }
 }
 
-describe('beacon diagnostics', () => {
-  it('maps beacon severity to VS Code diagnostic severity', () => {
-    expect(diagnosticSeverityForBeacon('error')).toBe(0)
-    expect(diagnosticSeverityForBeacon('warning')).toBe(1)
-    expect(diagnosticSeverityForBeacon('information')).toBe(2)
-    expect(diagnosticSeverityForBeacon('hint')).toBe(3)
+describe('annopulse diagnostics', () => {
+  it('maps annopulse severity to VS Code diagnostic severity', () => {
+    expect(diagnosticSeverityForAnnoPulse('error')).toBe(0)
+    expect(diagnosticSeverityForAnnoPulse('warning')).toBe(1)
+    expect(diagnosticSeverityForAnnoPulse('information')).toBe(2)
+    expect(diagnosticSeverityForAnnoPulse('hint')).toBe(3)
   })
 
   it('creates source-tagged diagnostics from annotations', () => {
-    const diagnostic = createBeaconDiagnostic(createAnnotation())
+    const diagnostic = createAnnoPulseDiagnostic(createAnnotation())
 
     expect(diagnostic.message).toBe('TODO: ship it')
     expect(diagnostic.severity).toBe(2)
-    expect(diagnostic.source).toBe('Code Beacon')
+    expect(diagnostic.source).toBe('AnnoPulse')
   })
 
   it('filters diagnostics by mode and open document URIs', () => {

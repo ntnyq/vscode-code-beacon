@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make Code Beacon's workspace workflow useful across an editing session and extension restarts: keep manual workflow state, show only relevant annotations in Explorer, and update workspace scan results when files change.
+Make AnnoPulse's workspace workflow useful across an editing session and extension restarts: keep manual workflow state, show only relevant annotations in Explorer, and update workspace scan results when files change.
 
 ## Scope
 
@@ -24,9 +24,9 @@ State is restored before the initial scan, and every state mutation is saved asy
 
 ### Explorer filtering
 
-Filtering is a pure `filterBeaconAnnotations()` function. It receives annotations and a plain filter object, so category, severity, owner, text query, resolved/ignored visibility, active-file scope, and open-editors scope can be tested without VS Code. The TreeView composes this function with the active editor and visible editor URI set, and refreshes on configuration/editor changes. Leaf annotations are sorted by URI, line, and column.
+Filtering is a pure `filterAnnoPulseAnnotations()` function. It receives annotations and a plain filter object, so category, severity, owner, text query, resolved/ignored visibility, active-file scope, and open-editors scope can be tested without VS Code. The TreeView composes this function with the active editor and visible editor URI set, and refreshes on configuration/editor changes. Leaf annotations are sorted by URI, line, and column.
 
-The settings use an `explorer` namespace and have conservative defaults: all scopes and categories are visible, while resolved and ignored items are hidden. This preserves current Explorer behavior for active beacons.
+The settings use an `explorer` namespace and have conservative defaults: all scopes and categories are visible, while resolved and ignored items are hidden. This preserves current Explorer behavior for active annotations.
 
 ### Incremental workspace scan
 

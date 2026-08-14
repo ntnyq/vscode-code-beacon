@@ -16,11 +16,14 @@ import {
   type VscodeExcludeConfig,
 } from '../core/workspace/globs'
 import { commands } from '../meta'
-import type { BeaconAnnotation, BeaconRuleConfig } from '../types/annotation'
+import type {
+  AnnoPulseAnnotation,
+  AnnoPulseRuleConfig,
+} from '../types/annotation'
 import { logger } from '../utils/logger'
 
 interface WorkspaceUriScanSucceeded {
-  readonly annotations: readonly BeaconAnnotation[]
+  readonly annotations: readonly AnnoPulseAnnotation[]
   readonly succeeded: true
 }
 
@@ -33,7 +36,7 @@ type WorkspaceUriScanResult = WorkspaceUriScanSucceeded | WorkspaceUriScanFailed
 const WORKSPACE_SCAN_CONCURRENCY = 8
 
 /**
- * Builds the effective workspace exclude patterns from Code Beacon and VS Code settings.
+ * Builds the effective workspace exclude patterns from AnnoPulse and VS Code settings.
  */
 function workspaceExcludePatterns(): string[] {
   const patterns = [...config.exclude]
@@ -79,7 +82,7 @@ function createWorkspaceUriScanner() {
     allowCustomRegex: workspace.isTrusted,
     commentOnly: config.commentOnly,
     maxFileSize: config.maxFileSize,
-    rules: config.rules as readonly BeaconRuleConfig[],
+    rules: config.rules as readonly AnnoPulseRuleConfig[],
     warn: message => logger.warn(message),
   })
 
@@ -112,7 +115,9 @@ function createWorkspaceUriScanner() {
 /**
  * Returns the workspace annotations currently stored for one URI.
  */
-function workspaceAnnotationsForUri(uri: string): readonly BeaconAnnotation[] {
+function workspaceAnnotationsForUri(
+  uri: string,
+): readonly AnnoPulseAnnotation[] {
   return annotationStore.getForSourceUri('workspace', uri)
 }
 
@@ -293,7 +298,7 @@ export function useWorkspaceScan() {
       {
         cancellable: true,
         location: ProgressLocation.Notification,
-        title: 'Scanning Code Beacon annotations',
+        title: 'Scanning AnnoPulse annotations',
       },
       async (progress, token) => {
         const { exclude, include } = workspaceScanGlobs()
@@ -305,7 +310,10 @@ export function useWorkspaceScan() {
         const scanUri = createWorkspaceUriScanner()
 
         let scanned = 0
-        const annotationsByUri = new Map<string, readonly BeaconAnnotation[]>()
+        const annotationsByUri = new Map<
+          string,
+          readonly AnnoPulseAnnotation[]
+        >()
         const scanUriGenerations = new Map<string, number>()
 
         let nextFileIndex = 0
@@ -387,12 +395,12 @@ export function useWorkspaceScan() {
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
       const affectsScanConfiguration =
-        event.affectsConfiguration('code-beacon.include') ||
-        event.affectsConfiguration('code-beacon.exclude') ||
-        event.affectsConfiguration('code-beacon.commentOnly') ||
-        event.affectsConfiguration('code-beacon.maxFileSize') ||
-        event.affectsConfiguration('code-beacon.rules') ||
-        event.affectsConfiguration('code-beacon') ||
+        event.affectsConfiguration('annopulse.include') ||
+        event.affectsConfiguration('annopulse.exclude') ||
+        event.affectsConfiguration('annopulse.commentOnly') ||
+        event.affectsConfiguration('annopulse.maxFileSize') ||
+        event.affectsConfiguration('annopulse.rules') ||
+        event.affectsConfiguration('annopulse') ||
         event.affectsConfiguration('files.exclude') ||
         event.affectsConfiguration('search.exclude')
       if (!affectsScanConfiguration) {

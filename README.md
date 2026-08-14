@@ -1,23 +1,23 @@
-# Code Beacon
+# AnnoPulse
 
-[![GitHub release](https://img.shields.io/github/v/release/ntnyq/vscode-code-beacon?include_prereleases&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=ntnyq.vscode-code-beacon)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ntnyq/vscode-code-beacon/ci.yml?branch=main)](https://github.com/ntnyq/vscode-code-beacon/actions/workflows/ci.yml)
-[![GitHub top language](https://img.shields.io/github/languages/top/ntnyq/vscode-code-beacon)](https://github.com/ntnyq/vscode-code-beacon)
-[![GitHub](https://img.shields.io/github/license/ntnyq/vscode-code-beacon)](https://github.com/ntnyq/vscode-code-beacon/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/ntnyq/vscode-annopulse?include_prereleases&label=Visual%20Studio%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=ntnyq.annopulse)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/ntnyq/vscode-annopulse/ci.yml?branch=main)](https://github.com/ntnyq/vscode-annopulse/actions/workflows/ci.yml)
+[![GitHub top language](https://img.shields.io/github/languages/top/ntnyq/vscode-annopulse)](https://github.com/ntnyq/vscode-annopulse)
+[![GitHub](https://img.shields.io/github/license/ntnyq/vscode-annopulse)](https://github.com/ntnyq/vscode-annopulse/blob/main/LICENSE)
 
-Code Beacon highlights actionable code annotations such as `TODO`, `FIXME`, `BUG`, `NOTE`, `REVIEW`, `SECURITY`, and `PERF`.
+AnnoPulse highlights actionable code annotations such as `TODO`, `FIXME`, `BUG`, `NOTE`, `REVIEW`, `SECURITY`, and `PERF`.
 It scans comments, decorates matching ranges, lists results in a dedicated explorer, can publish Problems diagnostics, and exports findings as Markdown, JSON, or CSV.
 
 ## Features
 
 - Highlight built-in and custom annotation rules in visible editors.
-- Browse annotations in the Code Beacon explorer and reveal a beacon in its source file.
+- Browse annotations in the AnnoPulse explorer and reveal an annotation in its source file.
 - Scan the active file, visible editors, or the full workspace with include/exclude controls.
 - Scan opened notebook cells through the normal Explorer, Problems, and CodeLens paths.
 - Optionally publish annotations to VS Code Problems.
-- Copy links or Markdown and export all beacons as Markdown, JSON, or CSV.
-- Resolve or ignore beacons with state persisted for the current workspace; reopen or unignore them when the work resumes.
-- Filter Explorer results by scope, category, severity, owner, or text query, and choose whether resolved and ignored beacons remain visible.
+- Copy links or Markdown and export all annotations as Markdown, JSON, or CSV.
+- Resolve or ignore annotations with state persisted for the current workspace; reopen or unignore them when the work resumes.
+- Filter Explorer results by scope, category, severity, owner, or text query, and choose whether resolved and ignored annotations remain visible.
 - Focus the Explorer on staged, unstaged, merge-conflict, and untracked files reported by VS Code's built-in Git extension.
 - Enrich annotation hovers with the blamed commit's author, date, short hash, and summary in trusted desktop workspaces.
 - Optionally expose changed files containing annotations through a read-only Source Control provider.
@@ -26,11 +26,11 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 
 ## Custom Rules
 
-`code-beacon.rules` can override built-in rules by `id` or add new rules:
+`annopulse.rules` can override built-in rules by `id` or add new rules:
 
 ```json
 {
-  "code-beacon.rules": [
+  "annopulse.rules": [
     {
       "id": "blocked",
       "label": "BLOCKED",
@@ -55,241 +55,241 @@ It scans comments, decorates matching ranges, lists results in a dedicated explo
 
 <!-- commands -->
 
-| Command                          | Title                                      |
-| -------------------------------- | ------------------------------------------ |
-| `code-beacon.enable`             | Code Beacon: Enable Code Beacon            |
-| `code-beacon.disable`            | Code Beacon: Disable Code Beacon           |
-| `code-beacon.toggle`             | Code Beacon: Toggle Code Beacon            |
-| `code-beacon.refresh`            | Code Beacon: Refresh Beacons               |
-| `code-beacon.scanWorkspace`      | Code Beacon: Scan Workspace for Beacons    |
-| `code-beacon.scanActiveFile`     | Code Beacon: Scan Active File for Beacons  |
-| `code-beacon.scanOpenEditors`    | Code Beacon: Scan Open Editors for Beacons |
-| `code-beacon.focusExplorer`      | Code Beacon: Focus Code Beacon Explorer    |
-| `code-beacon.reveal`             | Code Beacon: Reveal Beacon                 |
-| `code-beacon.copyLink`           | Code Beacon: Copy Beacon Link              |
-| `code-beacon.copyMarkdown`       | Code Beacon: Copy Beacon as Markdown       |
-| `code-beacon.createIssue`        | Code Beacon: Create Issue Body             |
-| `code-beacon.explain`            | Code Beacon: Explain Beacon                |
-| `code-beacon.generateFix`        | Code Beacon: Generate Beacon Fix           |
-| `code-beacon.summarizeWorkspace` | Code Beacon: Summarize Workspace Beacons   |
-| `code-beacon.resolve`            | Code Beacon: Resolve Beacon                |
-| `code-beacon.unresolve`          | Code Beacon: Reopen Beacon                 |
-| `code-beacon.ignore`             | Code Beacon: Ignore Beacon                 |
-| `code-beacon.unignore`           | Code Beacon: Unignore Beacon               |
-| `code-beacon.exportMarkdown`     | Code Beacon: Export Beacons as Markdown    |
-| `code-beacon.exportJson`         | Code Beacon: Export Beacons as JSON        |
-| `code-beacon.exportCsv`          | Code Beacon: Export Beacons as CSV         |
-| `code-beacon.openSettings`       | Code Beacon: Open Code Beacon Settings     |
-| `code-beacon.clearCache`         | Code Beacon: Clear Code Beacon Cache       |
+| Command                        | Title                                        |
+| ------------------------------ | -------------------------------------------- |
+| `annopulse.enable`             | AnnoPulse: Enable AnnoPulse                  |
+| `annopulse.disable`            | AnnoPulse: Disable AnnoPulse                 |
+| `annopulse.toggle`             | AnnoPulse: Toggle AnnoPulse                  |
+| `annopulse.refresh`            | AnnoPulse: Refresh Annotations               |
+| `annopulse.scanWorkspace`      | AnnoPulse: Scan Workspace for Annotations    |
+| `annopulse.scanActiveFile`     | AnnoPulse: Scan Active File for Annotations  |
+| `annopulse.scanOpenEditors`    | AnnoPulse: Scan Open Editors for Annotations |
+| `annopulse.focusExplorer`      | AnnoPulse: Focus AnnoPulse Explorer          |
+| `annopulse.reveal`             | AnnoPulse: Reveal Annotation                 |
+| `annopulse.copyLink`           | AnnoPulse: Copy Annotation Link              |
+| `annopulse.copyMarkdown`       | AnnoPulse: Copy Annotation as Markdown       |
+| `annopulse.createIssue`        | AnnoPulse: Create Issue Body                 |
+| `annopulse.explain`            | AnnoPulse: Explain Annotation                |
+| `annopulse.generateFix`        | AnnoPulse: Generate Annotation Fix           |
+| `annopulse.summarizeWorkspace` | AnnoPulse: Summarize Workspace Annotations   |
+| `annopulse.resolve`            | AnnoPulse: Resolve Annotation                |
+| `annopulse.unresolve`          | AnnoPulse: Reopen Annotation                 |
+| `annopulse.ignore`             | AnnoPulse: Ignore Annotation                 |
+| `annopulse.unignore`           | AnnoPulse: Unignore Annotation               |
+| `annopulse.exportMarkdown`     | AnnoPulse: Export Annotations as Markdown    |
+| `annopulse.exportJson`         | AnnoPulse: Export Annotations as JSON        |
+| `annopulse.exportCsv`          | AnnoPulse: Export Annotations as CSV         |
+| `annopulse.openSettings`       | AnnoPulse: Open AnnoPulse Settings           |
+| `annopulse.clearCache`         | AnnoPulse: Clear AnnoPulse Cache             |
 
 <!-- commands -->
 
 ## Create Issue Body
 
-In the Code Beacon Explorer, select a beacon and invoke **Code Beacon: Create Issue Body**. The command copies GitHub-compatible Markdown for that beacon to your clipboard, ready to edit and paste into an issue.
+In the AnnoPulse Explorer, select an annotation and invoke **AnnoPulse: Create Issue Body**. The command copies GitHub-compatible Markdown for that annotation to your clipboard, ready to edit and paste into an issue.
 
 Create Issue Body only copies local Markdown: it does not create a remote issue, send a network request, or require an issue-tracker account.
 
 ## Git-aware workflows
 
-Set `code-beacon.explorer.scope` to `changedFiles` to show annotations only in staged, unstaged, merge-conflict, and untracked files reported by VS Code's built-in Git extension.
+Set `annopulse.explorer.scope` to `changedFiles` to show annotations only in staged, unstaged, merge-conflict, and untracked files reported by VS Code's built-in Git extension.
 
-Enable `code-beacon.scm.enabled` to add a read-only **Code Beacon** provider to the Source Control view. It lists changed files that contain indexed annotations and opens the selected file; it never stages, unstages, commits, or modifies Git state.
+Enable `annopulse.scm.enabled` to add a read-only **AnnoPulse** provider to the Source Control view. It lists changed files that contain indexed annotations and opens the selected file; it never stages, unstages, commits, or modifies Git state.
 
-Enable `code-beacon.git.showMetadata` to add the blamed commit's author, date, short hash, and summary to Explorer items. The same metadata is available in annotation hovers without enabling the Explorer setting. Stale filtering uses this metadata when `code-beacon.explorer.onlyStale` is enabled.
+Enable `annopulse.git.showMetadata` to add the blamed commit's author, date, short hash, and summary to Explorer items. The same metadata is available in annotation hovers without enabling the Explorer setting. Stale filtering uses this metadata when `annopulse.explorer.onlyStale` is enabled.
 
-These integrations require a trusted local desktop workspace, a non-virtual repository, and VS Code's built-in Git extension. The rest of Code Beacon remains available when Git metadata is unavailable.
+These integrations require a trusted local desktop workspace, a non-virtual repository, and VS Code's built-in Git extension. The rest of AnnoPulse remains available when Git metadata is unavailable.
 
 ## AI-assisted workflows
 
-Set `code-beacon.ai.enabled` to `true` to enable Code Beacon's AI commands and Language Model Tools:
+Set `annopulse.ai.enabled` to `true` to enable AnnoPulse's AI commands and Language Model Tools:
 
-- **Explain Beacon** sends the selected annotation and a bounded source window to a VS Code language model, then opens the explanation locally.
-- **Generate Beacon Fix** requests a bounded replacement proposal. Code Beacon validates it against the current document and applies it through a confirmation-required `WorkspaceEdit`.
-- **Summarize Workspace Beacons** sends a bounded digest of annotations already held in the in-memory index; it does not read arbitrary workspace files.
-- The read-only `code_beacon_list_annotations` and `code_beacon_quality_check` tools share bounded, already-indexed annotation data only after VS Code presents a confirmation prompt.
+- **Explain Annotation** sends the selected annotation and a bounded source window to a VS Code language model, then opens the explanation locally.
+- **Generate Annotation Fix** requests a bounded replacement proposal. AnnoPulse validates it against the current document and applies it through a confirmation-required `WorkspaceEdit`.
+- **Summarize Workspace Annotations** sends a bounded digest of annotations already held in the in-memory index; it does not read arbitrary workspace files.
+- The read-only `annopulse_list_annotations` and `annopulse_quality_check` tools share bounded, already-indexed annotation data only after VS Code presents a confirmation prompt.
 
-AI actions run only when explicitly invoked, show cancellable progress, and use VS Code's language model API. Code Beacon does not enable AI-action telemetry or configure a telemetry destination.
+AI actions run only when explicitly invoked, show cancellable progress, and use VS Code's language model API. AnnoPulse does not enable AI-action telemetry or configure a telemetry destination.
 
 ## Configs
 
 <!-- configs-list -->
 
-#### `code-beacon.enable`
+#### `annopulse.enable`
 
-Description: Enable or disable code beacon.  
+Description: Enable or disable AnnoPulse.  
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.languages`
+#### `annopulse.languages`
 
 Description: Language IDs where annotations are scanned. Use '\*' for all languages and prefix with '!' to exclude.  
 Type: `array`  
 Default: `["*"]`
 
-#### `code-beacon.rules`
+#### `annopulse.rules`
 
 Description: Custom annotation rules. Built-in rules are enabled unless a custom rule with the same id overrides them.  
 Type: `array`  
 Default: `[]`
 
-#### `code-beacon.include`
+#### `annopulse.include`
 
 Description: Glob patterns that define files to scan.  
 Type: `array`  
 Default: `["**/*"]`
 
-#### `code-beacon.exclude`
+#### `annopulse.exclude`
 
 Description: Glob patterns that define files and folders to exclude from workspace scans.  
 Type: `array`  
 Default: See package.json
 
-#### `code-beacon.respectFilesExclude`
+#### `annopulse.respectFilesExclude`
 
 Description: Respect VS Code files.exclude during workspace scans.  
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.respectSearchExclude`
+#### `annopulse.respectSearchExclude`
 
 Description: Respect VS Code search.exclude during workspace scans.  
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.maxFileSize`
+#### `annopulse.maxFileSize`
 
 Description: Maximum document text length, in characters, to scan. Set to 0 to disable this size limit.  
 Type: `number`  
 Default: `1000000`
 
-#### `code-beacon.maxFilesForSearch`
+#### `annopulse.maxFilesForSearch`
 
 Description: Maximum number of files to scan during workspace scans.  
 Type: `number`  
 Default: `5000`
 
-#### `code-beacon.scanMode`
+#### `annopulse.scanMode`
 
-Description: Default scan mode for Code Beacon.  
+Description: Default scan mode for AnnoPulse.  
 Type: `string`  
 Default: `"visibleEditors"`
 
-#### `code-beacon.commentOnly`
+#### `annopulse.commentOnly`
 
-Description: Prefer scanning comments only when Code Beacon knows the language comment syntax.  
+Description: Prefer scanning comments only when AnnoPulse knows the language comment syntax.  
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.decorations.enabled`
+#### `annopulse.decorations.enabled`
 
 Description: Show editor decorations for annotations.  
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.diagnostics.mode`
+#### `annopulse.diagnostics.mode`
 
 Description: Controls Problems integration.  
 Type: `string`  
 Default: `"off"`
 
-#### `code-beacon.explorer.enabled`
+#### `annopulse.explorer.enabled`
 
-Description: Enable the Code Beacon TreeView.  
+Description: Enable the AnnoPulse TreeView.  
 Type: `boolean`  
 Default: `true`
 
-#### `code-beacon.explorer.groupBy`
+#### `annopulse.explorer.groupBy`
 
-Description: Default grouping mode for the Code Beacon TreeView.  
+Description: Default grouping mode for the AnnoPulse TreeView.  
 Type: `string`  
 Default: `"file"`
 
-#### `code-beacon.explorer.scope`
+#### `annopulse.explorer.scope`
 
-Description: Limits Code Beacon Explorer results to the workspace, active file, visible editors, or changed files. When set to "changedFiles", the Explorer includes files reported by VS Code's built-in Git extension as staged, unstaged, merge-conflict, or untracked changes. This scope is available only for trusted local desktop workspaces; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty changed-files view.  
+Description: Limits AnnoPulse Explorer results to the workspace, active file, visible editors, or changed files. When set to "changedFiles", the Explorer includes files reported by VS Code's built-in Git extension as staged, unstaged, merge-conflict, or untracked changes. This scope is available only for trusted local desktop workspaces; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty changed-files view.  
 Type: `string`  
 Default: `"workspace"`
 
-#### `code-beacon.explorer.categories`
+#### `annopulse.explorer.categories`
 
-Description: Categories shown in the Code Beacon Explorer. Leave empty to show all categories.  
+Description: Categories shown in the AnnoPulse Explorer. Leave empty to show all categories.  
 Type: `array`  
 Default: `[]`
 
-#### `code-beacon.explorer.severities`
+#### `annopulse.explorer.severities`
 
-Description: Severities shown in the Code Beacon Explorer. Leave empty to show all severities.  
+Description: Severities shown in the AnnoPulse Explorer. Leave empty to show all severities.  
 Type: `array`  
 Default: `[]`
 
-#### `code-beacon.explorer.owners`
+#### `annopulse.explorer.owners`
 
-Description: Owners shown in the Code Beacon Explorer. Leave empty to show all owners.  
+Description: Owners shown in the AnnoPulse Explorer. Leave empty to show all owners.  
 Type: `array`  
 Default: `[]`
 
-#### `code-beacon.explorer.query`
+#### `annopulse.explorer.query`
 
-Description: Case-insensitive text query for Code Beacon Explorer results.  
+Description: Case-insensitive text query for AnnoPulse Explorer results.  
 Type: `string`  
 Default: `""`
 
-#### `code-beacon.explorer.includeResolved`
+#### `annopulse.explorer.includeResolved`
 
-Description: Show resolved beacons in the Code Beacon Explorer.  
+Description: Show resolved annotations in the AnnoPulse Explorer.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.explorer.includeIgnored`
+#### `annopulse.explorer.includeIgnored`
 
-Description: Show ignored beacons in the Code Beacon Explorer.  
+Description: Show ignored annotations in the AnnoPulse Explorer.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.explorer.onlyStale`
+#### `annopulse.explorer.onlyStale`
 
-Description: Show only beacons with a valid Git commit date older than the configured stale threshold.  
+Description: Show only annotations with a valid Git commit date older than the configured stale threshold.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.explorer.onlyOwnerless`
+#### `annopulse.explorer.onlyOwnerless`
 
-Description: Show only beacons with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign a beacon.  
+Description: Show only annotations with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign an annotation.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.git.staleDays`
+#### `annopulse.git.staleDays`
 
 Description: Number of days after which a valid Git commit date is considered stale.  
 Type: `integer`  
 Default: `90`
 
-#### `code-beacon.git.showMetadata`
+#### `annopulse.git.showMetadata`
 
-Description: Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.  
+Description: Show Git author, age, and commit details in AnnoPulse Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.ai.enabled`
+#### `annopulse.ai.enabled`
 
-Description: Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.  
+Description: Enable AnnoPulse AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.scm.enabled`
+#### `annopulse.scm.enabled`
 
-Description: Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.  
+Description: Show a read-only AnnoPulse Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.codelens.enabled`
+#### `annopulse.codelens.enabled`
 
 Description: Enable CodeLens actions above annotation lines.  
 Type: `boolean`  
 Default: `false`
 
-#### `code-beacon.hover.enabled`
+#### `annopulse.hover.enabled`
 
 Description: Enable hover details for annotations.  
 Type: `boolean`  
@@ -299,11 +299,11 @@ Default: `true`
 
 ## Explorer stale and ownerless filters
 
-`code-beacon.explorer.onlyOwnerless` considers only an annotation's explicit `owner` value: an omitted or whitespace-only value is ownerless, and a Git commit author does not assign it.
+`annopulse.explorer.onlyOwnerless` considers only an annotation's explicit `owner` value: an omitted or whitespace-only value is ownerless, and a Git commit author does not assign it.
 
-When `code-beacon.explorer.onlyStale` is enabled, Code Beacon looks up blame metadata in batches through VS Code's built-in Git API and compares valid commit dates against `code-beacon.git.staleDays`. This requires a trusted local desktop workspace with an available non-virtual Git repository. Git metadata is not requested when the stale filter is off.
+When `annopulse.explorer.onlyStale` is enabled, AnnoPulse looks up blame metadata in batches through VS Code's built-in Git API and compares valid commit dates against `annopulse.git.staleDays`. This requires a trusted local desktop workspace with an available non-virtual Git repository. Git metadata is not requested when the stale filter is off.
 
-If metadata is unavailable, invalid, or cannot be resolved, the beacon is treated as having an unknown age and is not included by the stale filter. The rest of the Explorer remains available.
+If metadata is unavailable, invalid, or cannot be resolved, the annotation is treated as having an unknown age and is not included by the stale filter. The rest of the Explorer remains available.
 
 ## VS Code Web
 

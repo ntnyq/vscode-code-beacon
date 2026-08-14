@@ -2,7 +2,7 @@
 
 ## Goal
 
-Provide optional, privacy-preserving telemetry for Code Beacon AI actions only after both the extension-specific opt-in and VS Code global telemetry consent allow it.
+Provide optional, privacy-preserving telemetry for AnnoPulse AI actions only after both the extension-specific opt-in and VS Code global telemetry consent allow it.
 
 ## Required External Configuration
 
@@ -10,7 +10,7 @@ This feature requires a project-owned telemetry destination and credentials (for
 
 ## Proposed Contract
 
-- Add `code-beacon.ai.telemetry.enabled`, default `false`, tagged `telemetry` and `usesOnlineServices`.
+- Add `annopulse.ai.telemetry.enabled`, default `false`, tagged `telemetry` and `usesOnlineServices`.
 - Respect the setting **and** VS Code's `env.isTelemetryEnabled` / change event. A global opt-out always wins.
 - Use VS Code's telemetry logger rather than calling a sender directly. Configure it to avoid unhandled-error collection and to send only allowlisted action outcomes.
 - Emit only: action (`explain`, `generateFix`, `summarizeWorkspace`), outcome (`applied`, `cancelled`, `invalidProposal`, `rejected`, `failed`, `completed`), and a coarse integer duration bucket. Never emit URI/path, annotation IDs, text, source, prompt, model response, model identifier, user/machine/session identifiers, counts tied to a workspace, error text, or stack trace.

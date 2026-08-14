@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  listBeaconAnnotations,
-  normalizeBeaconListAnnotationsInput,
-  serializeBeaconListAnnotations,
+  listAnnoPulseAnnotations,
+  normalizeAnnoPulseListAnnotationsInput,
+  serializeAnnoPulseListAnnotations,
 } from '../src/core/ai/list-annotations'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 const context = {
   activeUri: 'file:///workspace/a.ts',
@@ -27,8 +27,8 @@ const annotations = [
 
 function annotation(
   id: string,
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -53,9 +53,9 @@ function annotation(
   }
 }
 
-describe(listBeaconAnnotations, () => {
+describe(listAnnoPulseAnnotations, () => {
   it('returns unresolved, unignored annotations by default', () => {
-    expect(listBeaconAnnotations(annotations, {}, context)).toStrictEqual({
+    expect(listAnnoPulseAnnotations(annotations, {}, context)).toStrictEqual({
       annotations: [
         expect.objectContaining({
           id: 'a-first',
@@ -78,7 +78,7 @@ describe(listBeaconAnnotations, () => {
 
   it('limits active file results to the active URI', () => {
     expect(
-      listBeaconAnnotations(
+      listAnnoPulseAnnotations(
         annotations,
         { scope: 'activeFile' },
         context,
@@ -88,7 +88,7 @@ describe(listBeaconAnnotations, () => {
 
   it('limits open editor results to open URIs', () => {
     expect(
-      listBeaconAnnotations(
+      listAnnoPulseAnnotations(
         annotations,
         { scope: 'openEditors' },
         context,
@@ -98,7 +98,7 @@ describe(listBeaconAnnotations, () => {
 
   it('includes resolved and ignored annotations in source order when requested', () => {
     expect(
-      listBeaconAnnotations(
+      listAnnoPulseAnnotations(
         annotations,
         { includeIgnored: true, includeResolved: true },
         context,
@@ -108,7 +108,7 @@ describe(listBeaconAnnotations, () => {
 
   it('reports the unbounded total when a result limit truncates it', () => {
     expect(
-      listBeaconAnnotations(annotations, { limit: 1 }, context),
+      listAnnoPulseAnnotations(annotations, { limit: 1 }, context),
     ).toMatchObject({
       returned: 1,
       total: 2,
@@ -119,20 +119,22 @@ describe(listBeaconAnnotations, () => {
   it.each([0, 101, 1.5, '10' as never])(
     'normalizes invalid limit %j to 50',
     limit => {
-      expect(normalizeBeaconListAnnotationsInput({ limit })).toMatchObject({
+      expect(normalizeAnnoPulseListAnnotationsInput({ limit })).toMatchObject({
         limit: 50,
       })
     },
   )
 
   it('retains the maximum allowed result limit', () => {
-    expect(normalizeBeaconListAnnotationsInput({ limit: 100 })).toMatchObject({
+    expect(
+      normalizeAnnoPulseListAnnotationsInput({ limit: 100 }),
+    ).toMatchObject({
       limit: 100,
     })
   })
 
   it('projects nonempty optional dates without exposing annotation internals', () => {
-    const result = listBeaconAnnotations(
+    const result = listAnnoPulseAnnotations(
       [
         annotation('dated', {
           dueDate: ' 2026-08-01 ',
@@ -162,11 +164,11 @@ describe(listBeaconAnnotations, () => {
   })
 })
 
-describe(serializeBeaconListAnnotations, () => {
+describe(serializeAnnoPulseListAnnotations, () => {
   it('serializes the result without exposing annotation internals', () => {
-    const result = listBeaconAnnotations(annotations, {}, context)
+    const result = listAnnoPulseAnnotations(annotations, {}, context)
     const serialized = JSON.parse(
-      serializeBeaconListAnnotations(result),
+      serializeAnnoPulseListAnnotations(result),
     ) as typeof result
 
     expect(serialized).toStrictEqual(result)

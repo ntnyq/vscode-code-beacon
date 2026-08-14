@@ -32,9 +32,9 @@ system APIs.
 
 ## Architecture
 
-`useBeaconHighlight()` remains the sole owner of text scanning and returns its
+`useAnnoPulseHighlight()` remains the sole owner of text scanning and returns its
 existing `scanTextDocument(document, source)` capability. A new
-`useBeaconNotebook()` coordinator consumes that capability with source
+`useAnnoPulseNotebook()` coordinator consumes that capability with source
 `notebook`.
 
 The coordinator maintains `Map<notebook URI, Set<cell URI>>` only for cleanup.
@@ -55,7 +55,7 @@ documents for open-file diagnostics.
   it has no pending I/O results that can overwrite newer content.
 - A removed cell is deleted by its immutable cell-document URI. Closing a
   notebook clears only URIs that the coordinator recorded for that notebook.
-- The normal scanner enforces `code-beacon.enable`, configured languages,
+- The normal scanner enforces `annopulse.enable`, configured languages,
   comment-only behavior, rule validation, and workspace-trust regex policy.
 - The new behavior follows existing scan-mode semantics: `manual` performs no
   automatic notebook scan; other modes include opened notebooks so that their

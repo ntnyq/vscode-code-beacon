@@ -10,23 +10,23 @@ import {
 } from 'vscode'
 import { config } from '../config'
 import { decodeAnnotationTarget } from '../core/commands/annotation-target'
-import { filterBeaconAnnotations } from '../core/explorer/filter'
-import { BeaconExplorerGitMetadataIndex } from '../core/explorer/git-metadata-index'
-import { BeaconTreeDataProvider } from '../core/explorer/tree-data-provider'
+import { filterAnnoPulseAnnotations } from '../core/explorer/filter'
+import { AnnoPulseExplorerGitMetadataIndex } from '../core/explorer/git-metadata-index'
+import { AnnoPulseTreeDataProvider } from '../core/explorer/tree-data-provider'
 import type {
   ChangedUriIndex,
   ChangedUriIndexDisposable,
 } from '../core/git/changed-uri-index'
 import { annotationStore } from '../core/store/annotation-store'
 import { commands } from '../meta'
-import type { BeaconAnnotation } from '../types/annotation'
-import { formatBeaconLink, toVscodeRange } from '../utils/ranges'
-import type { BeaconGitAdapter } from './use-beacon-git'
+import type { AnnoPulseAnnotation } from '../types/annotation'
+import { formatAnnoPulseLink, toVscodeRange } from '../utils/ranges'
+import type { AnnoPulseGitAdapter } from './use-annopulse-git'
 
 /**
- * Stable VS Code view id for the Code Beacon annotations view.
+ * Stable VS Code view id for the AnnoPulse annotations view.
  */
-const BEACON_VIEW_ID = 'codeBeacon.annotations'
+const ANNOPULSE_VIEW_ID = 'annopulse.annotations'
 const DEFAULT_STALE_DAYS = 90
 
 function normalizeStaleDays(value: unknown): number {
@@ -42,7 +42,7 @@ function isChangedFilesScope(): boolean {
   return config.explorer.scope === 'changedFiles'
 }
 
-function commandAnnotation(value: unknown): BeaconAnnotation | undefined {
+function commandAnnotation(value: unknown): AnnoPulseAnnotation | undefined {
   if (value === undefined || value === null) {
     return annotationStore.getAll()[0]
   }
@@ -69,17 +69,17 @@ async function revealAnnotation(value?: unknown) {
 }
 
 /**
- * Registers the Code Beacon TreeView and related navigation commands.
+ * Registers the AnnoPulse TreeView and related navigation commands.
  */
-export function useBeaconExplorer(
-  git: Pick<BeaconGitAdapter, 'getMetadataForAnnotations'>,
+export function useAnnoPulseExplorer(
+  git: Pick<AnnoPulseGitAdapter, 'getMetadataForAnnotations'>,
   changedUriIndex: ChangedUriIndex,
 ) {
-  const gitMetadataIndex = new BeaconExplorerGitMetadataIndex<TextDocument>()
+  const gitMetadataIndex = new AnnoPulseExplorerGitMetadataIndex<TextDocument>()
   const { getMetadataForAnnotations } = git
-  const provider = new BeaconTreeDataProvider(
+  const provider = new AnnoPulseTreeDataProvider(
     () =>
-      filterBeaconAnnotations(annotationStore.getAll(), {
+      filterAnnoPulseAnnotations(annotationStore.getAll(), {
         activeUri: window.activeTextEditor?.document.uri.toString(),
         categories: config.explorer.categories,
         changedUris: changedUriIndex.getAll(),
@@ -135,7 +135,7 @@ export function useBeaconExplorer(
       return
     }
 
-    const annotationsByUri = new Map<string, BeaconAnnotation[]>()
+    const annotationsByUri = new Map<string, AnnoPulseAnnotation[]>()
     for (const annotation of annotationStore.getAll()) {
       annotationsByUri.set(annotation.uri, [
         ...(annotationsByUri.get(annotation.uri) ?? []),
@@ -145,7 +145,7 @@ export function useBeaconExplorer(
 
     const targets: {
       document: TextDocument
-      annotations: readonly BeaconAnnotation[]
+      annotations: readonly AnnoPulseAnnotation[]
     }[] = []
     for (const [uri, annotations] of annotationsByUri) {
       if (
@@ -192,7 +192,7 @@ export function useBeaconExplorer(
     void hydrateGitMetadata()
   }
 
-  const view = window.createTreeView(BEACON_VIEW_ID, {
+  const view = window.createTreeView(ANNOPULSE_VIEW_ID, {
     showCollapseAll: true,
     treeDataProvider: provider,
   })
@@ -206,14 +206,14 @@ export function useBeaconExplorer(
   useDisposable(window.onDidChangeVisibleTextEditors(refreshExplorer))
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('code-beacon')) {
+      if (event.affectsConfiguration('annopulse')) {
         refreshExplorer()
       }
     }),
   )
   useDisposable(
     vscodeCommands.registerCommand(commands.focusExplorer, () =>
-      vscodeCommands.executeCommand(`${BEACON_VIEW_ID}.focus`),
+      vscodeCommands.executeCommand(`${ANNOPULSE_VIEW_ID}.focus`),
     ),
   )
   useDisposable(
@@ -224,7 +224,7 @@ export function useBeaconExplorer(
       const annotation = commandAnnotation(value)
 
       return annotation
-        ? env.clipboard.writeText(formatBeaconLink(annotation))
+        ? env.clipboard.writeText(formatAnnoPulseLink(annotation))
         : undefined
     }),
   )

@@ -1,9 +1,12 @@
-import { DEFAULT_BEACON_RULES, DEFAULT_STYLE } from '../../constants/defaults'
+import {
+  DEFAULT_ANNOPULSE_RULES,
+  DEFAULT_STYLE,
+} from '../../constants/defaults'
 import type {
-  BeaconMessageConfig,
-  BeaconRuleError,
-  BeaconRuleConfig,
-  CompiledBeaconRule,
+  AnnoPulseMessageConfig,
+  AnnoPulseRuleError,
+  AnnoPulseRuleConfig,
+  CompiledAnnoPulseRule,
   NormalizedRuleResult,
 } from '../../types/annotation'
 
@@ -17,7 +20,7 @@ export interface NormalizeRuleOptions {
 /**
  * Default message extraction behavior for built-in and custom rules.
  */
-const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
+const DEFAULT_MESSAGE_MODE: Required<AnnoPulseMessageConfig> = {
   group: 'message',
   mode: 'lineRest',
   trim: true,
@@ -26,8 +29,8 @@ const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
 /**
  * Error raised when a matcher is valid JavaScript but unsafe for scanning.
  */
-class BeaconRuleCompileError extends Error {
-  public override readonly name = 'BeaconRuleCompileError'
+class AnnoPulseRuleCompileError extends Error {
+  public override readonly name = 'AnnoPulseRuleCompileError'
 }
 
 /**
@@ -40,7 +43,7 @@ function escapeRegExp(value: string): string {
 /**
  * Builds the RegExp source for a text matcher rule.
  */
-function buildTextPattern(rule: BeaconRuleConfig): string {
+function buildTextPattern(rule: AnnoPulseRuleConfig): string {
   if (rule.matcher.type !== 'text') {
     throw new Error('Expected text matcher')
   }
@@ -84,7 +87,7 @@ function canMatchWithoutConsuming(regex: RegExp): boolean {
 /**
  * Compiles one rule into a runtime matcher with resolved defaults.
  */
-function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
+function compileRule(rule: AnnoPulseRuleConfig): CompiledAnnoPulseRule {
   let flags: string | undefined
 
   if (rule.matcher.type === 'regex') {
@@ -102,7 +105,7 @@ function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
   const matcherRegex = new RegExp(source, ensureGlobalFlag(flags))
 
   if (canMatchWithoutConsuming(matcherRegex)) {
-    throw new BeaconRuleCompileError(
+    throw new AnnoPulseRuleCompileError(
       `Matcher for rule "${rule.id}" must consume at least one character`,
     )
   }
@@ -130,13 +133,13 @@ function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
  * Merges built-in rules with custom rules and reports invalid matchers.
  */
 export function normalizeRules(
-  customRules: readonly BeaconRuleConfig[],
+  customRules: readonly AnnoPulseRuleConfig[],
   options: NormalizeRuleOptions = {},
 ): NormalizedRuleResult {
-  const mergedRules = new Map<string, BeaconRuleConfig>()
-  const errors: BeaconRuleError[] = []
+  const mergedRules = new Map<string, AnnoPulseRuleConfig>()
+  const errors: AnnoPulseRuleError[] = []
 
-  for (const rule of DEFAULT_BEACON_RULES) {
+  for (const rule of DEFAULT_ANNOPULSE_RULES) {
     mergedRules.set(rule.id, rule)
   }
 
@@ -152,7 +155,7 @@ export function normalizeRules(
     mergedRules.set(rule.id, rule)
   }
 
-  const rules: CompiledBeaconRule[] = []
+  const rules: CompiledAnnoPulseRule[] = []
 
   for (const rule of mergedRules.values()) {
     if (rule.enabled === false) {
@@ -162,7 +165,7 @@ export function normalizeRules(
     try {
       rules.push(compileRule(rule))
     } catch (error) {
-      if (error instanceof BeaconRuleCompileError) {
+      if (error instanceof AnnoPulseRuleCompileError) {
         errors.push({
           message: error.message,
           ruleId: rule.id,

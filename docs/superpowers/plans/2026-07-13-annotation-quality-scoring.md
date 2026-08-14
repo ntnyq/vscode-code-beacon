@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Provide deterministic annotation-quality scores, date metadata, and an opt-in read-only `code_beacon_quality_check` Language Model Tool.
+**Goal:** Provide deterministic annotation-quality scores, date metadata, and an opt-in read-only `annopulse_quality_check` Language Model Tool.
 
-**Architecture:** The scanner owns owner/date-directive parsing and adds optional date fields to `BeaconAnnotation`. A VS Code-independent quality module consumes those records with an explicit clock. A shared bounded selector feeds the existing list tool and the new quality tool, while the VS Code composable remains a thin registration, confirmation, and current-context adapter.
+**Architecture:** The scanner owns owner/date-directive parsing and adds optional date fields to `AnnoPulseAnnotation`. A VS Code-independent quality module consumes those records with an explicit clock. A shared bounded selector feeds the existing list tool and the new quality tool, while the VS Code composable remains a thin registration, confirmation, and current-context adapter.
 
 **Tech Stack:** TypeScript, Vitest, VS Code extension API, reactive-vscode, vscode-ext-gen, oxfmt.
 
@@ -33,10 +33,10 @@
 - Create: `src/core/ai/quality-check.ts` — safe quality-tool result construction and JSON serialization.
 - Modify: `tests/ai-list-annotations.test.ts` — date projection and selector regression tests.
 - Create: `tests/ai-quality-check.test.ts` — bounded quality-result serialization tests.
-- Modify: `src/composables/use-beacon-language-model-tools.ts` — register, confirm, guard, and invoke both read-only tools.
+- Modify: `src/composables/use-annotation-language-model-tools.ts` — register, confirm, guard, and invoke both read-only tools.
 - Modify: `package.json` — add quality-tool contribution and activation event.
 - Modify: `src/meta.ts` and `README.md` — generator outputs.
-- Modify: `tests/beacon-language-model-tools.test.ts` and `tests/package-metadata.test.ts` — adapter and manifest coverage.
+- Modify: `tests/annotation-language-model-tools.test.ts` and `tests/package-metadata.test.ts` — adapter and manifest coverage.
 - Modify: `docs/plan.md` — mark the quality-scoring roadmap item complete only after all verification passes.
 
 ## Task 1: Scan and retain date directives
@@ -49,7 +49,7 @@
 
 **Interfaces:**
 
-- Produces `BeaconAnnotation['dueDate']?: string` and `BeaconAnnotation['expiresDate']?: string`.
+- Produces `AnnoPulseAnnotation['dueDate']?: string` and `AnnoPulseAnnotation['expiresDate']?: string`.
 - Existing `scanDocument(options)` callers receive the new optional fields automatically; no caller must parse comment text.
 
 - [x] **Step 1: Write failing scanner tests for valid, malformed, repeated, and multiline directives.**
@@ -103,7 +103,7 @@ Expected: FAIL with missing `dueDate`/`expiresDate` assertions.
 
 - [x] **Step 3: Add optional raw date fields and a single parser for owner/message/date metadata.**
 
-In `BeaconAnnotation`, add:
+In `AnnoPulseAnnotation`, add:
 
 ```ts
 readonly dueDate?: string
@@ -147,15 +147,17 @@ rtk git commit -m "feat: capture annotation date directives"
 
 **Interfaces:**
 
-- Consumes `BeaconAnnotation` from Task 1 and `compareBeaconAnnotations` from `src/core/explorer/filter.ts`.
-- Produces `scoreBeaconAnnotation(annotation, now)` and `scoreBeaconAnnotations(annotations, options)` for Task 3.
+- Consumes `AnnoPulseAnnotation` from Task 1 and `compareAnnoPulseAnnotations` from `src/core/explorer/filter.ts`.
+- Produces `scoreAnnoPulseAnnotation(annotation, now)` and `scoreAnnoPulseAnnotations(annotations, options)` for Task 3.
 
 - [x] **Step 1: Write failing tests for the complete scoring contract.**
 
 Define a local annotation factory and cover the following exact expectations:
 
 ```ts
-expect(scoreBeaconAnnotation(annotation({ message: '' }), now)).toMatchObject({
+expect(
+  scoreAnnoPulseAnnotation(annotation({ message: '' }), now),
+).toMatchObject({
   score: 40,
   level: 'poor',
   issues: [
@@ -165,16 +167,16 @@ expect(scoreBeaconAnnotation(annotation({ message: '' }), now)).toMatchObject({
 })
 
 expect(
-  scoreBeaconAnnotation(annotation({ message: 'later' }), now).issues,
+  scoreAnnoPulseAnnotation(annotation({ message: 'later' }), now).issues,
 ).toEqual(expect.arrayContaining([{ code: 'vagueMessage', penalty: 25 }]))
 
 expect(
-  scoreBeaconAnnotation(annotation({ message: 'update', owner: 'Ada' }), now)
+  scoreAnnoPulseAnnotation(annotation({ message: 'update', owner: 'Ada' }), now)
     .issues,
 ).toEqual(expect.arrayContaining([{ code: 'missingContext', penalty: 15 }]))
 
 expect(
-  scoreBeaconAnnotation(
+  scoreAnnoPulseAnnotation(
     annotation({
       dueDate: '2026-02-29',
       expiresDate: '2026-01-01',
@@ -202,8 +204,8 @@ Expected: FAIL with module-not-found.
 Create the exported contract:
 
 ```ts
-export type BeaconQualityLevel = 'good' | 'needsAttention' | 'poor'
-export type BeaconQualityIssueCode =
+export type AnnoPulseQualityLevel = 'good' | 'needsAttention' | 'poor'
+export type AnnoPulseQualityIssueCode =
   | 'emptyMessage'
   | 'vagueMessage'
   | 'missingAction'
@@ -214,25 +216,25 @@ export type BeaconQualityIssueCode =
   | 'overdue'
   | 'expired'
 
-export interface BeaconQualityIssue {
-  readonly code: BeaconQualityIssueCode
+export interface AnnoPulseQualityIssue {
+  readonly code: AnnoPulseQualityIssueCode
   readonly message: string
   readonly penalty: number
 }
 
-export interface BeaconAnnotationQuality {
+export interface AnnoPulseAnnotationQuality {
   readonly annotationId: string
-  readonly issues: readonly BeaconQualityIssue[]
-  readonly level: BeaconQualityLevel
+  readonly issues: readonly AnnoPulseQualityIssue[]
+  readonly level: AnnoPulseQualityLevel
   readonly score: number
 }
 
-export interface BeaconQualityReport {
-  readonly annotations: readonly BeaconAnnotationQuality[]
-  readonly counts: Readonly<Record<BeaconQualityLevel, number>>
+export interface AnnoPulseQualityReport {
+  readonly annotations: readonly AnnoPulseAnnotationQuality[]
+  readonly counts: Readonly<Record<AnnoPulseQualityLevel, number>>
 }
 
-export interface ScoreBeaconAnnotationsOptions {
+export interface ScoreAnnoPulseAnnotationsOptions {
   readonly includeIgnored?: boolean
   readonly includeResolved?: boolean
   readonly now: Date
@@ -266,8 +268,8 @@ rtk git commit -m "feat: score annotation quality"
 
 **Interfaces:**
 
-- Consumes Task 2's `scoreBeaconAnnotations` and existing `BeaconAnnotation` data.
-- Produces `selectBeaconAnnotations`, existing `listBeaconAnnotations`, and `createBeaconQualityCheck`/`serializeBeaconQualityCheck` for Task 4.
+- Consumes Task 2's `scoreAnnoPulseAnnotations` and existing `AnnoPulseAnnotation` data.
+- Produces `selectAnnoPulseAnnotations`, existing `listAnnoPulseAnnotations`, and `createAnnoPulseQualityCheck`/`serializeAnnoPulseQualityCheck` for Task 4.
 
 - [x] **Step 1: Write failing tests for shared selection and safe quality JSON.**
 
@@ -307,15 +309,15 @@ Create `select-annotations.ts` with the currently public input, context, normali
 Create `quality-check.ts` with:
 
 ```ts
-export function createBeaconQualityCheck(
-  annotations: readonly BeaconAnnotation[],
-  input: BeaconListAnnotationsInput,
-  context: BeaconListAnnotationsContext,
+export function createAnnoPulseQualityCheck(
+  annotations: readonly AnnoPulseAnnotation[],
+  input: AnnoPulseListAnnotationsInput,
+  context: AnnoPulseListAnnotationsContext,
   now: Date,
-): BeaconQualityCheckResult
+): AnnoPulseQualityCheckResult
 
-export function serializeBeaconQualityCheck(
-  result: BeaconQualityCheckResult,
+export function serializeAnnoPulseQualityCheck(
+  result: AnnoPulseQualityCheckResult,
 ): string
 ```
 
@@ -338,18 +340,18 @@ rtk git commit -m "feat: expose bounded annotation quality results"
 
 **Files:**
 
-- Modify: `src/composables/use-beacon-language-model-tools.ts`
+- Modify: `src/composables/use-annotation-language-model-tools.ts`
 - Modify: `package.json`
 - Modify: `src/meta.ts`
 - Modify: `README.md`
-- Modify: `tests/beacon-language-model-tools.test.ts`
+- Modify: `tests/annotation-language-model-tools.test.ts`
 - Modify: `tests/package-metadata.test.ts`
 - Modify: `docs/plan.md:766-772`
 
 **Interfaces:**
 
-- Consumes Task 3's `createBeaconQualityCheck` and `serializeBeaconQualityCheck`.
-- Produces `BEACON_QUALITY_CHECK_TOOL_NAME = 'code_beacon_quality_check'` and a user-visible opt-in tool contribution.
+- Consumes Task 3's `createAnnoPulseQualityCheck` and `serializeAnnoPulseQualityCheck`.
+- Produces `ANNOPULSE_QUALITY_CHECK_TOOL_NAME = 'annopulse_quality_check'` and a user-visible opt-in tool contribution.
 
 - [x] **Step 1: Write failing adapter and metadata tests for the second tool.**
 
@@ -357,7 +359,7 @@ Update mocks so registration is indexed by tool name. Assert both names register
 
 ```ts
 expect(registerTool).toHaveBeenCalledWith(
-  'code_beacon_quality_check',
+  'annopulse_quality_check',
   expect.objectContaining({
     invoke: expect.any(Function),
     prepareInvocation: expect.any(Function),
@@ -370,27 +372,27 @@ expect(
     cancellationToken,
   ),
 ).resolves.toMatchObject({
-  confirmationMessages: { title: 'Share Code Beacon annotation quality' },
+  confirmationMessages: { title: 'Share AnnoPulse annotation quality' },
   invocationMessage:
-    'Checking up to 2 Code Beacon annotations from open editors.',
+    'Checking up to 2 AnnoPulse annotations from open editors.',
 })
 ```
 
-Prove disabled quality invocation throws before reading `annotationStore` or editor getters. With tools enabled, assert active-file/open-editor scope and the JSON quality result. In package tests assert two alphabetical activation events and two tool contributions; the new contribution uses name `code_beacon_quality_check`, reference `codeBeaconAnnotationQuality`, `$(checklist)` icon, `config.code-beacon.ai.enabled`, `read-only` tag, and the same bounded input schema.
+Prove disabled quality invocation throws before reading `annotationStore` or editor getters. With tools enabled, assert active-file/open-editor scope and the JSON quality result. In package tests assert two alphabetical activation events and two tool contributions; the new contribution uses name `annopulse_quality_check`, reference `annopulseAnnotationQuality`, `$(checklist)` icon, `config.annopulse.ai.enabled`, `read-only` tag, and the same bounded input schema.
 
 - [x] **Step 2: Run adapter and metadata tests and verify they fail.**
 
-Run: `rtk pnpm vitest run tests/beacon-language-model-tools.test.ts tests/package-metadata.test.ts`
+Run: `rtk pnpm vitest run tests/annotation-language-model-tools.test.ts tests/package-metadata.test.ts`
 
 Expected: FAIL because the quality tool and manifest contribution do not exist.
 
 - [x] **Step 3: Register two tools through a shared adapter helper.**
 
-Keep the current list tool contract byte-for-byte in behavior. Extract a local factory/helper only for common disabled-guard and current-context snapshot acquisition. Register `code_beacon_quality_check` with a preparation message and confirmation that say “quality” rather than “listing”. Its `invoke` must synchronously throw the exact existing disabled-tools error before acquiring the snapshot, then call `createBeaconQualityCheck(..., new Date())`, serialize it, and return one `LanguageModelTextPart` in `LanguageModelToolResult`.
+Keep the current list tool contract byte-for-byte in behavior. Extract a local factory/helper only for common disabled-guard and current-context snapshot acquisition. Register `annopulse_quality_check` with a preparation message and confirmation that say “quality” rather than “listing”. Its `invoke` must synchronously throw the exact existing disabled-tools error before acquiring the snapshot, then call `createAnnoPulseQualityCheck(..., new Date())`, serialize it, and return one `LanguageModelTextPart` in `LanguageModelToolResult`.
 
 - [x] **Step 4: Add the manifest contribution and regenerate metadata.**
 
-Add `onLanguageModelTool:code_beacon_quality_check` in alphabetical order with the existing tool event. Add a `languageModelTools` entry with the exact identity from Step 1, a model description that says scores are deterministic and derived only from already-indexed annotations, and the same input schema/defaults as the list tool. Run:
+Add `onLanguageModelTool:annopulse_quality_check` in alphabetical order with the existing tool event. Add a `languageModelTools` entry with the exact identity from Step 1, a model description that says scores are deterministic and derived only from already-indexed annotations, and the same input schema/defaults as the list tool. Run:
 
 ```bash
 rtk pnpm generate:meta
@@ -404,7 +406,7 @@ rtk git diff --exit-code -- src/meta.ts README.md
 Run:
 
 ```bash
-rtk pnpm vitest run tests/beacon-language-model-tools.test.ts tests/package-metadata.test.ts tests/ai-list-annotations.test.ts tests/ai-quality-check.test.ts tests/quality-score-annotations.test.ts tests/scan-document.test.ts
+rtk pnpm vitest run tests/annotation-language-model-tools.test.ts tests/package-metadata.test.ts tests/ai-list-annotations.test.ts tests/ai-quality-check.test.ts tests/quality-score-annotations.test.ts tests/scan-document.test.ts
 pnpm typecheck
 rtk pnpm test:unit
 rtk git diff --check
@@ -415,7 +417,7 @@ Expected: all commands pass. Only then change `docs/plan.md` from `- [ ] TODO qu
 - [x] **Step 6: Commit the user-facing quality tool and roadmap status.**
 
 ```bash
-rtk git add src/composables/use-beacon-language-model-tools.ts package.json src/meta.ts README.md tests/beacon-language-model-tools.test.ts tests/package-metadata.test.ts docs/plan.md
+rtk git add src/composables/use-annotation-language-model-tools.ts package.json src/meta.ts README.md tests/annotation-language-model-tools.test.ts tests/package-metadata.test.ts docs/plan.md
 rtk git commit -m "feat: add annotation quality check tool"
 ```
 

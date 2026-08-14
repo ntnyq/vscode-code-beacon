@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BeaconGitMetadataCache,
-  MAX_BEACON_GIT_METADATA_CACHE_ENTRIES,
+  AnnoPulseGitMetadataCache,
+  MAX_ANNOPULSE_GIT_METADATA_CACHE_ENTRIES,
   parseBlameCommitHash,
 } from '../src/core/git/blame'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
 
 describe('git blame commit hash parsing', () => {
   it.each([
@@ -49,8 +49,8 @@ describe('git blame commit hash parsing', () => {
   })
 })
 
-describe(BeaconGitMetadataCache, () => {
-  const metadata: BeaconGitMetadata = {
+describe(AnnoPulseGitMetadataCache, () => {
+  const metadata: AnnoPulseGitMetadata = {
     authorEmail: 'ada@example.com',
     authorName: 'Ada Lovelace',
     commitDate: '2026-07-12T04:00:00.000Z',
@@ -59,7 +59,7 @@ describe(BeaconGitMetadataCache, () => {
   }
 
   it('returns cached metadata for an identical URI, version, and line', () => {
-    const cache = new BeaconGitMetadataCache()
+    const cache = new AnnoPulseGitMetadataCache()
 
     cache.set('file:///workspace/answer.ts', 3, 1, metadata)
 
@@ -67,7 +67,7 @@ describe(BeaconGitMetadataCache, () => {
   })
 
   it('misses when the URI changes', () => {
-    const cache = new BeaconGitMetadataCache()
+    const cache = new AnnoPulseGitMetadataCache()
 
     cache.set('file:///workspace/answer.ts', 3, 1, metadata)
 
@@ -86,7 +86,7 @@ describe(BeaconGitMetadataCache, () => {
       version: 3,
     },
   ])('misses when $name', ({ version, line }) => {
-    const cache = new BeaconGitMetadataCache()
+    const cache = new AnnoPulseGitMetadataCache()
 
     cache.set('file:///workspace/answer.ts', 3, 1, metadata)
 
@@ -96,11 +96,11 @@ describe(BeaconGitMetadataCache, () => {
   })
 
   it('evicts the least recently used metadata when capacity is reached', () => {
-    const cache = new BeaconGitMetadataCache()
+    const cache = new AnnoPulseGitMetadataCache()
 
     for (
       let index = 0;
-      index <= MAX_BEACON_GIT_METADATA_CACHE_ENTRIES;
+      index <= MAX_ANNOPULSE_GIT_METADATA_CACHE_ENTRIES;
       index++
     ) {
       cache.set(`file:///workspace/${index}.ts`, 1, 0, metadata)
@@ -109,7 +109,7 @@ describe(BeaconGitMetadataCache, () => {
     expect(cache.get('file:///workspace/0.ts', 1, 0)).toBeUndefined()
     expect(
       cache.get(
-        `file:///workspace/${MAX_BEACON_GIT_METADATA_CACHE_ENTRIES}.ts`,
+        `file:///workspace/${MAX_ANNOPULSE_GIT_METADATA_CACHE_ENTRIES}.ts`,
         1,
         0,
       ),

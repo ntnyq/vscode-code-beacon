@@ -1,11 +1,11 @@
 import type * as ReactiveVscode from 'reactive-vscode'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import { useBeaconNotebook } from '../src/composables/use-beacon-notebook'
+import { useAnnoPulseNotebook } from '../src/composables/use-annopulse-notebook'
 import { config } from '../src/config'
-import type * as CodeBeaconConfig from '../src/config'
+import type * as AnnoPulseConfig from '../src/config'
 import { annotationStore } from '../src/core/store/annotation-store'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
 const {
@@ -44,7 +44,7 @@ vi.mock(
       config: {
         scanMode: 'openEditors',
       },
-    }) as unknown as Partial<typeof CodeBeaconConfig>,
+    }) as unknown as Partial<typeof AnnoPulseConfig>,
 )
 
 vi.mock(
@@ -95,7 +95,7 @@ function notebook(
   } as Vscode.NotebookDocument
 }
 
-function annotation(notebookCell: Vscode.NotebookCell): BeaconAnnotation {
+function annotation(notebookCell: Vscode.NotebookCell): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 0,
@@ -119,15 +119,15 @@ function annotation(notebookCell: Vscode.NotebookCell): BeaconAnnotation {
   }
 }
 
-describe('beacon notebook lifecycle', () => {
+describe('annopulse notebook lifecycle', () => {
   const cellA = cell('vscode-notebook-cell:///a')
   const cellB = cell('vscode-notebook-cell:///b')
   const notebookA = notebook('file:///book.ipynb', [cellA])
   const scanTextDocument = vi.fn<
     (
       document: Vscode.TextDocument,
-      source: BeaconAnnotation['source'],
-    ) => readonly BeaconAnnotation[]
+      source: AnnoPulseAnnotation['source'],
+    ) => readonly AnnoPulseAnnotation[]
   >(() => [])
 
   beforeEach(() => {
@@ -144,13 +144,13 @@ describe('beacon notebook lifecycle', () => {
   it('scans cells in notebooks already open at activation', () => {
     notebookDocuments.push(notebookA)
 
-    useBeaconNotebook(scanTextDocument)
+    useAnnoPulseNotebook(scanTextDocument)
 
     expect(scanTextDocument).toHaveBeenCalledWith(cellA.document, 'notebook')
   })
 
   it('scans added cells and clears removed and closed notebook cells', () => {
-    useBeaconNotebook(scanTextDocument)
+    useAnnoPulseNotebook(scanTextDocument)
 
     const openListener = openListeners[0] as
       | ((notebook: Vscode.NotebookDocument) => void)
@@ -200,7 +200,7 @@ describe('beacon notebook lifecycle', () => {
 
   it('does not scan opened notebooks in manual mode', () => {
     Object.assign(config, { scanMode: 'manual' })
-    useBeaconNotebook(scanTextDocument)
+    useAnnoPulseNotebook(scanTextDocument)
 
     const openListener = openListeners[0] as
       | ((notebook: Vscode.NotebookDocument) => void)
@@ -227,7 +227,7 @@ describe('beacon notebook lifecycle', () => {
 
   it('clears manually scanned cells when their opened notebook closes', () => {
     Object.assign(config, { scanMode: 'manual' })
-    useBeaconNotebook(scanTextDocument)
+    useAnnoPulseNotebook(scanTextDocument)
 
     const openListener = openListeners[0] as
       | ((notebook: Vscode.NotebookDocument) => void)
@@ -255,7 +255,7 @@ describe('beacon notebook lifecycle', () => {
   })
 
   it('clears open-editor ownership when a notebook closes', () => {
-    useBeaconNotebook(scanTextDocument)
+    useAnnoPulseNotebook(scanTextDocument)
 
     const openListener = openListeners[0] as
       | ((notebook: Vscode.NotebookDocument) => void)
@@ -282,7 +282,7 @@ describe('beacon notebook lifecycle', () => {
 
   it('rescans changed cell documents in visibleEditors mode', () => {
     Object.assign(config, { scanMode: 'visibleEditors' })
-    useBeaconNotebook(scanTextDocument)
+    useAnnoPulseNotebook(scanTextDocument)
 
     const changeListener = changeListeners[0] as
       | ((event: Vscode.NotebookDocumentChangeEvent) => void)

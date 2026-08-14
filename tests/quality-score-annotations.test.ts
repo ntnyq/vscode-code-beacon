@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
-  scoreBeaconAnnotation,
-  scoreBeaconAnnotations,
+  scoreAnnoPulseAnnotation,
+  scoreAnnoPulseAnnotations,
 } from '../src/core/quality/score-annotations'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 const now = new Date(2026, 0, 2)
 
 function annotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 1,
@@ -34,10 +34,10 @@ function annotation(
   }
 }
 
-describe(scoreBeaconAnnotation, () => {
+describe(scoreAnnoPulseAnnotation, () => {
   it('reports an empty message and missing owner', () => {
     expect(
-      scoreBeaconAnnotation(annotation({ message: '', owner: ' \t' }), now),
+      scoreAnnoPulseAnnotation(annotation({ message: '', owner: ' \t' }), now),
     ).toMatchObject({
       score: 40,
       level: 'poor',
@@ -50,7 +50,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('reports standalone placeholders as vague', () => {
     expect(
-      scoreBeaconAnnotation(annotation({ message: 'later' }), now).issues,
+      scoreAnnoPulseAnnotation(annotation({ message: 'later' }), now).issues,
     ).toStrictEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: 'vagueMessage', penalty: 25 }),
@@ -60,7 +60,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('reports a task with too little context', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ message: 'update', owner: 'Ada' }),
         now,
       ).issues,
@@ -73,7 +73,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('reports task messages without a recognized action', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ message: 'cache parser regression', owner: 'Ada' }),
         now,
       ).issues,
@@ -84,7 +84,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('reports invalid due dates before expired dates', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({
           dueDate: '2026-02-29',
           expiresDate: '2026-01-01',
@@ -101,7 +101,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('accepts real leap days', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({
           dueDate: '2024-02-29',
           expiresDate: '2026-01-02',
@@ -114,7 +114,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('does not mark due dates on the current calendar day as overdue', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ dueDate: '2026-01-02', owner: 'Ada' }),
         now,
       ).issues,
@@ -123,7 +123,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('recognizes documented Chinese task actions', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ message: '修复缓存', owner: 'Ada' }),
         now,
       ).issues,
@@ -134,7 +134,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('reports invalid expiry dates and overdue valid due dates', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({
           dueDate: '2026-01-01',
           expiresDate: '2026-13-01',
@@ -150,7 +150,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('clamps scores at zero', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({
           dueDate: '2026-01-01',
           expiresDate: '2026-01-01',
@@ -163,13 +163,13 @@ describe(scoreBeaconAnnotation, () => {
 
   it('uses the good and needs-attention level boundary', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ dueDate: '2026-01-01', owner: 'Ada' }),
         now,
       ),
     ).toMatchObject({ level: 'good', score: 80 })
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ dueDate: '2026-13-01', message: 'later' }),
         now,
       ),
@@ -177,11 +177,11 @@ describe(scoreBeaconAnnotation, () => {
   })
 
   it('suppresses action and context findings after empty and vague messages', () => {
-    const emptyCodes = scoreBeaconAnnotation(
+    const emptyCodes = scoreAnnoPulseAnnotation(
       annotation({ message: '' }),
       now,
     ).issues.map(issue => issue.code)
-    const vagueCodes = scoreBeaconAnnotation(
+    const vagueCodes = scoreAnnoPulseAnnotation(
       annotation({ message: 'something' }),
       now,
     ).issues.map(issue => issue.code)
@@ -197,7 +197,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('does not require action, context, or owner for notes', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ category: 'note', message: 'background' }),
         now,
       ).issues,
@@ -206,7 +206,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('does not report vague messages for notes', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({ category: 'note', message: 'later' }),
         now,
       ).issues,
@@ -215,7 +215,7 @@ describe(scoreBeaconAnnotation, () => {
 
   it('still reports empty messages and date defects for notes', () => {
     expect(
-      scoreBeaconAnnotation(
+      scoreAnnoPulseAnnotation(
         annotation({
           category: 'note',
           dueDate: 'invalid',
@@ -232,9 +232,9 @@ describe(scoreBeaconAnnotation, () => {
   })
 })
 
-describe(scoreBeaconAnnotations, () => {
+describe(scoreAnnoPulseAnnotations, () => {
   it('sorts the returned annotations and excludes resolved and ignored by default', () => {
-    const report = scoreBeaconAnnotations(
+    const report = scoreAnnoPulseAnnotations(
       [
         annotation({ id: 'late', line: 3, uri: 'file:///b.ts', owner: 'Ada' }),
         annotation({ id: 'resolved', resolved: true }),
@@ -262,7 +262,7 @@ describe(scoreBeaconAnnotations, () => {
   })
 
   it('includes resolved and ignored annotations only when requested', () => {
-    const report = scoreBeaconAnnotations(
+    const report = scoreAnnoPulseAnnotations(
       [
         annotation({ id: 'resolved', owner: 'Ada', resolved: true }),
         annotation({ id: 'ignored', ignored: true, message: '' }),

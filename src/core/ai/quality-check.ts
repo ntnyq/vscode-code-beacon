@@ -1,41 +1,41 @@
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 import {
-  scoreBeaconAnnotations,
-  type BeaconAnnotationQuality,
-  type BeaconQualityReport,
+  scoreAnnoPulseAnnotations,
+  type AnnoPulseAnnotationQuality,
+  type AnnoPulseQualityReport,
 } from '../quality/score-annotations'
 import {
-  projectBeaconAnnotation,
-  type BeaconListedAnnotation,
+  projectAnnoPulseAnnotation,
+  type AnnoPulseListedAnnotation,
 } from './list-annotations'
 import {
-  selectBeaconAnnotations,
-  type BeaconAnnotationToolScope,
-  type BeaconListAnnotationsContext,
-  type BeaconListAnnotationsInput,
+  selectAnnoPulseAnnotations,
+  type AnnoPulseAnnotationToolScope,
+  type AnnoPulseListAnnotationsContext,
+  type AnnoPulseListAnnotationsInput,
 } from './select-annotations'
 
-export interface BeaconQualityCheckAnnotation extends BeaconAnnotationQuality {
-  readonly annotation: BeaconListedAnnotation
+export interface AnnoPulseQualityCheckAnnotation extends AnnoPulseAnnotationQuality {
+  readonly annotation: AnnoPulseListedAnnotation
 }
 
-export interface BeaconQualityCheckResult {
-  readonly annotations: readonly BeaconQualityCheckAnnotation[]
-  readonly counts: BeaconQualityReport['counts']
+export interface AnnoPulseQualityCheckResult {
+  readonly annotations: readonly AnnoPulseQualityCheckAnnotation[]
+  readonly counts: AnnoPulseQualityReport['counts']
   readonly returned: number
-  readonly scope: BeaconAnnotationToolScope
+  readonly scope: AnnoPulseAnnotationToolScope
   readonly total: number
   readonly truncated: boolean
 }
 
-export function createBeaconQualityCheck(
-  annotations: readonly BeaconAnnotation[],
-  input: BeaconListAnnotationsInput,
-  context: BeaconListAnnotationsContext,
+export function createAnnoPulseQualityCheck(
+  annotations: readonly AnnoPulseAnnotation[],
+  input: AnnoPulseListAnnotationsInput,
+  context: AnnoPulseListAnnotationsContext,
   now: Date,
-): BeaconQualityCheckResult {
-  const selected = selectBeaconAnnotations(annotations, input, context)
-  const report = scoreBeaconAnnotations(selected.annotations, {
+): AnnoPulseQualityCheckResult {
+  const selected = selectAnnoPulseAnnotations(annotations, input, context)
+  const report = scoreAnnoPulseAnnotations(selected.annotations, {
     includeIgnored: true,
     includeResolved: true,
     now,
@@ -51,7 +51,7 @@ export function createBeaconQualityCheck(
 
       return {
         ...quality,
-        annotation: projectBeaconAnnotation(annotation),
+        annotation: projectAnnoPulseAnnotation(annotation),
       }
     }),
     counts: report.counts,
@@ -62,8 +62,8 @@ export function createBeaconQualityCheck(
   }
 }
 
-export function serializeBeaconQualityCheck(
-  result: BeaconQualityCheckResult,
+export function serializeAnnoPulseQualityCheck(
+  result: AnnoPulseQualityCheckResult,
 ): string {
   return JSON.stringify(result)
 }

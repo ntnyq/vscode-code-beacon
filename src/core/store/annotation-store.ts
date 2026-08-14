@@ -1,5 +1,5 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import type { BeaconAnnotationState } from './annotation-state'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotationState } from './annotation-state'
 
 /**
  * Callback invoked whenever the annotation store changes.
@@ -14,17 +14,17 @@ export interface AnnotationStore {
    * Replaces annotations owned by one source for one URI.
    */
   setForSourceUri: (
-    source: BeaconAnnotation['source'],
+    source: AnnoPulseAnnotation['source'],
     uri: string,
-    annotations: readonly BeaconAnnotation[],
+    annotations: readonly AnnoPulseAnnotation[],
   ) => void
 
   /**
    * Replaces annotations owned by one source while preserving other sources.
    */
   replaceForSource: (
-    source: BeaconAnnotation['source'],
-    annotationsByUri: ReadonlyMap<string, readonly BeaconAnnotation[]>,
+    source: AnnoPulseAnnotation['source'],
+    annotationsByUri: ReadonlyMap<string, readonly AnnoPulseAnnotation[]>,
   ) => void
 
   /**
@@ -40,30 +40,33 @@ export interface AnnotationStore {
   /**
    * Returns the resolved and ignored annotation identifiers.
    */
-  getState: () => BeaconAnnotationState
+  getState: () => AnnoPulseAnnotationState
 
   /**
    * Replaces resolved and ignored annotation state.
    */
-  restoreState: (state: BeaconAnnotationState) => void
+  restoreState: (state: AnnoPulseAnnotationState) => void
 
   /**
    * Returns annotations for one URI.
    */
-  getForUri: (uri: string) => readonly BeaconAnnotation[]
+  getForUri: (uri: string) => readonly AnnoPulseAnnotation[]
 
   /**
    * Returns the retained snapshot for one source and URI.
    */
   getForSourceUri: (
-    source: BeaconAnnotation['source'],
+    source: AnnoPulseAnnotation['source'],
     uri: string,
-  ) => readonly BeaconAnnotation[]
+  ) => readonly AnnoPulseAnnotation[]
 
   /**
    * Releases one source's ownership of a URI.
    */
-  removeForSourceUri: (source: BeaconAnnotation['source'], uri: string) => void
+  removeForSourceUri: (
+    source: AnnoPulseAnnotation['source'],
+    uri: string,
+  ) => void
 
   /**
    * Releases every live-document source for one URI.
@@ -73,7 +76,7 @@ export interface AnnotationStore {
   /**
    * Returns every annotation in the store.
    */
-  getAll: () => readonly BeaconAnnotation[]
+  getAll: () => readonly AnnoPulseAnnotation[]
 
   /**
    * Clears annotations for every URI.
@@ -89,7 +92,7 @@ export interface AnnotationStore {
 /**
  * Builds a position-independent key used to carry state across document edits.
  */
-function annotationStateKey(annotation: BeaconAnnotation): string {
+function annotationStateKey(annotation: AnnoPulseAnnotation): string {
   return JSON.stringify([
     annotation.uri,
     annotation.ruleId,
@@ -106,9 +109,9 @@ function annotationStateKey(annotation: BeaconAnnotation): string {
  * Keeps the first annotation for each logical ID to avoid cross-source duplicates.
  */
 function uniqueById(
-  annotations: readonly BeaconAnnotation[],
-): readonly BeaconAnnotation[] {
-  const uniqueAnnotations = new Map<string, BeaconAnnotation>()
+  annotations: readonly AnnoPulseAnnotation[],
+): readonly AnnoPulseAnnotation[] {
+  const uniqueAnnotations = new Map<string, AnnoPulseAnnotation>()
 
   for (const annotation of annotations) {
     if (!uniqueAnnotations.has(annotation.id)) {
@@ -120,9 +123,9 @@ function uniqueById(
 }
 
 function isCloserAnnotation(
-  candidate: BeaconAnnotation,
-  current: BeaconAnnotation,
-  reference: BeaconAnnotation,
+  candidate: AnnoPulseAnnotation,
+  current: AnnoPulseAnnotation,
+  reference: AnnoPulseAnnotation,
 ): boolean {
   const candidateLineDistance = Math.abs(candidate.line - reference.line)
   const currentLineDistance = Math.abs(current.line - reference.line)
@@ -136,9 +139,9 @@ function isCloserAnnotation(
 }
 
 function takeClosestReplacement(
-  annotation: BeaconAnnotation,
-  candidates: BeaconAnnotation[],
-): BeaconAnnotation | undefined {
+  annotation: AnnoPulseAnnotation,
+  candidates: AnnoPulseAnnotation[],
+): AnnoPulseAnnotation | undefined {
   let replacementIndex = candidates.findIndex(
     candidate => candidate.id === annotation.id,
   )
@@ -168,14 +171,14 @@ export function createAnnotationStore(): AnnotationStore {
   /**
    * Current annotations grouped by document URI.
    */
-  const annotationsByUri = new Map<string, readonly BeaconAnnotation[]>()
+  const annotationsByUri = new Map<string, readonly AnnoPulseAnnotation[]>()
 
   /**
    * Latest source snapshots retained even when a higher-priority source wins.
    */
   const sourceSnapshotsByUri = new Map<
     string,
-    Map<BeaconAnnotation['source'], readonly BeaconAnnotation[]>
+    Map<AnnoPulseAnnotation['source'], readonly AnnoPulseAnnotation[]>
   >()
 
   /**
@@ -205,7 +208,7 @@ export function createAnnotationStore(): AnnotationStore {
   /**
    * Applies persistent state flags to a scanned annotation.
    */
-  const withState = (annotation: BeaconAnnotation): BeaconAnnotation => ({
+  const withState = (annotation: AnnoPulseAnnotation): AnnoPulseAnnotation => ({
     ...annotation,
     ignored: ignoredIds.has(annotation.id),
     resolved: resolvedIds.has(annotation.id),
@@ -215,11 +218,11 @@ export function createAnnotationStore(): AnnotationStore {
    * Moves state to matching annotations whose generated IDs changed after edits.
    */
   const reconcileState = (
-    previous: readonly BeaconAnnotation[],
-    next: readonly BeaconAnnotation[],
+    previous: readonly AnnoPulseAnnotation[],
+    next: readonly AnnoPulseAnnotation[],
   ) => {
-    const previousByKey = new Map<string, BeaconAnnotation[]>()
-    const nextByKey = new Map<string, BeaconAnnotation[]>()
+    const previousByKey = new Map<string, AnnoPulseAnnotation[]>()
+    const nextByKey = new Map<string, AnnoPulseAnnotation[]>()
 
     for (const annotation of previous) {
       const key = annotationStateKey(annotation)
@@ -232,8 +235,8 @@ export function createAnnotationStore(): AnnotationStore {
     }
 
     const moveState = (
-      annotation: BeaconAnnotation,
-      replacement: BeaconAnnotation | undefined,
+      annotation: AnnoPulseAnnotation,
+      replacement: AnnoPulseAnnotation | undefined,
     ) => {
       if (!replacement || replacement.id === annotation.id) {
         return
@@ -286,13 +289,15 @@ export function createAnnotationStore(): AnnotationStore {
     }
   }
 
-  const sourcePriority: Readonly<Record<BeaconAnnotation['source'], number>> = {
+  const sourcePriority: Readonly<
+    Record<AnnoPulseAnnotation['source'], number>
+  > = {
     notebook: 3,
     openEditor: 3,
     visibleEditor: 4,
     workspace: 1,
   }
-  const liveDocumentSources = new Set<BeaconAnnotation['source']>([
+  const liveDocumentSources = new Set<AnnoPulseAnnotation['source']>([
     'notebook',
     'openEditor',
     'visibleEditor',
@@ -338,13 +343,13 @@ export function createAnnotationStore(): AnnotationStore {
    * Publishes one source snapshot for a URI without notifying subscribers.
    */
   const setSourceForUri = (
-    source: BeaconAnnotation['source'],
+    source: AnnoPulseAnnotation['source'],
     uri: string,
-    annotations: readonly BeaconAnnotation[],
+    annotations: readonly AnnoPulseAnnotation[],
   ) => {
     const sourceSnapshots =
       sourceSnapshotsByUri.get(uri) ??
-      new Map<BeaconAnnotation['source'], readonly BeaconAnnotation[]>()
+      new Map<AnnoPulseAnnotation['source'], readonly AnnoPulseAnnotation[]>()
     const previousSourceAnnotations = liveDocumentSources.has(source)
       ? [...sourceSnapshots]
           .filter(([snapshotSource]) => liveDocumentSources.has(snapshotSource))
@@ -384,7 +389,7 @@ export function createAnnotationStore(): AnnotationStore {
    * Releases one source snapshot without notifying subscribers.
    */
   const removeSourceForUri = (
-    source: BeaconAnnotation['source'],
+    source: AnnoPulseAnnotation['source'],
     uri: string,
   ) => {
     const sourceSnapshots = sourceSnapshotsByUri.get(uri)

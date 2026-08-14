@@ -7,11 +7,11 @@ import {
   parseGeneratedFix,
   planGeneratedFix,
 } from '../src/core/ai/generate-annotation-fix'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function annotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -255,9 +255,7 @@ describe(annotationFixPrompt, () => {
     expect(messages[1].content).not.toContain(
       'source-tail-that-must-not-reach-the-model',
     )
-    expect(messages[1].content).toContain(
-      '[Code Beacon source window truncated]',
-    )
+    expect(messages[1].content).toContain('[AnnoPulse source window truncated]')
   })
 
   it('preserves ordinary generic and comparison source text', () => {

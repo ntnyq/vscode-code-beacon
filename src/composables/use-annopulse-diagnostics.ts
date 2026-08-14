@@ -1,14 +1,14 @@
 import { useDisposable } from 'reactive-vscode'
 import { Uri, languages, workspace } from 'vscode'
 import { config } from '../config'
-import { diagnosticsByUriForAnnotations } from '../core/diagnostics/beacon-diagnostics'
+import { diagnosticsByUriForAnnotations } from '../core/diagnostics/annopulse-diagnostics'
 import { annotationStore } from '../core/store/annotation-store'
 
 /**
- * Registers and keeps the Code Beacon diagnostic collection in sync.
+ * Registers and keeps the AnnoPulse diagnostic collection in sync.
  */
-export function useBeaconDiagnostics() {
-  const collection = languages.createDiagnosticCollection('code-beacon')
+export function useAnnoPulseDiagnostics() {
+  const collection = languages.createDiagnosticCollection('annopulse')
 
   /**
    * Republishes diagnostics from the current annotation store contents.
@@ -36,7 +36,7 @@ export function useBeaconDiagnostics() {
   })
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('code-beacon.diagnostics.mode')) {
+      if (event.affectsConfiguration('annopulse.diagnostics.mode')) {
         publish()
       }
     }),

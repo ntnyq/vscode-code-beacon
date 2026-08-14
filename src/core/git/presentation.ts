@@ -1,11 +1,11 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import type { BeaconGitMetadata } from './blame'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import type { AnnoPulseGitMetadata } from './blame'
 
 /**
  * Returns a trimmed owner name when an annotation has one.
  */
-export function beaconDisplayOwner(
-  annotation: BeaconAnnotation,
+export function annopulseDisplayOwner(
+  annotation: AnnoPulseAnnotation,
 ): string | undefined {
   return annotation.owner?.trim() || undefined
 }
@@ -13,7 +13,7 @@ export function beaconDisplayOwner(
 /**
  * Returns the annotation lifecycle state for display.
  */
-export function beaconDisplayState(annotation: BeaconAnnotation): string {
+export function annopulseDisplayState(annotation: AnnoPulseAnnotation): string {
   const states = [
     ...(annotation.resolved ? ['resolved'] : []),
     ...(annotation.ignored ? ['ignored'] : []),
@@ -25,8 +25,8 @@ export function beaconDisplayState(annotation: BeaconAnnotation): string {
 /**
  * Formats a commit date as a deterministic relative day label.
  */
-export function formatBeaconGitAge(
-  metadata: BeaconGitMetadata | undefined,
+export function formatAnnoPulseGitAge(
+  metadata: AnnoPulseGitMetadata | undefined,
   now: Date,
 ): string | undefined {
   const commitTime = Date.parse(metadata?.commitDate ?? '')
@@ -45,15 +45,15 @@ export function formatBeaconGitAge(
 }
 
 /**
- * Formats compact metadata for a Beacon Explorer item description.
+ * Formats compact metadata for a AnnoPulse Explorer item description.
  */
-export function formatBeaconExplorerDescription(
-  annotation: BeaconAnnotation,
-  metadata: BeaconGitMetadata | undefined,
+export function formatAnnoPulseExplorerDescription(
+  annotation: AnnoPulseAnnotation,
+  metadata: AnnoPulseGitMetadata | undefined,
   now: Date,
 ): string {
-  const owner = beaconDisplayOwner(annotation)
-  const age = formatBeaconGitAge(metadata, now)
+  const owner = annopulseDisplayOwner(annotation)
+  const age = formatAnnoPulseGitAge(metadata, now)
 
   return [
     `${annotation.line + 1}:${annotation.column + 1}`,
@@ -68,15 +68,15 @@ export function formatBeaconExplorerDescription(
 }
 
 /**
- * Formats complete plain-text metadata for a Beacon Explorer tooltip.
+ * Formats complete plain-text metadata for a AnnoPulse Explorer tooltip.
  */
-export function formatBeaconExplorerTooltip(
-  annotation: BeaconAnnotation,
-  metadata: BeaconGitMetadata | undefined,
+export function formatAnnoPulseExplorerTooltip(
+  annotation: AnnoPulseAnnotation,
+  metadata: AnnoPulseGitMetadata | undefined,
   now: Date,
 ): string {
-  const owner = beaconDisplayOwner(annotation)
-  const age = formatBeaconGitAge(metadata, now)
+  const owner = annopulseDisplayOwner(annotation)
+  const age = formatAnnoPulseGitAge(metadata, now)
   const title = annotation.message
     ? `${annotation.keyword} ${annotation.message}`
     : annotation.keyword
@@ -84,7 +84,7 @@ export function formatBeaconExplorerTooltip(
     title,
     `Location: ${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`,
     `Owner: ${owner ? `@${owner}` : 'Unassigned'}`,
-    `State: ${beaconDisplayState(annotation)}`,
+    `State: ${annopulseDisplayState(annotation)}`,
   ]
 
   if (metadata) {

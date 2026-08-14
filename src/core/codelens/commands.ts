@@ -1,21 +1,21 @@
 import { commands } from '../../meta'
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 
 /**
- * Command descriptor used by CodeLens actions for one beacon annotation.
+ * Command descriptor used by CodeLens actions for one AnnoPulse annotation.
  */
-export interface BeaconCodeLensCommand {
+export interface AnnoPulseCodeLensCommand {
   readonly command: string
   readonly title: string
-  readonly arguments: [BeaconAnnotation]
+  readonly arguments: [AnnoPulseAnnotation]
 }
 
 /**
  * Builds CodeLens commands for the current resolved and ignored state.
  */
-export function createBeaconCodeLensCommands(
-  annotation: BeaconAnnotation,
-): readonly BeaconCodeLensCommand[] {
+export function createAnnoPulseCodeLensCommands(
+  annotation: AnnoPulseAnnotation,
+): readonly AnnoPulseCodeLensCommand[] {
   return [
     annotation.resolved
       ? {

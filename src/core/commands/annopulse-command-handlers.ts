@@ -1,4 +1,4 @@
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 import type {
   AiActionCancellation,
   AiActionExecutor,
@@ -20,9 +20,9 @@ import {
 import {
   formatAnnotations,
   formatAnnotationsAsMarkdown,
-  type BeaconExportFormat,
+  type AnnoPulseExportFormat,
 } from '../export/format'
-import { formatBeaconIssue } from '../issues/format'
+import { formatAnnoPulseIssue } from '../issues/format'
 import type { AnnotationStore } from '../store/annotation-store'
 import { decodeAnnotationTarget } from './annotation-target'
 
@@ -40,7 +40,7 @@ export interface GeneratedFixApplication {
   readonly start: number
 }
 
-export interface BeaconCommandDocument {
+export interface AnnoPulseCommandDocument {
   readonly languageId: string
   readonly applyGeneratedFix: (
     application: GeneratedFixApplication,
@@ -48,28 +48,28 @@ export interface BeaconCommandDocument {
   readonly getText: () => string
 }
 
-export interface BeaconCommandLanguageModel {
+export interface AnnoPulseCommandLanguageModel {
   readonly request: (
     messages: readonly string[],
     token: AiActionCancellation,
   ) => PromiseLike<AsyncIterable<unknown>>
 }
 
-export interface BeaconCommandOutput {
+export interface AnnoPulseCommandOutput {
   readonly append: (value: string) => void
   readonly clear: () => void
   readonly dispose: () => void
   readonly show: (preserveFocus?: boolean) => void
 }
 
-export interface BeaconCommandAdapter {
+export interface AnnoPulseCommandAdapter {
   readonly aiEnabled: boolean
   readonly enabled: boolean
-  readonly createAiActionExecutor: () => AiActionExecutor<BeaconCommandLanguageModel>
-  readonly createOutput: (name: string) => BeaconCommandOutput
-  readonly openDocument: (uri: string) => PromiseLike<BeaconCommandDocument>
+  readonly createAiActionExecutor: () => AiActionExecutor<AnnoPulseCommandLanguageModel>
+  readonly createOutput: (name: string) => AnnoPulseCommandOutput
+  readonly openDocument: (uri: string) => PromiseLike<AnnoPulseCommandDocument>
   readonly openExportDocument: (
-    format: BeaconExportFormat,
+    format: AnnoPulseExportFormat,
     content: string,
   ) => PromiseLike<unknown>
   readonly openExtensionSettings: () => PromiseLike<unknown>
@@ -79,30 +79,30 @@ export interface BeaconCommandAdapter {
   readonly writeClipboard: (content: string) => PromiseLike<unknown>
 }
 
-export type BeaconCommandHandler = (value?: unknown) => unknown
+export type AnnoPulseCommandHandler = (value?: unknown) => unknown
 
-export interface BeaconCommandHandlers {
-  readonly clearCache: BeaconCommandHandler
-  readonly copyMarkdown: BeaconCommandHandler
-  readonly createIssue: BeaconCommandHandler
-  readonly disable: BeaconCommandHandler
+export interface AnnoPulseCommandHandlers {
+  readonly clearCache: AnnoPulseCommandHandler
+  readonly copyMarkdown: AnnoPulseCommandHandler
+  readonly createIssue: AnnoPulseCommandHandler
+  readonly disable: AnnoPulseCommandHandler
   readonly dispose: () => void
-  readonly enable: BeaconCommandHandler
-  readonly explain: BeaconCommandHandler
+  readonly enable: AnnoPulseCommandHandler
+  readonly explain: AnnoPulseCommandHandler
   readonly exportAnnotations: (
-    format: BeaconExportFormat,
+    format: AnnoPulseExportFormat,
   ) => PromiseLike<unknown>
-  readonly exportCsv: BeaconCommandHandler
-  readonly exportJson: BeaconCommandHandler
-  readonly exportMarkdown: BeaconCommandHandler
-  readonly generateFix: BeaconCommandHandler
-  readonly ignore: BeaconCommandHandler
-  readonly openSettings: BeaconCommandHandler
-  readonly resolve: BeaconCommandHandler
-  readonly summarizeWorkspace: BeaconCommandHandler
-  readonly toggle: BeaconCommandHandler
-  readonly unignore: BeaconCommandHandler
-  readonly unresolve: BeaconCommandHandler
+  readonly exportCsv: AnnoPulseCommandHandler
+  readonly exportJson: AnnoPulseCommandHandler
+  readonly exportMarkdown: AnnoPulseCommandHandler
+  readonly generateFix: AnnoPulseCommandHandler
+  readonly ignore: AnnoPulseCommandHandler
+  readonly openSettings: AnnoPulseCommandHandler
+  readonly resolve: AnnoPulseCommandHandler
+  readonly summarizeWorkspace: AnnoPulseCommandHandler
+  readonly toggle: AnnoPulseCommandHandler
+  readonly unignore: AnnoPulseCommandHandler
+  readonly unresolve: AnnoPulseCommandHandler
 }
 
 interface AiActionOutcomeMessages {
@@ -113,9 +113,9 @@ interface AiActionOutcomeMessages {
   readonly preparationFailed: string
 }
 
-function explanationOutputHeading(annotation: BeaconAnnotation): string {
+function explanationOutputHeading(annotation: AnnoPulseAnnotation): string {
   return [
-    '# Code Beacon explanation',
+    '# AnnoPulse explanation',
     '',
     `URI: ${annotation.uri}`,
     `Location: line ${annotation.line + 1}, column ${annotation.column + 1}`,
@@ -130,7 +130,7 @@ function workspaceSummaryOutputHeading(summary: {
   readonly truncated: boolean
 }): string {
   return [
-    '# Code Beacon workspace summary',
+    '# AnnoPulse workspace summary',
     '',
     `Annotations — total: ${summary.total}; returned: ${summary.returned}; sent: ${summary.sent}; truncated: ${summary.truncated ? 'yes' : 'no'}`,
     '',
@@ -138,8 +138,8 @@ function workspaceSummaryOutputHeading(summary: {
 }
 
 function annotationCommand(
-  action: (annotation: BeaconAnnotation) => void,
-): BeaconCommandHandler {
+  action: (annotation: AnnoPulseAnnotation) => void,
+): AnnoPulseCommandHandler {
   return value => {
     const annotation = decodeAnnotationTarget(value)
     if (annotation) {
@@ -149,7 +149,7 @@ function annotationCommand(
 }
 
 async function showAiActionOutcome(
-  adapter: BeaconCommandAdapter,
+  adapter: AnnoPulseCommandAdapter,
   outcome: AiActionOutcome<unknown>,
   messages: AiActionOutcomeMessages,
 ) {
@@ -178,7 +178,7 @@ async function showAiActionOutcome(
 }
 
 async function showGeneratedFixOutcome(
-  adapter: BeaconCommandAdapter,
+  adapter: AnnoPulseCommandAdapter,
   outcome: GeneratedFixOutcome,
 ) {
   switch (outcome) {
@@ -212,17 +212,17 @@ async function showGeneratedFixOutcome(
 /**
  * Creates the business handlers shared by every command registration adapter.
  */
-export function createBeaconCommandHandlers(
-  adapter: BeaconCommandAdapter,
+export function createAnnoPulseCommandHandlers(
+  adapter: AnnoPulseCommandAdapter,
   annotationStore: AnnotationStore,
-): BeaconCommandHandlers {
-  let explainOutput: BeaconCommandOutput | undefined
-  let workspaceSummaryOutput: BeaconCommandOutput | undefined
+): AnnoPulseCommandHandlers {
+  let explainOutput: AnnoPulseCommandOutput | undefined
+  let workspaceSummaryOutput: AnnoPulseCommandOutput | undefined
   const explainExecutor = adapter.createAiActionExecutor()
   const generateFixExecutor = adapter.createAiActionExecutor()
   const workspaceSummaryExecutor = adapter.createAiActionExecutor()
 
-  const exportAnnotations = (format: BeaconExportFormat) =>
+  const exportAnnotations = (format: AnnoPulseExportFormat) =>
     adapter.openExportDocument(
       format,
       formatAnnotations(annotationStore.getAll(), format),
@@ -233,14 +233,14 @@ export function createBeaconCommandHandlers(
 
     if (!annotation) {
       await adapter.showWarning(
-        'Select a beacon in the Explorer to explain it.',
+        'Select an annotation in the Explorer to explain it.',
       )
       return
     }
 
     if (!adapter.aiEnabled) {
       await adapter.showWarning(
-        'Enable code-beacon.ai.enabled to explain annotations.',
+        'Enable annopulse.ai.enabled to explain annotations.',
       )
       return
     }
@@ -256,10 +256,9 @@ export function createBeaconCommandHandlers(
           ),
         }
       },
-      progressTitle: 'Explaining Code Beacon annotation',
+      progressTitle: 'Explaining AnnoPulse annotation',
       async run({ consumeText, model, prepared, token }) {
-        const output = (explainOutput ??=
-          adapter.createOutput('Code Beacon AI'))
+        const output = (explainOutput ??= adapter.createOutput('AnnoPulse AI'))
         output.clear()
         output.append(explanationOutputHeading(annotation))
 
@@ -296,14 +295,14 @@ export function createBeaconCommandHandlers(
 
     if (!annotation) {
       await adapter.showWarning(
-        'Select a beacon in the Explorer to generate a fix.',
+        'Select an annotation in the Explorer to generate a fix.',
       )
       return
     }
 
     if (!adapter.aiEnabled) {
       await adapter.showWarning(
-        'Enable code-beacon.ai.enabled to generate annotation fixes.',
+        'Enable annopulse.ai.enabled to generate annotation fixes.',
       )
       return
     }
@@ -322,7 +321,7 @@ export function createBeaconCommandHandlers(
           snapshot,
         }
       },
-      progressTitle: 'Generating Code Beacon fix',
+      progressTitle: 'Generating annotation fix',
       async run({ consumeText, model, prepared, shouldStop, token }) {
         const stream = await model.request(
           prepared.prompt.map(message => message.content),
@@ -388,7 +387,7 @@ export function createBeaconCommandHandlers(
   const summarizeWorkspace = async () => {
     if (!adapter.aiEnabled) {
       await adapter.showWarning(
-        'Enable code-beacon.ai.enabled to summarize workspace annotations.',
+        'Enable annopulse.ai.enabled to summarize workspace annotations.',
       )
       return
     }
@@ -398,7 +397,7 @@ export function createBeaconCommandHandlers(
     if (summary.total === 0) {
       workspaceSummaryExecutor.supersede()
       await adapter.showInformation(
-        'No unresolved, non-ignored Code Beacon annotations are currently indexed to summarize.',
+        'No unresolved, non-ignored AnnoPulse annotations are currently indexed to summarize.',
       )
       return
     }
@@ -406,7 +405,7 @@ export function createBeaconCommandHandlers(
     const prompt = workspaceAnnotationSummaryPrompt(summary)
     const outcome = await workspaceSummaryExecutor.execute({
       prepare: () => ({ prompt, summary }),
-      progressTitle: 'Summarizing Code Beacon workspace annotations',
+      progressTitle: 'Summarizing AnnoPulse workspace annotations',
       async run({ consumeText, model, prepared, shouldStop, token }) {
         const stream = await model.request([prepared.prompt], token)
 
@@ -415,7 +414,7 @@ export function createBeaconCommandHandlers(
         }
 
         const output = (workspaceSummaryOutput ??= adapter.createOutput(
-          'Code Beacon Workspace Summary',
+          'AnnoPulse Workspace Summary',
         ))
         output.clear()
         output.append(workspaceSummaryOutputHeading(prepared.summary))
@@ -447,7 +446,7 @@ export function createBeaconCommandHandlers(
     copyMarkdown: value =>
       adapter.writeClipboard(
         formatAnnotationsAsMarkdown(
-          value ? [value as BeaconAnnotation] : annotationStore.getAll(),
+          value ? [value as AnnoPulseAnnotation] : annotationStore.getAll(),
         ),
       ),
     async createIssue(value) {
@@ -455,12 +454,12 @@ export function createBeaconCommandHandlers(
 
       if (!annotation) {
         await adapter.showWarning(
-          'Select a beacon in the Explorer to create an issue body.',
+          'Select an annotation in the Explorer to create an issue body.',
         )
         return
       }
 
-      await adapter.writeClipboard(formatBeaconIssue(annotation).body)
+      await adapter.writeClipboard(formatAnnoPulseIssue(annotation).body)
       await adapter.showInformation('Issue body copied to clipboard.')
     },
     disable: () => adapter.setEnabled(false),

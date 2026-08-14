@@ -1,9 +1,9 @@
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 
 /**
- * Export formats supported by Code Beacon commands.
+ * Export formats supported by AnnoPulse commands.
  */
-export type BeaconExportFormat = 'markdown' | 'json' | 'csv'
+export type AnnoPulseExportFormat = 'markdown' | 'json' | 'csv'
 
 /**
  * Stable serialized annotation shape used by JSON and CSV exports.
@@ -24,7 +24,7 @@ interface ExportableAnnotation {
  * Converts a runtime annotation into a one-based export record.
  */
 function toExportableAnnotation(
-  annotation: BeaconAnnotation,
+  annotation: AnnoPulseAnnotation,
 ): ExportableAnnotation {
   return {
     category: annotation.category,
@@ -56,7 +56,7 @@ function escapeCsvValue(value: string | number): string {
 /**
  * Formats a one-based annotation location for human-readable exports.
  */
-function formatAnnotationLink(annotation: BeaconAnnotation): string {
+function formatAnnotationLink(annotation: AnnoPulseAnnotation): string {
   return `${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`
 }
 
@@ -64,14 +64,14 @@ function formatAnnotationLink(annotation: BeaconAnnotation): string {
  * Formats annotations as a compact Markdown report.
  */
 export function formatAnnotationsAsMarkdown(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): string {
   if (annotations.length === 0) {
-    return '# Code Beacon\n\nNo annotations found.\n'
+    return '# AnnoPulse\n\nNo annotations found.\n'
   }
 
   return [
-    '# Code Beacon',
+    '# AnnoPulse',
     '',
     ...annotations.map(annotation => {
       const message = annotation.message ? ` - ${annotation.message}` : ''
@@ -85,7 +85,7 @@ export function formatAnnotationsAsMarkdown(
  * Formats annotations as pretty-printed JSON with one-based positions.
  */
 export function formatAnnotationsAsJson(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): string {
   return `${JSON.stringify(annotations.map(toExportableAnnotation), null, 2)}\n`
 }
@@ -94,7 +94,7 @@ export function formatAnnotationsAsJson(
  * Formats annotations as CSV with escaped values and one-based positions.
  */
 export function formatAnnotationsAsCsv(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): string {
   const headers = [
     'uri',
@@ -131,8 +131,8 @@ export function formatAnnotationsAsCsv(
  * Dispatches annotation export formatting by requested format.
  */
 export function formatAnnotations(
-  annotations: readonly BeaconAnnotation[],
-  format: BeaconExportFormat,
+  annotations: readonly AnnoPulseAnnotation[],
+  format: AnnoPulseExportFormat,
 ): string {
   const formatters = {
     csv: formatAnnotationsAsCsv,

@@ -24,7 +24,7 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run typecheck
       - run: pnpm run build
-      - run: pnpm exec vsce package --no-dependencies --out /tmp/vscode-code-beacon-ci.vsix
+      - run: pnpm exec vsce package --no-dependencies --out /tmp/vscode-code-annopulse-ci.vsix
 
   test:
     runs-on: ubuntu-latest

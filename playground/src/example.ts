@@ -1,4 +1,4 @@
-// oxlint-disable eslint/no-warning-comments -- Playground intentionally contains beacon keywords.
+// oxlint-disable eslint/no-warning-comments -- Playground intentionally contains annotation keywords.
 
 export function calculateInvoiceTotal(items: readonly number[]): number {
   // TODO: handle discounts from account-level contracts

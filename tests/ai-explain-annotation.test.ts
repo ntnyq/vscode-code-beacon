@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
   annotationExplanationPrompt,
   annotationSourceWindow,
-  BEACON_EXPLANATION_CONTEXT_LINE_RADIUS,
-  MAX_BEACON_EXPLANATION_CONTEXT_LENGTH,
+  ANNOPULSE_EXPLANATION_CONTEXT_LINE_RADIUS,
+  MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH,
 } from '../src/core/ai/explain-annotation'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function annotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -54,7 +54,7 @@ describe(annotationSourceWindow, () => {
 
     const window = annotationSourceWindow(text, 62)
 
-    expect(BEACON_EXPLANATION_CONTEXT_LINE_RADIUS).toBe(60)
+    expect(ANNOPULSE_EXPLANATION_CONTEXT_LINE_RADIUS).toBe(60)
     expect(window).toContain('3 | line 2')
     expect(window).toContain('123 | line 122')
     expect(window.split('\n')).not.toContain('2 | line 1')
@@ -83,11 +83,11 @@ describe(annotationSourceWindow, () => {
 
     const window = annotationSourceWindow(text, 60)
 
-    expect(MAX_BEACON_EXPLANATION_CONTEXT_LENGTH).toBe(12_000)
+    expect(MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH).toBe(12_000)
     expect(window.length).toBeLessThanOrEqual(
-      MAX_BEACON_EXPLANATION_CONTEXT_LENGTH,
+      MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH,
     )
-    expect(window.endsWith('\n[Code Beacon context truncated]')).toBe(true)
+    expect(window.endsWith('\n[AnnoPulse context truncated]')).toBe(true)
   })
 
   it('retains the selected line while capping oversized context', () => {
@@ -102,9 +102,9 @@ describe(annotationSourceWindow, () => {
     expect(window).toContain(`61 | selected-context-60-${'x'.repeat(200)}`)
     expect(window).toContain(`63 | selected-context-62-${'x'.repeat(200)}`)
     expect(window.length).toBeLessThanOrEqual(
-      MAX_BEACON_EXPLANATION_CONTEXT_LENGTH,
+      MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH,
     )
-    expect(window.endsWith('\n[Code Beacon context truncated]')).toBe(true)
+    expect(window.endsWith('\n[AnnoPulse context truncated]')).toBe(true)
   })
 
   it('normalizes CRLF line endings', () => {
@@ -114,10 +114,10 @@ describe(annotationSourceWindow, () => {
   })
 
   it('does not split a surrogate pair at the context cap', () => {
-    const truncationMarker = '\n[Code Beacon context truncated]'
+    const truncationMarker = '\n[AnnoPulse context truncated]'
     const linePrefix = '1 | '
     const contextBudget =
-      MAX_BEACON_EXPLANATION_CONTEXT_LENGTH - truncationMarker.length
+      MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH - truncationMarker.length
     const text = `${'x'.repeat(contextBudget - linePrefix.length - 1)}😀${'x'.repeat(
       truncationMarker.length,
     )}`
@@ -125,7 +125,7 @@ describe(annotationSourceWindow, () => {
     const window = annotationSourceWindow(text, 0)
 
     expect(window.length).toBeLessThanOrEqual(
-      MAX_BEACON_EXPLANATION_CONTEXT_LENGTH,
+      MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH,
     )
     expect(window).not.toContain('😀')
     expect(window).not.toContain('\uD83D')

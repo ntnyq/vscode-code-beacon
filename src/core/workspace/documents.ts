@@ -11,7 +11,7 @@ export interface ScannableTextDocument {
 /**
  * Provider selector used for source documents across local and virtual schemes.
  */
-export const beaconDocumentSelector = '*'
+export const annopulseDocumentSelector = '*'
 
 /**
  * Schemes that are text documents but not source files users expect to scan.
@@ -49,7 +49,7 @@ export function isLanguageEnabled(
 }
 
 /**
- * Checks whether a text document can be scanned by Code Beacon.
+ * Checks whether a text document can be scanned by AnnoPulse.
  */
 export function isScannableTextDocument(
   document: ScannableTextDocument,

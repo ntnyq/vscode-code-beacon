@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  createBeaconQualityCheck,
-  serializeBeaconQualityCheck,
+  createAnnoPulseQualityCheck,
+  serializeAnnoPulseQualityCheck,
 } from '../src/core/ai/quality-check'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 const context = {
   activeUri: 'file:///workspace/a.ts',
@@ -12,8 +12,8 @@ const context = {
 
 function annotation(
   id: string,
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -38,9 +38,9 @@ function annotation(
   }
 }
 
-describe(createBeaconQualityCheck, () => {
+describe(createAnnoPulseQualityCheck, () => {
   it('scores a bounded active-file snapshot and retains selection metadata', () => {
-    const result = createBeaconQualityCheck(
+    const result = createAnnoPulseQualityCheck(
       [
         annotation('b', { dueDate: '2026-08-02', line: 2 }),
         annotation('a', { dueDate: '2026-08-01' }),
@@ -71,9 +71,9 @@ describe(createBeaconQualityCheck, () => {
   })
 })
 
-describe(serializeBeaconQualityCheck, () => {
+describe(serializeAnnoPulseQualityCheck, () => {
   it('serializes safe quality JSON without annotation internals', () => {
-    const result = createBeaconQualityCheck(
+    const result = createAnnoPulseQualityCheck(
       [
         annotation('a', {
           diagnostics: { enabled: true },
@@ -97,7 +97,7 @@ describe(serializeBeaconQualityCheck, () => {
       new Date(2026, 0, 2),
     )
     const serialized = JSON.parse(
-      serializeBeaconQualityCheck(result),
+      serializeAnnoPulseQualityCheck(result),
     ) as typeof result
     const serializedAnnotation = serialized.annotations[0]?.annotation
 

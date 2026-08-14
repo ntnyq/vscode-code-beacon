@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
-  filterBeaconAnnotations,
-  isBeaconOwnerless,
-  isBeaconStale,
-  type BeaconExplorerFilter,
+  filterAnnoPulseAnnotations,
+  isAnnoPulseOwnerless,
+  isAnnoPulseStale,
+  type AnnoPulseExplorerFilter,
 } from '../src/core/explorer/filter'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
-const annotations: readonly BeaconAnnotation[] = [
+const annotations: readonly AnnoPulseAnnotation[] = [
   createAnnotation('active-todo', {
     category: 'todo',
     message: 'Ship the release',
@@ -55,7 +55,7 @@ const annotations: readonly BeaconAnnotation[] = [
   }),
 ]
 
-const defaultFilter: BeaconExplorerFilter = {
+const defaultFilter: AnnoPulseExplorerFilter = {
   activeUri: undefined,
   categories: [],
   changedUris: new Set(),
@@ -75,8 +75,8 @@ const defaultFilter: BeaconExplorerFilter = {
 
 function createAnnotation(
   id: string,
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -101,7 +101,7 @@ function createAnnotation(
   }
 }
 
-function createGitMetadata(commitDate: string): BeaconGitMetadata {
+function createGitMetadata(commitDate: string): AnnoPulseGitMetadata {
   return {
     authorEmail: 'author@example.com',
     authorName: 'Author',
@@ -111,17 +111,17 @@ function createGitMetadata(commitDate: string): BeaconGitMetadata {
   }
 }
 
-function filteredIds(filter: Partial<BeaconExplorerFilter>): string[] {
-  return filterBeaconAnnotations(annotations, {
+function filteredIds(filter: Partial<AnnoPulseExplorerFilter>): string[] {
+  return filterAnnoPulseAnnotations(annotations, {
     ...defaultFilter,
     ...filter,
   }).map(annotation => annotation.id)
 }
 
-describe(filterBeaconAnnotations, () => {
+describe(filterAnnoPulseAnnotations, () => {
   const filterCases: readonly [
     string,
-    Partial<BeaconExplorerFilter>,
+    Partial<AnnoPulseExplorerFilter>,
     string[],
   ][] = [
     ['category', { categories: ['bug'] }, ['active-bug']],
@@ -193,11 +193,11 @@ describe(filterBeaconAnnotations, () => {
       createAnnotation('owned', { owner: 'Alice' }),
     ]
 
-    expect(isBeaconOwnerless(ownerlessAnnotations[0])).toBe(true)
-    expect(isBeaconOwnerless(ownerlessAnnotations[1])).toBe(true)
-    expect(isBeaconOwnerless(ownerlessAnnotations[2])).toBe(false)
+    expect(isAnnoPulseOwnerless(ownerlessAnnotations[0])).toBe(true)
+    expect(isAnnoPulseOwnerless(ownerlessAnnotations[1])).toBe(true)
+    expect(isAnnoPulseOwnerless(ownerlessAnnotations[2])).toBe(false)
     expect(
-      filterBeaconAnnotations(ownerlessAnnotations, {
+      filterAnnoPulseAnnotations(ownerlessAnnotations, {
         ...defaultFilter,
         onlyOwnerless: true,
       }).map(annotation => annotation.id),
@@ -210,17 +210,17 @@ describe(filterBeaconAnnotations, () => {
     const oneMillisecondAfter = '2026-04-13T00:00:00.001Z'
 
     expect(
-      isBeaconStale(
+      isAnnoPulseStale(
         createGitMetadata(oneMillisecondBefore),
         90,
         defaultFilter.now,
       ),
     ).toBe(true)
     expect(
-      isBeaconStale(createGitMetadata(cutoff), 90, defaultFilter.now),
+      isAnnoPulseStale(createGitMetadata(cutoff), 90, defaultFilter.now),
     ).toBe(false)
     expect(
-      isBeaconStale(
+      isAnnoPulseStale(
         createGitMetadata(oneMillisecondAfter),
         90,
         defaultFilter.now,
@@ -229,7 +229,7 @@ describe(filterBeaconAnnotations, () => {
   })
 
   it('does not treat missing or invalid metadata as stale', () => {
-    const invalidMetadata: BeaconGitMetadata = {
+    const invalidMetadata: AnnoPulseGitMetadata = {
       authorEmail: 'author@example.com',
       authorName: 'Author',
       commitDate: 'not-a-date',
@@ -237,8 +237,8 @@ describe(filterBeaconAnnotations, () => {
       summary: 'Test commit',
     }
 
-    expect(isBeaconStale(undefined, 90, defaultFilter.now)).toBe(false)
-    expect(isBeaconStale(invalidMetadata, 90, defaultFilter.now)).toBe(false)
+    expect(isAnnoPulseStale(undefined, 90, defaultFilter.now)).toBe(false)
+    expect(isAnnoPulseStale(invalidMetadata, 90, defaultFilter.now)).toBe(false)
   })
 
   it('composes ownerless and stale filters with category filtering using AND', () => {
@@ -255,7 +255,7 @@ describe(filterBeaconAnnotations, () => {
       }),
       createAnnotation('stale-ownerless-bug', { category: 'bug' }),
     ]
-    const metadataByAnnotationId = new Map<string, BeaconGitMetadata>([
+    const metadataByAnnotationId = new Map<string, AnnoPulseGitMetadata>([
       ['stale-ownerless-todo', createGitMetadata('2026-04-12T23:59:59.999Z')],
       ['fresh-ownerless-todo', createGitMetadata('2026-04-13T00:00:00.000Z')],
       ['stale-owned-todo', createGitMetadata('2026-04-12T23:59:59.999Z')],
@@ -263,7 +263,7 @@ describe(filterBeaconAnnotations, () => {
     ])
 
     expect(
-      filterBeaconAnnotations(annotationsToFilter, {
+      filterAnnoPulseAnnotations(annotationsToFilter, {
         ...defaultFilter,
         categories: ['todo'],
         metadataByAnnotationId,

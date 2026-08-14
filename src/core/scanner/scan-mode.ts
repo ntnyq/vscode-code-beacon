@@ -3,7 +3,7 @@ import type { ConfigShorthandTypeMap } from '../../meta'
 /**
  * Configured scan mode exposed by the extension settings schema.
  */
-export type BeaconScanMode = ConfigShorthandTypeMap['scanMode']
+export type AnnoPulseScanMode = ConfigShorthandTypeMap['scanMode']
 
 /**
  * Initial scan action selected when the extension activates or refreshes.
@@ -25,7 +25,7 @@ export type AutomaticDocumentChangeScope =
 /**
  * Resolves a user-facing scan mode into the initial scan target.
  */
-export function initialScanTarget(mode: BeaconScanMode): InitialScanTarget {
+export function initialScanTarget(mode: AnnoPulseScanMode): InitialScanTarget {
   if (mode === 'manual') {
     return 'none'
   }
@@ -37,7 +37,7 @@ export function initialScanTarget(mode: BeaconScanMode): InitialScanTarget {
  * Resolves a user-facing scan mode into an incremental document-change scope.
  */
 export function automaticDocumentChangeScope(
-  mode: BeaconScanMode,
+  mode: AnnoPulseScanMode,
 ): AutomaticDocumentChangeScope {
   if (mode === 'visibleEditors') {
     return 'visibleEditors'

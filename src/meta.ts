@@ -3,9 +3,9 @@
 
 // Meta info
 export const publisher = "ntnyq"
-export const name = "vscode-code-beacon"
+export const name = "annopulse"
 export const version = "0.1.0"
-export const displayName = "Code Beacon"
+export const displayName = "AnnoPulse"
 export const description = "Highlight, list, diagnose, and export code annotations such as TODO, FIXME, BUG, NOTE, REVIEW, SECURITY, and PERF."
 export const extensionId = `${publisher}.${name}`
 
@@ -13,256 +13,256 @@ export const extensionId = `${publisher}.${name}`
  * Type union of all commands
  */
 export type CommandKey =
-  | "code-beacon.enable"
-  | "code-beacon.disable"
-  | "code-beacon.toggle"
-  | "code-beacon.refresh"
-  | "code-beacon.scanWorkspace"
-  | "code-beacon.scanActiveFile"
-  | "code-beacon.scanOpenEditors"
-  | "code-beacon.focusExplorer"
-  | "code-beacon.reveal"
-  | "code-beacon.copyLink"
-  | "code-beacon.copyMarkdown"
-  | "code-beacon.createIssue"
-  | "code-beacon.explain"
-  | "code-beacon.generateFix"
-  | "code-beacon.summarizeWorkspace"
-  | "code-beacon.resolve"
-  | "code-beacon.unresolve"
-  | "code-beacon.ignore"
-  | "code-beacon.unignore"
-  | "code-beacon.exportMarkdown"
-  | "code-beacon.exportJson"
-  | "code-beacon.exportCsv"
-  | "code-beacon.openSettings"
-  | "code-beacon.clearCache"
+  | "annopulse.enable"
+  | "annopulse.disable"
+  | "annopulse.toggle"
+  | "annopulse.refresh"
+  | "annopulse.scanWorkspace"
+  | "annopulse.scanActiveFile"
+  | "annopulse.scanOpenEditors"
+  | "annopulse.focusExplorer"
+  | "annopulse.reveal"
+  | "annopulse.copyLink"
+  | "annopulse.copyMarkdown"
+  | "annopulse.createIssue"
+  | "annopulse.explain"
+  | "annopulse.generateFix"
+  | "annopulse.summarizeWorkspace"
+  | "annopulse.resolve"
+  | "annopulse.unresolve"
+  | "annopulse.ignore"
+  | "annopulse.unignore"
+  | "annopulse.exportMarkdown"
+  | "annopulse.exportJson"
+  | "annopulse.exportCsv"
+  | "annopulse.openSettings"
+  | "annopulse.clearCache"
 
 /**
- * Commands map registered by `ntnyq.vscode-code-beacon`
+ * Commands map registered by `ntnyq.annopulse`
  */
 export const commands = {
   /**
-   * Enable Code Beacon
-   * @value `code-beacon.enable`
+   * Enable AnnoPulse
+   * @value `annopulse.enable`
    */
-  enable: "code-beacon.enable",
+  enable: "annopulse.enable",
   /**
-   * Disable Code Beacon
-   * @value `code-beacon.disable`
+   * Disable AnnoPulse
+   * @value `annopulse.disable`
    */
-  disable: "code-beacon.disable",
+  disable: "annopulse.disable",
   /**
-   * Toggle Code Beacon
-   * @value `code-beacon.toggle`
+   * Toggle AnnoPulse
+   * @value `annopulse.toggle`
    */
-  toggle: "code-beacon.toggle",
+  toggle: "annopulse.toggle",
   /**
-   * Refresh Beacons
-   * @value `code-beacon.refresh`
+   * Refresh Annotations
+   * @value `annopulse.refresh`
    */
-  refresh: "code-beacon.refresh",
+  refresh: "annopulse.refresh",
   /**
-   * Scan Workspace for Beacons
-   * @value `code-beacon.scanWorkspace`
+   * Scan Workspace for Annotations
+   * @value `annopulse.scanWorkspace`
    */
-  scanWorkspace: "code-beacon.scanWorkspace",
+  scanWorkspace: "annopulse.scanWorkspace",
   /**
-   * Scan Active File for Beacons
-   * @value `code-beacon.scanActiveFile`
+   * Scan Active File for Annotations
+   * @value `annopulse.scanActiveFile`
    */
-  scanActiveFile: "code-beacon.scanActiveFile",
+  scanActiveFile: "annopulse.scanActiveFile",
   /**
-   * Scan Open Editors for Beacons
-   * @value `code-beacon.scanOpenEditors`
+   * Scan Open Editors for Annotations
+   * @value `annopulse.scanOpenEditors`
    */
-  scanOpenEditors: "code-beacon.scanOpenEditors",
+  scanOpenEditors: "annopulse.scanOpenEditors",
   /**
-   * Focus Code Beacon Explorer
-   * @value `code-beacon.focusExplorer`
+   * Focus AnnoPulse Explorer
+   * @value `annopulse.focusExplorer`
    */
-  focusExplorer: "code-beacon.focusExplorer",
+  focusExplorer: "annopulse.focusExplorer",
   /**
-   * Reveal Beacon
-   * @value `code-beacon.reveal`
+   * Reveal Annotation
+   * @value `annopulse.reveal`
    */
-  reveal: "code-beacon.reveal",
+  reveal: "annopulse.reveal",
   /**
-   * Copy Beacon Link
-   * @value `code-beacon.copyLink`
+   * Copy Annotation Link
+   * @value `annopulse.copyLink`
    */
-  copyLink: "code-beacon.copyLink",
+  copyLink: "annopulse.copyLink",
   /**
-   * Copy Beacon as Markdown
-   * @value `code-beacon.copyMarkdown`
+   * Copy Annotation as Markdown
+   * @value `annopulse.copyMarkdown`
    */
-  copyMarkdown: "code-beacon.copyMarkdown",
+  copyMarkdown: "annopulse.copyMarkdown",
   /**
    * Create Issue Body
-   * @value `code-beacon.createIssue`
+   * @value `annopulse.createIssue`
    */
-  createIssue: "code-beacon.createIssue",
+  createIssue: "annopulse.createIssue",
   /**
-   * Explain Beacon
-   * @value `code-beacon.explain`
+   * Explain Annotation
+   * @value `annopulse.explain`
    */
-  explain: "code-beacon.explain",
+  explain: "annopulse.explain",
   /**
-   * Generate Beacon Fix
-   * @value `code-beacon.generateFix`
+   * Generate Annotation Fix
+   * @value `annopulse.generateFix`
    */
-  generateFix: "code-beacon.generateFix",
+  generateFix: "annopulse.generateFix",
   /**
-   * Summarize Workspace Beacons
-   * @value `code-beacon.summarizeWorkspace`
+   * Summarize Workspace Annotations
+   * @value `annopulse.summarizeWorkspace`
    */
-  summarizeWorkspace: "code-beacon.summarizeWorkspace",
+  summarizeWorkspace: "annopulse.summarizeWorkspace",
   /**
-   * Resolve Beacon
-   * @value `code-beacon.resolve`
+   * Resolve Annotation
+   * @value `annopulse.resolve`
    */
-  resolve: "code-beacon.resolve",
+  resolve: "annopulse.resolve",
   /**
-   * Reopen Beacon
-   * @value `code-beacon.unresolve`
+   * Reopen Annotation
+   * @value `annopulse.unresolve`
    */
-  unresolve: "code-beacon.unresolve",
+  unresolve: "annopulse.unresolve",
   /**
-   * Ignore Beacon
-   * @value `code-beacon.ignore`
+   * Ignore Annotation
+   * @value `annopulse.ignore`
    */
-  ignore: "code-beacon.ignore",
+  ignore: "annopulse.ignore",
   /**
-   * Unignore Beacon
-   * @value `code-beacon.unignore`
+   * Unignore Annotation
+   * @value `annopulse.unignore`
    */
-  unignore: "code-beacon.unignore",
+  unignore: "annopulse.unignore",
   /**
-   * Export Beacons as Markdown
-   * @value `code-beacon.exportMarkdown`
+   * Export Annotations as Markdown
+   * @value `annopulse.exportMarkdown`
    */
-  exportMarkdown: "code-beacon.exportMarkdown",
+  exportMarkdown: "annopulse.exportMarkdown",
   /**
-   * Export Beacons as JSON
-   * @value `code-beacon.exportJson`
+   * Export Annotations as JSON
+   * @value `annopulse.exportJson`
    */
-  exportJson: "code-beacon.exportJson",
+  exportJson: "annopulse.exportJson",
   /**
-   * Export Beacons as CSV
-   * @value `code-beacon.exportCsv`
+   * Export Annotations as CSV
+   * @value `annopulse.exportCsv`
    */
-  exportCsv: "code-beacon.exportCsv",
+  exportCsv: "annopulse.exportCsv",
   /**
-   * Open Code Beacon Settings
-   * @value `code-beacon.openSettings`
+   * Open AnnoPulse Settings
+   * @value `annopulse.openSettings`
    */
-  openSettings: "code-beacon.openSettings",
+  openSettings: "annopulse.openSettings",
   /**
-   * Clear Code Beacon Cache
-   * @value `code-beacon.clearCache`
+   * Clear AnnoPulse Cache
+   * @value `annopulse.clearCache`
    */
-  clearCache: "code-beacon.clearCache",
+  clearCache: "annopulse.clearCache",
 } satisfies Record<string, CommandKey>
 
 /**
  * Type union of all configs
  */
 export type ConfigKey =
-  | "code-beacon.enable"
-  | "code-beacon.languages"
-  | "code-beacon.rules"
-  | "code-beacon.include"
-  | "code-beacon.exclude"
-  | "code-beacon.respectFilesExclude"
-  | "code-beacon.respectSearchExclude"
-  | "code-beacon.maxFileSize"
-  | "code-beacon.maxFilesForSearch"
-  | "code-beacon.scanMode"
-  | "code-beacon.commentOnly"
-  | "code-beacon.decorations.enabled"
-  | "code-beacon.diagnostics.mode"
-  | "code-beacon.explorer.enabled"
-  | "code-beacon.explorer.groupBy"
-  | "code-beacon.explorer.scope"
-  | "code-beacon.explorer.categories"
-  | "code-beacon.explorer.severities"
-  | "code-beacon.explorer.owners"
-  | "code-beacon.explorer.query"
-  | "code-beacon.explorer.includeResolved"
-  | "code-beacon.explorer.includeIgnored"
-  | "code-beacon.explorer.onlyStale"
-  | "code-beacon.explorer.onlyOwnerless"
-  | "code-beacon.git.staleDays"
-  | "code-beacon.git.showMetadata"
-  | "code-beacon.ai.enabled"
-  | "code-beacon.scm.enabled"
-  | "code-beacon.codelens.enabled"
-  | "code-beacon.hover.enabled"
+  | "annopulse.enable"
+  | "annopulse.languages"
+  | "annopulse.rules"
+  | "annopulse.include"
+  | "annopulse.exclude"
+  | "annopulse.respectFilesExclude"
+  | "annopulse.respectSearchExclude"
+  | "annopulse.maxFileSize"
+  | "annopulse.maxFilesForSearch"
+  | "annopulse.scanMode"
+  | "annopulse.commentOnly"
+  | "annopulse.decorations.enabled"
+  | "annopulse.diagnostics.mode"
+  | "annopulse.explorer.enabled"
+  | "annopulse.explorer.groupBy"
+  | "annopulse.explorer.scope"
+  | "annopulse.explorer.categories"
+  | "annopulse.explorer.severities"
+  | "annopulse.explorer.owners"
+  | "annopulse.explorer.query"
+  | "annopulse.explorer.includeResolved"
+  | "annopulse.explorer.includeIgnored"
+  | "annopulse.explorer.onlyStale"
+  | "annopulse.explorer.onlyOwnerless"
+  | "annopulse.git.staleDays"
+  | "annopulse.git.showMetadata"
+  | "annopulse.ai.enabled"
+  | "annopulse.scm.enabled"
+  | "annopulse.codelens.enabled"
+  | "annopulse.hover.enabled"
 
 export interface ConfigKeyTypeMap {
-  "code-beacon.enable": boolean,
-  "code-beacon.languages": string[],
-  "code-beacon.rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
-  "code-beacon.include": string[],
-  "code-beacon.exclude": string[],
-  "code-beacon.respectFilesExclude": boolean,
-  "code-beacon.respectSearchExclude": boolean,
-  "code-beacon.maxFileSize": number,
-  "code-beacon.maxFilesForSearch": number,
-  "code-beacon.scanMode": ("visibleEditors" | "openEditors" | "workspace" | "manual"),
-  "code-beacon.commentOnly": boolean,
-  "code-beacon.decorations.enabled": boolean,
-  "code-beacon.diagnostics.mode": ("off" | "openFiles" | "workspace"),
-  "code-beacon.explorer.enabled": boolean,
-  "code-beacon.explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
-  "code-beacon.explorer.scope": ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
-  "code-beacon.explorer.categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
-  "code-beacon.explorer.severities": ("hint" | "information" | "warning" | "error")[],
-  "code-beacon.explorer.owners": string[],
-  "code-beacon.explorer.query": string,
-  "code-beacon.explorer.includeResolved": boolean,
-  "code-beacon.explorer.includeIgnored": boolean,
-  "code-beacon.explorer.onlyStale": boolean,
-  "code-beacon.explorer.onlyOwnerless": boolean,
-  "code-beacon.git.staleDays": unknown,
-  "code-beacon.git.showMetadata": boolean,
-  "code-beacon.ai.enabled": boolean,
-  "code-beacon.scm.enabled": boolean,
-  "code-beacon.codelens.enabled": boolean,
-  "code-beacon.hover.enabled": boolean,
+  "annopulse.enable": boolean,
+  "annopulse.languages": string[],
+  "annopulse.rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],
+  "annopulse.include": string[],
+  "annopulse.exclude": string[],
+  "annopulse.respectFilesExclude": boolean,
+  "annopulse.respectSearchExclude": boolean,
+  "annopulse.maxFileSize": number,
+  "annopulse.maxFilesForSearch": number,
+  "annopulse.scanMode": ("visibleEditors" | "openEditors" | "workspace" | "manual"),
+  "annopulse.commentOnly": boolean,
+  "annopulse.decorations.enabled": boolean,
+  "annopulse.diagnostics.mode": ("off" | "openFiles" | "workspace"),
+  "annopulse.explorer.enabled": boolean,
+  "annopulse.explorer.groupBy": ("file" | "rule" | "category" | "severity" | "owner" | "flat"),
+  "annopulse.explorer.scope": ("workspace" | "activeFile" | "openEditors" | "changedFiles"),
+  "annopulse.explorer.categories": ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom")[],
+  "annopulse.explorer.severities": ("hint" | "information" | "warning" | "error")[],
+  "annopulse.explorer.owners": string[],
+  "annopulse.explorer.query": string,
+  "annopulse.explorer.includeResolved": boolean,
+  "annopulse.explorer.includeIgnored": boolean,
+  "annopulse.explorer.onlyStale": boolean,
+  "annopulse.explorer.onlyOwnerless": boolean,
+  "annopulse.git.staleDays": unknown,
+  "annopulse.git.showMetadata": boolean,
+  "annopulse.ai.enabled": boolean,
+  "annopulse.scm.enabled": boolean,
+  "annopulse.codelens.enabled": boolean,
+  "annopulse.hover.enabled": boolean,
 }
 
 export interface ConfigShorthandMap {
-  enable: "code-beacon.enable",
-  languages: "code-beacon.languages",
-  rules: "code-beacon.rules",
-  include: "code-beacon.include",
-  exclude: "code-beacon.exclude",
-  respectFilesExclude: "code-beacon.respectFilesExclude",
-  respectSearchExclude: "code-beacon.respectSearchExclude",
-  maxFileSize: "code-beacon.maxFileSize",
-  maxFilesForSearch: "code-beacon.maxFilesForSearch",
-  scanMode: "code-beacon.scanMode",
-  commentOnly: "code-beacon.commentOnly",
-  decorationsEnabled: "code-beacon.decorations.enabled",
-  diagnosticsMode: "code-beacon.diagnostics.mode",
-  explorerEnabled: "code-beacon.explorer.enabled",
-  explorerGroupBy: "code-beacon.explorer.groupBy",
-  explorerScope: "code-beacon.explorer.scope",
-  explorerCategories: "code-beacon.explorer.categories",
-  explorerSeverities: "code-beacon.explorer.severities",
-  explorerOwners: "code-beacon.explorer.owners",
-  explorerQuery: "code-beacon.explorer.query",
-  explorerIncludeResolved: "code-beacon.explorer.includeResolved",
-  explorerIncludeIgnored: "code-beacon.explorer.includeIgnored",
-  explorerOnlyStale: "code-beacon.explorer.onlyStale",
-  explorerOnlyOwnerless: "code-beacon.explorer.onlyOwnerless",
-  gitStaleDays: "code-beacon.git.staleDays",
-  gitShowMetadata: "code-beacon.git.showMetadata",
-  aiEnabled: "code-beacon.ai.enabled",
-  scmEnabled: "code-beacon.scm.enabled",
-  codelensEnabled: "code-beacon.codelens.enabled",
-  hoverEnabled: "code-beacon.hover.enabled",
+  enable: "annopulse.enable",
+  languages: "annopulse.languages",
+  rules: "annopulse.rules",
+  include: "annopulse.include",
+  exclude: "annopulse.exclude",
+  respectFilesExclude: "annopulse.respectFilesExclude",
+  respectSearchExclude: "annopulse.respectSearchExclude",
+  maxFileSize: "annopulse.maxFileSize",
+  maxFilesForSearch: "annopulse.maxFilesForSearch",
+  scanMode: "annopulse.scanMode",
+  commentOnly: "annopulse.commentOnly",
+  decorationsEnabled: "annopulse.decorations.enabled",
+  diagnosticsMode: "annopulse.diagnostics.mode",
+  explorerEnabled: "annopulse.explorer.enabled",
+  explorerGroupBy: "annopulse.explorer.groupBy",
+  explorerScope: "annopulse.explorer.scope",
+  explorerCategories: "annopulse.explorer.categories",
+  explorerSeverities: "annopulse.explorer.severities",
+  explorerOwners: "annopulse.explorer.owners",
+  explorerQuery: "annopulse.explorer.query",
+  explorerIncludeResolved: "annopulse.explorer.includeResolved",
+  explorerIncludeIgnored: "annopulse.explorer.includeIgnored",
+  explorerOnlyStale: "annopulse.explorer.onlyStale",
+  explorerOnlyOwnerless: "annopulse.explorer.onlyOwnerless",
+  gitStaleDays: "annopulse.git.staleDays",
+  gitShowMetadata: "annopulse.git.showMetadata",
+  aiEnabled: "annopulse.ai.enabled",
+  scmEnabled: "annopulse.scm.enabled",
+  codelensEnabled: "annopulse.codelens.enabled",
+  hoverEnabled: "annopulse.hover.enabled",
 }
 
 export interface ConfigShorthandTypeMap {
@@ -305,309 +305,309 @@ export interface ConfigItem<T extends keyof ConfigKeyTypeMap> {
 
 
 /**
- * Configs map registered by `ntnyq.vscode-code-beacon`
+ * Configs map registered by `ntnyq.annopulse`
  */
 export const configs = {
   /**
-   * Enable or disable code beacon.
-   * @key `code-beacon.enable`
+   * Enable or disable AnnoPulse.
+   * @key `annopulse.enable`
    * @default `true`
    * @type `boolean`
    */
   enable: {
-    key: "code-beacon.enable",
+    key: "annopulse.enable",
     default: true,
-  } as ConfigItem<"code-beacon.enable">,
+  } as ConfigItem<"annopulse.enable">,
   /**
    * Language IDs where annotations are scanned. Use '*' for all languages and prefix with '!' to exclude.
-   * @key `code-beacon.languages`
+   * @key `annopulse.languages`
    * @default `["*"]`
    * @type `array`
    */
   languages: {
-    key: "code-beacon.languages",
+    key: "annopulse.languages",
     default: ["*"],
-  } as ConfigItem<"code-beacon.languages">,
+  } as ConfigItem<"annopulse.languages">,
   /**
    * Custom annotation rules. Built-in rules are enabled unless a custom rule with the same id overrides them.
-   * @key `code-beacon.rules`
+   * @key `annopulse.rules`
    * @default `[]`
    * @type `array`
    */
   rules: {
-    key: "code-beacon.rules",
+    key: "annopulse.rules",
     default: [],
-  } as ConfigItem<"code-beacon.rules">,
+  } as ConfigItem<"annopulse.rules">,
   /**
    * Glob patterns that define files to scan.
-   * @key `code-beacon.include`
+   * @key `annopulse.include`
    * @default `["**\/*"]`
    * @type `array`
    */
   include: {
-    key: "code-beacon.include",
+    key: "annopulse.include",
     default: ["**/*"],
-  } as ConfigItem<"code-beacon.include">,
+  } as ConfigItem<"annopulse.include">,
   /**
    * Glob patterns that define files and folders to exclude from workspace scans.
-   * @key `code-beacon.exclude`
+   * @key `annopulse.exclude`
    * @default `["**\/node_modules/**","**\/bower_components/**","**\/dist/**","**\/build/**","**\/.git/**","**\/.vscode/**","**\/.vscode-test/**","**\/.github/**","**\/.next/**","**\/coverage/**","**\/*.min.*","**\/*.map","**\/pnpm-lock.yaml","**\/package-lock.json","**\/yarn.lock"]`
    * @type `array`
    */
   exclude: {
-    key: "code-beacon.exclude",
+    key: "annopulse.exclude",
     default: ["**/node_modules/**","**/bower_components/**","**/dist/**","**/build/**","**/.git/**","**/.vscode/**","**/.vscode-test/**","**/.github/**","**/.next/**","**/coverage/**","**/*.min.*","**/*.map","**/pnpm-lock.yaml","**/package-lock.json","**/yarn.lock"],
-  } as ConfigItem<"code-beacon.exclude">,
+  } as ConfigItem<"annopulse.exclude">,
   /**
    * Respect VS Code files.exclude during workspace scans.
-   * @key `code-beacon.respectFilesExclude`
+   * @key `annopulse.respectFilesExclude`
    * @default `true`
    * @type `boolean`
    */
   respectFilesExclude: {
-    key: "code-beacon.respectFilesExclude",
+    key: "annopulse.respectFilesExclude",
     default: true,
-  } as ConfigItem<"code-beacon.respectFilesExclude">,
+  } as ConfigItem<"annopulse.respectFilesExclude">,
   /**
    * Respect VS Code search.exclude during workspace scans.
-   * @key `code-beacon.respectSearchExclude`
+   * @key `annopulse.respectSearchExclude`
    * @default `true`
    * @type `boolean`
    */
   respectSearchExclude: {
-    key: "code-beacon.respectSearchExclude",
+    key: "annopulse.respectSearchExclude",
     default: true,
-  } as ConfigItem<"code-beacon.respectSearchExclude">,
+  } as ConfigItem<"annopulse.respectSearchExclude">,
   /**
    * Maximum document text length, in characters, to scan. Set to 0 to disable this size limit.
-   * @key `code-beacon.maxFileSize`
+   * @key `annopulse.maxFileSize`
    * @default `1000000`
    * @type `number`
    */
   maxFileSize: {
-    key: "code-beacon.maxFileSize",
+    key: "annopulse.maxFileSize",
     default: 1000000,
-  } as ConfigItem<"code-beacon.maxFileSize">,
+  } as ConfigItem<"annopulse.maxFileSize">,
   /**
    * Maximum number of files to scan during workspace scans.
-   * @key `code-beacon.maxFilesForSearch`
+   * @key `annopulse.maxFilesForSearch`
    * @default `5000`
    * @type `number`
    */
   maxFilesForSearch: {
-    key: "code-beacon.maxFilesForSearch",
+    key: "annopulse.maxFilesForSearch",
     default: 5000,
-  } as ConfigItem<"code-beacon.maxFilesForSearch">,
+  } as ConfigItem<"annopulse.maxFilesForSearch">,
   /**
-   * Default scan mode for Code Beacon.
-   * @key `code-beacon.scanMode`
+   * Default scan mode for AnnoPulse.
+   * @key `annopulse.scanMode`
    * @default `"visibleEditors"`
    * @type `string`
    */
   scanMode: {
-    key: "code-beacon.scanMode",
+    key: "annopulse.scanMode",
     default: "visibleEditors",
-  } as ConfigItem<"code-beacon.scanMode">,
+  } as ConfigItem<"annopulse.scanMode">,
   /**
-   * Prefer scanning comments only when Code Beacon knows the language comment syntax.
-   * @key `code-beacon.commentOnly`
+   * Prefer scanning comments only when AnnoPulse knows the language comment syntax.
+   * @key `annopulse.commentOnly`
    * @default `true`
    * @type `boolean`
    */
   commentOnly: {
-    key: "code-beacon.commentOnly",
+    key: "annopulse.commentOnly",
     default: true,
-  } as ConfigItem<"code-beacon.commentOnly">,
+  } as ConfigItem<"annopulse.commentOnly">,
   /**
    * Show editor decorations for annotations.
-   * @key `code-beacon.decorations.enabled`
+   * @key `annopulse.decorations.enabled`
    * @default `true`
    * @type `boolean`
    */
   decorationsEnabled: {
-    key: "code-beacon.decorations.enabled",
+    key: "annopulse.decorations.enabled",
     default: true,
-  } as ConfigItem<"code-beacon.decorations.enabled">,
+  } as ConfigItem<"annopulse.decorations.enabled">,
   /**
    * Controls Problems integration.
-   * @key `code-beacon.diagnostics.mode`
+   * @key `annopulse.diagnostics.mode`
    * @default `"off"`
    * @type `string`
    */
   diagnosticsMode: {
-    key: "code-beacon.diagnostics.mode",
+    key: "annopulse.diagnostics.mode",
     default: "off",
-  } as ConfigItem<"code-beacon.diagnostics.mode">,
+  } as ConfigItem<"annopulse.diagnostics.mode">,
   /**
-   * Enable the Code Beacon TreeView.
-   * @key `code-beacon.explorer.enabled`
+   * Enable the AnnoPulse TreeView.
+   * @key `annopulse.explorer.enabled`
    * @default `true`
    * @type `boolean`
    */
   explorerEnabled: {
-    key: "code-beacon.explorer.enabled",
+    key: "annopulse.explorer.enabled",
     default: true,
-  } as ConfigItem<"code-beacon.explorer.enabled">,
+  } as ConfigItem<"annopulse.explorer.enabled">,
   /**
-   * Default grouping mode for the Code Beacon TreeView.
-   * @key `code-beacon.explorer.groupBy`
+   * Default grouping mode for the AnnoPulse TreeView.
+   * @key `annopulse.explorer.groupBy`
    * @default `"file"`
    * @type `string`
    */
   explorerGroupBy: {
-    key: "code-beacon.explorer.groupBy",
+    key: "annopulse.explorer.groupBy",
     default: "file",
-  } as ConfigItem<"code-beacon.explorer.groupBy">,
+  } as ConfigItem<"annopulse.explorer.groupBy">,
   /**
-   * Limits Code Beacon Explorer results to the workspace, active file, visible editors, or changed files. When set to "changedFiles", the Explorer includes files reported by VS Code's built-in Git extension as staged, unstaged, merge-conflict, or untracked changes. This scope is available only for trusted local desktop workspaces; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty changed-files view.
-   * @key `code-beacon.explorer.scope`
+   * Limits AnnoPulse Explorer results to the workspace, active file, visible editors, or changed files. When set to "changedFiles", the Explorer includes files reported by VS Code's built-in Git extension as staged, unstaged, merge-conflict, or untracked changes. This scope is available only for trusted local desktop workspaces; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty changed-files view.
+   * @key `annopulse.explorer.scope`
    * @default `"workspace"`
    * @type `string`
    */
   explorerScope: {
-    key: "code-beacon.explorer.scope",
+    key: "annopulse.explorer.scope",
     default: "workspace",
-  } as ConfigItem<"code-beacon.explorer.scope">,
+  } as ConfigItem<"annopulse.explorer.scope">,
   /**
-   * Categories shown in the Code Beacon Explorer. Leave empty to show all categories.
-   * @key `code-beacon.explorer.categories`
+   * Categories shown in the AnnoPulse Explorer. Leave empty to show all categories.
+   * @key `annopulse.explorer.categories`
    * @default `[]`
    * @type `array`
    */
   explorerCategories: {
-    key: "code-beacon.explorer.categories",
+    key: "annopulse.explorer.categories",
     default: [],
-  } as ConfigItem<"code-beacon.explorer.categories">,
+  } as ConfigItem<"annopulse.explorer.categories">,
   /**
-   * Severities shown in the Code Beacon Explorer. Leave empty to show all severities.
-   * @key `code-beacon.explorer.severities`
+   * Severities shown in the AnnoPulse Explorer. Leave empty to show all severities.
+   * @key `annopulse.explorer.severities`
    * @default `[]`
    * @type `array`
    */
   explorerSeverities: {
-    key: "code-beacon.explorer.severities",
+    key: "annopulse.explorer.severities",
     default: [],
-  } as ConfigItem<"code-beacon.explorer.severities">,
+  } as ConfigItem<"annopulse.explorer.severities">,
   /**
-   * Owners shown in the Code Beacon Explorer. Leave empty to show all owners.
-   * @key `code-beacon.explorer.owners`
+   * Owners shown in the AnnoPulse Explorer. Leave empty to show all owners.
+   * @key `annopulse.explorer.owners`
    * @default `[]`
    * @type `array`
    */
   explorerOwners: {
-    key: "code-beacon.explorer.owners",
+    key: "annopulse.explorer.owners",
     default: [],
-  } as ConfigItem<"code-beacon.explorer.owners">,
+  } as ConfigItem<"annopulse.explorer.owners">,
   /**
-   * Case-insensitive text query for Code Beacon Explorer results.
-   * @key `code-beacon.explorer.query`
+   * Case-insensitive text query for AnnoPulse Explorer results.
+   * @key `annopulse.explorer.query`
    * @default `""`
    * @type `string`
    */
   explorerQuery: {
-    key: "code-beacon.explorer.query",
+    key: "annopulse.explorer.query",
     default: "",
-  } as ConfigItem<"code-beacon.explorer.query">,
+  } as ConfigItem<"annopulse.explorer.query">,
   /**
-   * Show resolved beacons in the Code Beacon Explorer.
-   * @key `code-beacon.explorer.includeResolved`
+   * Show resolved annotations in the AnnoPulse Explorer.
+   * @key `annopulse.explorer.includeResolved`
    * @default `false`
    * @type `boolean`
    */
   explorerIncludeResolved: {
-    key: "code-beacon.explorer.includeResolved",
+    key: "annopulse.explorer.includeResolved",
     default: false,
-  } as ConfigItem<"code-beacon.explorer.includeResolved">,
+  } as ConfigItem<"annopulse.explorer.includeResolved">,
   /**
-   * Show ignored beacons in the Code Beacon Explorer.
-   * @key `code-beacon.explorer.includeIgnored`
+   * Show ignored annotations in the AnnoPulse Explorer.
+   * @key `annopulse.explorer.includeIgnored`
    * @default `false`
    * @type `boolean`
    */
   explorerIncludeIgnored: {
-    key: "code-beacon.explorer.includeIgnored",
+    key: "annopulse.explorer.includeIgnored",
     default: false,
-  } as ConfigItem<"code-beacon.explorer.includeIgnored">,
+  } as ConfigItem<"annopulse.explorer.includeIgnored">,
   /**
-   * Show only beacons with a valid Git commit date older than the configured stale threshold.
-   * @key `code-beacon.explorer.onlyStale`
+   * Show only annotations with a valid Git commit date older than the configured stale threshold.
+   * @key `annopulse.explorer.onlyStale`
    * @default `false`
    * @type `boolean`
    */
   explorerOnlyStale: {
-    key: "code-beacon.explorer.onlyStale",
+    key: "annopulse.explorer.onlyStale",
     default: false,
-  } as ConfigItem<"code-beacon.explorer.onlyStale">,
+  } as ConfigItem<"annopulse.explorer.onlyStale">,
   /**
-   * Show only beacons with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign a beacon.
-   * @key `code-beacon.explorer.onlyOwnerless`
+   * Show only annotations with no explicit owner or a whitespace-only owner. Git authors do not implicitly assign an annotation.
+   * @key `annopulse.explorer.onlyOwnerless`
    * @default `false`
    * @type `boolean`
    */
   explorerOnlyOwnerless: {
-    key: "code-beacon.explorer.onlyOwnerless",
+    key: "annopulse.explorer.onlyOwnerless",
     default: false,
-  } as ConfigItem<"code-beacon.explorer.onlyOwnerless">,
+  } as ConfigItem<"annopulse.explorer.onlyOwnerless">,
   /**
    * Number of days after which a valid Git commit date is considered stale.
-   * @key `code-beacon.git.staleDays`
+   * @key `annopulse.git.staleDays`
    * @default `90`
    * @type `integer`
    */
   gitStaleDays: {
-    key: "code-beacon.git.staleDays",
+    key: "annopulse.git.staleDays",
     default: 90,
-  } as ConfigItem<"code-beacon.git.staleDays">,
+  } as ConfigItem<"annopulse.git.staleDays">,
   /**
-   * Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.
-   * @key `code-beacon.git.showMetadata`
+   * Show Git author, age, and commit details in AnnoPulse Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.
+   * @key `annopulse.git.showMetadata`
    * @default `false`
    * @type `boolean`
    */
   gitShowMetadata: {
-    key: "code-beacon.git.showMetadata",
+    key: "annopulse.git.showMetadata",
     default: false,
-  } as ConfigItem<"code-beacon.git.showMetadata">,
+  } as ConfigItem<"annopulse.git.showMetadata">,
   /**
-   * Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.
-   * @key `code-beacon.ai.enabled`
+   * Enable AnnoPulse AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.
+   * @key `annopulse.ai.enabled`
    * @default `false`
    * @type `boolean`
    */
   aiEnabled: {
-    key: "code-beacon.ai.enabled",
+    key: "annopulse.ai.enabled",
     default: false,
-  } as ConfigItem<"code-beacon.ai.enabled">,
+  } as ConfigItem<"annopulse.ai.enabled">,
   /**
-   * Show a read-only Code Beacon Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.
-   * @key `code-beacon.scm.enabled`
+   * Show a read-only AnnoPulse Source Control provider for changed Git files containing annotations. It never stages, unstages, commits, or modifies Git; unavailable Git data, virtual filesystems, and untrusted workspaces produce an empty list.
+   * @key `annopulse.scm.enabled`
    * @default `false`
    * @type `boolean`
    */
   scmEnabled: {
-    key: "code-beacon.scm.enabled",
+    key: "annopulse.scm.enabled",
     default: false,
-  } as ConfigItem<"code-beacon.scm.enabled">,
+  } as ConfigItem<"annopulse.scm.enabled">,
   /**
    * Enable CodeLens actions above annotation lines.
-   * @key `code-beacon.codelens.enabled`
+   * @key `annopulse.codelens.enabled`
    * @default `false`
    * @type `boolean`
    */
   codelensEnabled: {
-    key: "code-beacon.codelens.enabled",
+    key: "annopulse.codelens.enabled",
     default: false,
-  } as ConfigItem<"code-beacon.codelens.enabled">,
+  } as ConfigItem<"annopulse.codelens.enabled">,
   /**
    * Enable hover details for annotations.
-   * @key `code-beacon.hover.enabled`
+   * @key `annopulse.hover.enabled`
    * @default `true`
    * @type `boolean`
    */
   hoverEnabled: {
-    key: "code-beacon.hover.enabled",
+    key: "annopulse.hover.enabled",
     default: true,
-  } as ConfigItem<"code-beacon.hover.enabled">,
+  } as ConfigItem<"annopulse.hover.enabled">,
 }
 
 export interface ScopedConfigKeyTypeMap {
@@ -644,7 +644,7 @@ export interface ScopedConfigKeyTypeMap {
 }
 
 export const scopedConfigs = {
-  scope: "code-beacon",
+  scope: "annopulse",
   defaults: {
     "enable": true,
     "languages": ["*"],
@@ -680,7 +680,7 @@ export const scopedConfigs = {
 }
 
 export interface NestedConfigs {
-  "code-beacon": {
+  "annopulse": {
     "enable": boolean,
     "languages": string[],
     "rules": { 'id': string; 'label': string; 'category': ("todo" | "fixme" | "bug" | "hack" | "note" | "review" | "security" | "perf" | "question" | "custom"); 'enabled'?: boolean; 'matcher': { 'type': ("text" | "regex"); 'value'?: string; 'pattern'?: string; 'flags'?: string; 'caseSensitive'?: boolean; 'wholeWord'?: boolean; 'colon'?: ("required" | "optional" | "forbidden") }; 'severity': ("hint" | "information" | "warning" | "error"); 'commentOnly'?: boolean; 'languages'?: string[]; 'style'?: { 'marker'?: ("keyword" | "message" | "line"); 'color'?: string; 'backgroundColor'?: string; 'border'?: string; 'borderRadius'?: string; 'overviewRulerColor'?: string }; 'diagnostics'?: { 'enabled'?: boolean; 'severity'?: ("hint" | "information" | "warning" | "error") } }[],

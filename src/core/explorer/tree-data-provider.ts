@@ -8,19 +8,19 @@ import {
   type TreeDataProvider,
 } from 'vscode'
 import { commands } from '../../meta'
-import type { BeaconAnnotation } from '../../types/annotation'
-import type { BeaconGitMetadata } from '../git/blame'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import type { AnnoPulseGitMetadata } from '../git/blame'
 import {
-  beaconDisplayOwner,
-  formatBeaconExplorerDescription,
-  formatBeaconExplorerTooltip,
+  annopulseDisplayOwner,
+  formatAnnoPulseExplorerDescription,
+  formatAnnoPulseExplorerTooltip,
 } from '../git/presentation'
-import { compareBeaconAnnotations } from './filter'
+import { compareAnnoPulseAnnotations } from './filter'
 
 /**
- * Supported TreeView grouping modes for beacon annotations.
+ * Supported TreeView grouping modes for AnnoPulse annotations.
  */
-export type BeaconExplorerGroupBy =
+export type AnnoPulseExplorerGroupBy =
   | 'file'
   | 'rule'
   | 'category'
@@ -31,52 +31,57 @@ export type BeaconExplorerGroupBy =
 /**
  * Tree element representing a group of annotations.
  */
-export interface BeaconGroupTreeElement {
+export interface AnnoPulseGroupTreeElement {
   readonly type: 'group'
   readonly id: string
   readonly label: string
-  readonly annotations: readonly BeaconAnnotation[]
+  readonly annotations: readonly AnnoPulseAnnotation[]
 }
 
 /**
  * Tree element representing a single annotation leaf.
  */
-export interface BeaconLeafTreeElement {
-  readonly type: 'beacon'
-  readonly annotation: BeaconAnnotation
+export interface AnnoPulseLeafTreeElement {
+  readonly type: 'annopulse'
+  readonly annotation: AnnoPulseAnnotation
 }
 
 /**
- * Union of all Code Beacon TreeView element variants.
+ * Union of all AnnoPulse TreeView element variants.
  */
-export type BeaconTreeElement = BeaconGroupTreeElement | BeaconLeafTreeElement
+export type AnnoPulseTreeElement =
+  | AnnoPulseGroupTreeElement
+  | AnnoPulseLeafTreeElement
 
 /**
  * Reader used by the TreeView provider to access current annotations.
  */
-export type GetBeaconAnnotations = () => readonly BeaconAnnotation[]
+export type GetAnnoPulseAnnotations = () => readonly AnnoPulseAnnotation[]
 
 /**
  * Reader used by the TreeView provider to access Git metadata by annotation.
  */
-export type GetBeaconGitMetadata = () => ReadonlyMap<string, BeaconGitMetadata>
+export type GetAnnoPulseGitMetadata = () => ReadonlyMap<
+  string,
+  AnnoPulseGitMetadata
+>
 
 /**
  * Reader used by the TreeView provider to access the current time.
  */
-export type GetBeaconNow = () => Date
+export type GetAnnoPulseNow = () => Date
 
 /**
  * Selects the display label for an annotation and grouping mode.
  */
 function groupLabel(
-  annotation: BeaconAnnotation,
-  groupBy: BeaconExplorerGroupBy,
+  annotation: AnnoPulseAnnotation,
+  groupBy: AnnoPulseExplorerGroupBy,
 ): string {
   const labels = {
     category: annotation.category,
     file: annotation.uri,
-    flat: 'All Beacons',
+    flat: 'All Annotations',
     owner: annotation.owner ?? 'Unassigned',
     rule: annotation.ruleId,
     severity: annotation.severity,
@@ -88,7 +93,7 @@ function groupLabel(
 /**
  * Selects a VS Code theme icon for an annotation severity.
  */
-function beaconIcon(annotation: BeaconAnnotation): ThemeIcon {
+function annopulseIcon(annotation: AnnoPulseAnnotation): ThemeIcon {
   const iconIds = {
     error: 'error',
     hint: 'lightbulb',
@@ -117,74 +122,74 @@ function compareGroupLabels(left: string, right: string): number {
 /**
  * Builds a TreeView context value that encodes annotation state.
  */
-function beaconContextValue(annotation: BeaconAnnotation): string {
+function annopulseContextValue(annotation: AnnoPulseAnnotation): string {
   if (annotation.resolved && annotation.ignored) {
-    return 'beaconResolvedIgnored'
+    return 'annopulseResolvedIgnored'
   }
 
   if (annotation.resolved) {
-    return 'beaconResolved'
+    return 'annopulseResolved'
   }
 
   if (annotation.ignored) {
-    return 'beaconIgnored'
+    return 'annopulseIgnored'
   }
 
-  return 'beacon'
+  return 'annopulse'
 }
 
 /**
  * VS Code TreeDataProvider backed by the annotation store.
  */
-export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElement> {
+export class AnnoPulseTreeDataProvider implements TreeDataProvider<AnnoPulseTreeElement> {
   /**
    * VS Code emitter used to notify TreeView refreshes.
    */
   // oxlint-disable-next-line unicorn/prefer-event-target -- VS Code TreeDataProvider requires vscode.EventEmitter.
   private readonly changeEmitter = new EventEmitter<
-    BeaconTreeElement | undefined
+    AnnoPulseTreeElement | undefined
   >()
 
   /**
    * Reader for the current annotation list.
    */
-  private readonly getAnnotations: GetBeaconAnnotations
+  private readonly getAnnotations: GetAnnoPulseAnnotations
 
   /**
    * Reader for the current grouping mode.
    */
-  private readonly getGroupBy: () => BeaconExplorerGroupBy
+  private readonly getGroupBy: () => AnnoPulseExplorerGroupBy
 
   /**
    * Reader for optional Git metadata keyed by annotation ID.
    */
-  private readonly getMetadataByAnnotationId: GetBeaconGitMetadata
+  private readonly getMetadataByAnnotationId: GetAnnoPulseGitMetadata
 
   /**
    * Reader for the current time used in Git metadata presentation.
    */
-  private readonly getNow: GetBeaconNow
+  private readonly getNow: GetAnnoPulseNow
 
   /**
    * VS Code event fired when TreeView data should refresh.
    */
-  public readonly onDidChangeTreeData: Event<BeaconTreeElement | undefined> =
+  public readonly onDidChangeTreeData: Event<AnnoPulseTreeElement | undefined> =
     this.changeEmitter.event
 
   /**
    * VS Code callback that converts a tree element into a TreeItem.
    */
-  public readonly getTreeItem = (element: BeaconTreeElement) =>
+  public readonly getTreeItem = (element: AnnoPulseTreeElement) =>
     this.createTreeItem(element)
 
   /**
    * Creates a provider from annotation and grouping readers.
    */
   public constructor(
-    getAnnotations: GetBeaconAnnotations,
-    getGroupBy: () => BeaconExplorerGroupBy = () => 'file',
-    getMetadataByAnnotationId: GetBeaconGitMetadata = () => new Map(),
-    getNow: GetBeaconNow = () => new Date(),
+    getAnnotations: GetAnnoPulseAnnotations,
+    getGroupBy: () => AnnoPulseExplorerGroupBy = () => 'file',
+    getMetadataByAnnotationId: GetAnnoPulseGitMetadata = () => new Map(),
+    getNow: GetAnnoPulseNow = () => new Date(),
   ) {
     this.getAnnotations = getAnnotations
     this.getGroupBy = getGroupBy
@@ -204,24 +209,24 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
    * Returns root groups or annotation leaves for a group element.
    */
   public getChildren(
-    element?: BeaconTreeElement,
-  ): BeaconTreeElement[] | Promise<BeaconTreeElement[]> {
+    element?: AnnoPulseTreeElement,
+  ): AnnoPulseTreeElement[] | Promise<AnnoPulseTreeElement[]> {
     if (element?.type === 'group') {
       return element.annotations.map(annotation => ({
         annotation,
-        type: 'beacon',
+        type: 'annopulse',
       }))
     }
 
-    if (element?.type === 'beacon') {
+    if (element?.type === 'annopulse') {
       return []
     }
 
     const groupBy = this.getGroupBy()
-    const groups = new Map<string, BeaconAnnotation[]>()
+    const groups = new Map<string, AnnoPulseAnnotation[]>()
 
     for (const annotation of this.getAnnotations().toSorted(
-      compareBeaconAnnotations,
+      compareAnnoPulseAnnotations,
     )) {
       const label = groupLabel(annotation, groupBy)
       groups.set(label, [...(groups.get(label) ?? []), annotation])
@@ -240,7 +245,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
   /**
    * Converts a group or annotation leaf into a VS Code TreeItem.
    */
-  private createTreeItem(element: BeaconTreeElement): TreeItem {
+  private createTreeItem(element: AnnoPulseTreeElement): TreeItem {
     if (element.type === 'group') {
       const item = new TreeItem(
         element.label,
@@ -254,7 +259,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
 
     const { annotation } = element
     const metadata = this.getMetadataByAnnotationId().get(annotation.id)
-    const owner = beaconDisplayOwner(annotation)
+    const owner = annopulseDisplayOwner(annotation)
     const item = new TreeItem(
       annotation.message
         ? `${annotation.keyword} ${annotation.message}`
@@ -265,11 +270,11 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
     item.command = {
       arguments: [annotation],
       command: commands.reveal,
-      title: 'Reveal Beacon',
+      title: 'Reveal Annotation',
     }
-    item.contextValue = beaconContextValue(annotation)
+    item.contextValue = annopulseContextValue(annotation)
     item.description = metadata
-      ? formatBeaconExplorerDescription(annotation, metadata, this.getNow())
+      ? formatAnnoPulseExplorerDescription(annotation, metadata, this.getNow())
       : [
           `${annotation.line + 1}:${annotation.column + 1}`,
           owner ? `@${owner}` : '',
@@ -278,9 +283,9 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeElemen
         ]
           .filter(Boolean)
           .join(' ')
-    item.iconPath = beaconIcon(annotation)
+    item.iconPath = annopulseIcon(annotation)
     item.resourceUri = Uri.parse(annotation.uri)
-    item.tooltip = formatBeaconExplorerTooltip(
+    item.tooltip = formatAnnoPulseExplorerTooltip(
       annotation,
       metadata,
       this.getNow(),

@@ -1,41 +1,41 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import { compareBeaconAnnotations } from '../explorer/filter'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import { compareAnnoPulseAnnotations } from '../explorer/filter'
 
-export const DEFAULT_BEACON_ANNOTATION_LIMIT = 50
-export const MAX_BEACON_ANNOTATION_LIMIT = 100
+export const DEFAULT_ANNOPULSE_ANNOTATION_LIMIT = 50
+export const MAX_ANNOPULSE_ANNOTATION_LIMIT = 100
 
-export type BeaconAnnotationToolScope = 'all' | 'activeFile' | 'openEditors'
+export type AnnoPulseAnnotationToolScope = 'all' | 'activeFile' | 'openEditors'
 
-export interface BeaconListAnnotationsInput {
-  readonly scope?: BeaconAnnotationToolScope
+export interface AnnoPulseListAnnotationsInput {
+  readonly scope?: AnnoPulseAnnotationToolScope
   readonly limit?: number
   readonly includeResolved?: boolean
   readonly includeIgnored?: boolean
 }
 
-export interface BeaconListAnnotationsContext {
+export interface AnnoPulseListAnnotationsContext {
   readonly activeUri: string | undefined
   readonly openUris: readonly string[]
 }
 
-export interface NormalizedBeaconListAnnotationsInput {
-  readonly scope: BeaconAnnotationToolScope
+export interface NormalizedAnnoPulseListAnnotationsInput {
+  readonly scope: AnnoPulseAnnotationToolScope
   readonly limit: number
   readonly includeResolved: boolean
   readonly includeIgnored: boolean
 }
 
-export interface BeaconSelectedAnnotationsResult {
-  readonly annotations: readonly BeaconAnnotation[]
+export interface AnnoPulseSelectedAnnotationsResult {
+  readonly annotations: readonly AnnoPulseAnnotation[]
   readonly returned: number
-  readonly scope: BeaconAnnotationToolScope
+  readonly scope: AnnoPulseAnnotationToolScope
   readonly total: number
   readonly truncated: boolean
 }
 
-export function normalizeBeaconListAnnotationsInput(
-  input: BeaconListAnnotationsInput,
-): NormalizedBeaconListAnnotationsInput {
+export function normalizeAnnoPulseListAnnotationsInput(
+  input: AnnoPulseListAnnotationsInput,
+): NormalizedAnnoPulseListAnnotationsInput {
   const limit = input.limit
 
   return {
@@ -45,9 +45,9 @@ export function normalizeBeaconListAnnotationsInput(
       typeof limit === 'number' &&
       Number.isInteger(limit) &&
       limit >= 1 &&
-      limit <= MAX_BEACON_ANNOTATION_LIMIT
+      limit <= MAX_ANNOPULSE_ANNOTATION_LIMIT
         ? limit
-        : DEFAULT_BEACON_ANNOTATION_LIMIT,
+        : DEFAULT_ANNOPULSE_ANNOTATION_LIMIT,
     scope:
       input.scope === 'activeFile' || input.scope === 'openEditors'
         ? input.scope
@@ -55,12 +55,12 @@ export function normalizeBeaconListAnnotationsInput(
   }
 }
 
-export function selectBeaconAnnotations(
-  annotations: readonly BeaconAnnotation[],
-  input: BeaconListAnnotationsInput,
-  context: BeaconListAnnotationsContext,
-): BeaconSelectedAnnotationsResult {
-  const normalizedInput = normalizeBeaconListAnnotationsInput(input)
+export function selectAnnoPulseAnnotations(
+  annotations: readonly AnnoPulseAnnotation[],
+  input: AnnoPulseListAnnotationsInput,
+  context: AnnoPulseListAnnotationsContext,
+): AnnoPulseSelectedAnnotationsResult {
+  const normalizedInput = normalizeAnnoPulseListAnnotationsInput(input)
   const openUris = new Set(context.openUris)
   const matchingAnnotations = annotations
     .filter(annotation => {
@@ -83,7 +83,7 @@ export function selectBeaconAnnotations(
         normalizedInput.scope !== 'openEditors' || openUris.has(annotation.uri)
       )
     })
-    .toSorted(compareBeaconAnnotations)
+    .toSorted(compareAnnoPulseAnnotations)
   const total = matchingAnnotations.length
   const selectedAnnotations = matchingAnnotations.slice(
     0,

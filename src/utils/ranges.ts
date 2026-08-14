@@ -1,6 +1,6 @@
 import { Range as VscodeRange } from 'vscode'
 import type { Range } from 'vscode'
-import type { BeaconAnnotation, SerializedRange } from '../types/annotation'
+import type { AnnoPulseAnnotation, SerializedRange } from '../types/annotation'
 
 /**
  * Converts a serialized range into the VS Code Range class.
@@ -15,8 +15,8 @@ export function toVscodeRange(range: SerializedRange): Range {
 }
 
 /**
- * Formats a one-based link-like location for a beacon annotation.
+ * Formats a one-based link-like location for an AnnoPulse annotation.
  */
-export function formatBeaconLink(annotation: BeaconAnnotation): string {
+export function formatAnnoPulseLink(annotation: AnnoPulseAnnotation): string {
   return `${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`
 }

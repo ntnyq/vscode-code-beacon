@@ -1,5 +1,5 @@
 import type { AnnotationStore } from '../../src/core/store/annotation-store'
-import type { BeaconAnnotation } from '../../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../../src/types/annotation'
 
 /**
  * Seeds test annotations through the same source-aware interface used at runtime.
@@ -7,8 +7,8 @@ import type { BeaconAnnotation } from '../../src/types/annotation'
 export function seedAnnotationStore(
   store: AnnotationStore,
   uri: string,
-  annotations: readonly BeaconAnnotation[],
-  emptySource?: BeaconAnnotation['source'],
+  annotations: readonly AnnoPulseAnnotation[],
+  emptySource?: AnnoPulseAnnotation['source'],
 ) {
   const annotationsBySource = Map.groupBy(
     annotations,

@@ -1,13 +1,15 @@
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 
-export interface BeaconSourceControlResourceDescriptor {
+export interface AnnoPulseSourceControlResourceDescriptor {
   readonly annotationCount: number
   readonly categories: readonly string[]
   readonly tooltip: string
   readonly uri: string
 }
 
-function categorySummary(annotations: readonly BeaconAnnotation[]): string[] {
+function categorySummary(
+  annotations: readonly AnnoPulseAnnotation[],
+): string[] {
   return [
     ...new Set(
       annotations.map(annotation => annotation.category.toUpperCase()),
@@ -15,11 +17,11 @@ function categorySummary(annotations: readonly BeaconAnnotation[]): string[] {
   ].sort((left, right) => left.localeCompare(right))
 }
 
-export function createBeaconSourceControlResources(
+export function createAnnoPulseSourceControlResources(
   changedUris: ReadonlySet<string>,
-  annotations: readonly BeaconAnnotation[],
-): readonly BeaconSourceControlResourceDescriptor[] {
-  const annotationsByUri = new Map<string, BeaconAnnotation[]>()
+  annotations: readonly AnnoPulseAnnotation[],
+): readonly AnnoPulseSourceControlResourceDescriptor[] {
+  const annotationsByUri = new Map<string, AnnoPulseAnnotation[]>()
 
   for (const annotation of annotations) {
     if (!changedUris.has(annotation.uri)) {
@@ -39,7 +41,7 @@ export function createBeaconSourceControlResources(
       return {
         annotationCount,
         categories,
-        tooltip: `${annotationCount} Code Beacon annotation${annotationCount === 1 ? '' : 's'} (${categories.join(', ')})`,
+        tooltip: `${annotationCount} AnnoPulse annotation${annotationCount === 1 ? '' : 's'} (${categories.join(', ')})`,
         uri,
       }
     })

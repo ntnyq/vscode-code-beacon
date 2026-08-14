@@ -1,8 +1,8 @@
-# Code Beacon 产品与代码设计计划
+# AnnoPulse 产品与代码设计计划
 
 更新时间：2026-07-28
 
-Code Beacon 是一个面向 VS Code 的代码注释信号管理插件。它不只是高亮 TODO，而是把 TODO、FIXME、BUG、NOTE、HACK、REVIEW、SECURITY、PERF 等代码注释信号转成可扫描、可导航、可诊断、可协作、可被 AI 理解的工作流。
+AnnoPulse 是一个面向 VS Code 的代码注释信号管理插件。它不只是高亮 TODO，而是把 TODO、FIXME、BUG、NOTE、HACK、REVIEW、SECURITY、PERF 等代码注释信号转成可扫描、可导航、可诊断、可协作、可被 AI 理解的工作流。
 
 本文基于 `docs/vscode-task-lens-plugin-design.md`，并结合以下来源：
 
@@ -16,21 +16,21 @@ Code Beacon 是一个面向 VS Code 的代码注释信号管理插件。它不�
 
 ### 一句话
 
-Code Beacon 在编辑器中标出代码里的任务、风险和上下文信号，并提供工作区级检索、Problems 集成、TreeView 管理、CodeLens 操作、Git 归因和 AI 辅助处理。
+AnnoPulse 在编辑器中标出代码里的任务、风险和上下文信号，并提供工作区级检索、Problems 集成、TreeView 管理、CodeLens 操作、Git 归因和 AI 辅助处理。
 
 ### 目标用户
 
 - 个人开发者：快速看到遗漏的 TODO/FIXME，避免发布前忘记处理。
 - 大仓库维护者：在 TreeView、Problems、导出报告中按文件、标签、严重级别、负责人和时间整理注释债务。
 - 团队协作者：用 REVIEW、SECURITY、PERF、QUESTION 等注释类型表达代码中需要后续处理的信号。
-- AI 辅助用户：让 VS Code Agent/Copilot 能通过 Code Beacon 工具读取当前注释任务上下文。
+- AI 辅助用户：让 VS Code Agent/Copilot 能通过 AnnoPulse 工具读取当前注释任务上下文。
 
 ### 非目标
 
 - 不做完整项目管理系统。
 - 不默认把所有 TODO 塞进 Problems 造成噪声。
 - 不默认依赖 native ripgrep 或 Node `fs`，以保证 VS Code Web、Remote、Virtual Workspace 可用。
-- 不复制 GitLens、Todo Tree、Error Lens 的全部功能，只吸收适合 Code Beacon 的交互模式。
+- 不复制 GitLens、Todo Tree、Error Lens 的全部功能，只吸收适合 AnnoPulse 的交互模式。
 
 ## 2. 从参考项目得到的关键结论
 
@@ -56,7 +56,7 @@ Code Beacon 在编辑器中标出代码里的任务、风险和上下文信号�
 - `todohighlight.enableDiagnostics` 支持 open files 的 Problems 诊断，且最新 README 将默认值调整为 false，说明 Problems 默认打开会产生噪声。
 - include/exclude、maxFilesForSearch、Settings UI 自动补全、`.vscode-test`、`.next` 等默认排除逐步补齐。
 - 源码中配置变更时会 dispose 旧 decoration types，PR `#105` 修了 before/after text duplication。
-- 仍然保留 OutputChannel 列表、`workspace.findFiles + openTextDocument` 全量扫描和较旧的 JavaScript 架构，TreeView、增量索引、Notebook、Virtual Workspace、AI 工具等仍是 Code Beacon 可超越的点。
+- 仍然保留 OutputChannel 列表、`workspace.findFiles + openTextDocument` 全量扫描和较旧的 JavaScript 架构，TreeView、增量索引、Notebook、Virtual Workspace、AI 工具等仍是 AnnoPulse 可超越的点。
 
 ### vscode-better-color-highlight
 
@@ -72,17 +72,17 @@ Code Beacon 在编辑器中标出代码里的任务、风险和上下文信号�
 
 ### 同类产品亮点
 
-- Todo Tree：使用 ripgrep 快速搜索，Activity Bar TreeView 展示结果，点击跳转，开放丰富配置。Code Beacon 应学习 TreeView 和 workspace index，但避免强依赖 ripgrep 导致 Web/Virtual Workspace 不可用。
-- Better Comments：把注释分为 Alerts、Queries、TODOs、Highlights、commented out code，并允许自定义标签。Code Beacon 应提供语义 category，而不仅是关键词字符串。
-- Error Lens：把 Problems 信息变成行内消息、整行背景、overview ruler。Code Beacon 的 diagnostics、inline hint、line marker 可以学习这种呈现，但默认要克制。
-- GitLens：in-editor blame、hover、CodeLens、历史导航。Code Beacon 应仅做 annotation 相关 blame：作者、最后修改时间、commit、age、owner 推断。
+- Todo Tree：使用 ripgrep 快速搜索，Activity Bar TreeView 展示结果，点击跳转，开放丰富配置。AnnoPulse 应学习 TreeView 和 workspace index，但避免强依赖 ripgrep 导致 Web/Virtual Workspace 不可用。
+- Better Comments：把注释分为 Alerts、Queries、TODOs、Highlights、commented out code，并允许自定义标签。AnnoPulse 应提供语义 category，而不仅是关键词字符串。
+- Error Lens：把 Problems 信息变成行内消息、整行背景、overview ruler。AnnoPulse 的 diagnostics、inline hint、line marker 可以学习这种呈现，但默认要克制。
+- GitLens：in-editor blame、hover、CodeLens、历史导航。AnnoPulse 应仅做 annotation 相关 blame：作者、最后修改时间、commit、age、owner 推断。
 - todo-comments.nvim：按 severity/icon/category 组织 TODO 注释，并支持搜索列表。jgclark `#111` 明确有用户想要这个方向。
 
 ## 3. 产品功能设计
 
-### 3.1 Beacon Rule
+### 3.1 AnnoPulse Rule
 
-Rule 是 Code Beacon 的核心配置单元。一个 rule 同时描述匹配方式、语义分类、视觉样式、诊断行为和操作入口。
+Rule 是 AnnoPulse 的核心配置单元。一个 rule 同时描述匹配方式、语义分类、视觉样式、诊断行为和操作入口。
 
 默认内置规则：
 
@@ -108,7 +108,7 @@ Rule 是 Code Beacon 的核心配置单元。一个 rule 同时描述匹配方�
 - capture message：支持从匹配位置到行尾、到空行、到 block comment 结束、或 regex named group。
 - owner capture：识别 `TODO(ntnyq):`、`TODO @ntnyq:`、`TODO [owner=ntnyq]`。
 - due/expires capture：识别 `due:2026-08-01`、`expires:2026-08-01`。
-- ignore directives：支持 `code-beacon-ignore-line`、`code-beacon-ignore-next-line`。
+- ignore directives：支持 `annopulse-ignore-line`、`annopulse-ignore-next-line`。
 
 ### 3.3 编辑器可视化
 
@@ -126,8 +126,8 @@ Rule 是 Code Beacon 的核心配置单元。一个 rule 同时描述匹配方�
 
 新增 Activity Bar / Explorer view：
 
-- View Container：`codeBeacon`
-- View：`codeBeacon.annotations`
+- View Container：`annopulse`
+- View：`annopulse.annotations`
 - 分组模式：
   - by file
   - by rule
@@ -161,17 +161,17 @@ TreeView 使用 VS Code 官方 Tree View API：package contribution + `TreeDataP
 
 ### 3.5 Problems 集成
 
-用 `languages.createDiagnosticCollection('code-beacon')` 管理诊断。
+用 `languages.createDiagnosticCollection('annopulse')` 管理诊断。
 
 默认策略：
 
-- `code-beacon.diagnostics.mode` 默认 `off`，避免污染 Problems。
+- `annopulse.diagnostics.mode` 默认 `off`，避免污染 Problems。
 - 可选值：
   - `off`
   - `openFiles`
   - `workspace`
 - Diagnostic：
-  - `source: "Code Beacon"`
+  - `source: "AnnoPulse"`
   - `code: rule.id`
   - severity 由 rule 映射到 `DiagnosticSeverity`
   - message 默认为 `TODO: message`
@@ -216,17 +216,17 @@ CodeLens 默认关闭，可按 rule/category 开启。
 
 工具：
 
-- `code_beacon_list_annotations`：返回当前 workspace/active file/open editors 的 annotation 摘要。
-- `code_beacon_explain_annotation`：解释当前 annotation 背景、风险和可能处理方式。
-- `code_beacon_generate_fix`：根据 annotation 和附近代码生成候选修复。
-- `code_beacon_quality_check`：识别低质量 TODO，例如无动作、无上下文、无负责人、过期。
+- `annopulse_list_annotations`：返回当前 workspace/active file/open editors 的 annotation 摘要。
+- `annopulse_explain_annotation`：解释当前 annotation 背景、风险和可能处理方式。
+- `annopulse_generate_fix`：根据 annotation 和附近代码生成候选修复。
+- `annopulse_quality_check`：识别低质量 TODO，例如无动作、无上下文、无负责人、过期。
 
 命令：
 
-- `code-beacon.explain`
-- `code-beacon.generateFix`
-- `code-beacon.createIssue`
-- `code-beacon.summarizeWorkspace`
+- `annopulse.explain`
+- `annopulse.generateFix`
+- `annopulse.createIssue`
+- `annopulse.summarizeWorkspace`
 
 安全原则：
 
@@ -255,9 +255,9 @@ CodeLens 默认关闭，可按 rule/category 开启。
 
 命令：
 
-- `code-beacon.exportMarkdown`
-- `code-beacon.exportJson`
-- `code-beacon.exportCsv`
+- `annopulse.exportMarkdown`
+- `annopulse.exportJson`
+- `annopulse.exportCsv`
 
 ### 3.10 Notebook / Web / Remote / Virtual Workspace
 
@@ -275,48 +275,48 @@ CodeLens 默认关闭，可按 rule/category 开启。
 
 ## 4. 命令设计
 
-命令全部使用 `code-beacon.*`。
+命令全部使用 `annopulse.*`。
 
-| Command                       | Title                         | 用途                                         |
-| ----------------------------- | ----------------------------- | -------------------------------------------- |
-| `code-beacon.enable`          | Enable Code Beacon            | 开启插件                                     |
-| `code-beacon.disable`         | Disable Code Beacon           | 关闭插件                                     |
-| `code-beacon.toggle`          | Toggle Code Beacon            | 切换开启状态                                 |
-| `code-beacon.refresh`         | Refresh Beacons               | 重新扫描可见编辑器和当前索引                 |
-| `code-beacon.scanWorkspace`   | Scan Workspace for Beacons    | 扫描工作区                                   |
-| `code-beacon.scanActiveFile`  | Scan Active File for Beacons  | 只扫描当前文件                               |
-| `code-beacon.scanOpenEditors` | Scan Open Editors for Beacons | 只扫描打开的编辑器                           |
-| `code-beacon.focusExplorer`   | Focus Code Beacon Explorer    | 聚焦 TreeView                                |
-| `code-beacon.reveal`          | Reveal Beacon                 | 打开文件并定位                               |
-| `code-beacon.copyLink`        | Copy Beacon Link              | 复制 `file:line:column`                      |
-| `code-beacon.copyMarkdown`    | Copy Beacon as Markdown       | 复制 Markdown 列表项                         |
-| `code-beacon.markResolved`    | Mark Beacon Resolved          | 将 annotation 标记为已解决                   |
-| `code-beacon.ignore`          | Ignore Beacon                 | 对当前行添加 ignore directive 或写入本地状态 |
-| `code-beacon.clearIgnored`    | Clear Ignored Beacons         | 清除忽略状态                                 |
-| `code-beacon.exportMarkdown`  | Export Beacons as Markdown    | 导出 Markdown                                |
-| `code-beacon.exportJson`      | Export Beacons as JSON        | 导出 JSON                                    |
-| `code-beacon.exportCsv`       | Export Beacons as CSV         | 导出 CSV                                     |
-| `code-beacon.showBlame`       | Show Beacon Blame             | 展示 blame 信息                              |
-| `code-beacon.explain`         | Explain Beacon                | AI 解释                                      |
-| `code-beacon.generateFix`     | Generate Beacon Fix           | AI 生成修复                                  |
-| `code-beacon.createIssue`     | Create Issue from Beacon      | 创建 issue 草稿或复制 issue body             |
-| `code-beacon.openSettings`    | Open Code Beacon Settings     | 打开配置                                     |
-| `code-beacon.clearCache`      | Clear Code Beacon Cache       | 清理扫描与 blame 缓存                        |
+| Command                     | Title                             | 用途                                         |
+| --------------------------- | --------------------------------- | -------------------------------------------- |
+| `annopulse.enable`          | Enable AnnoPulse                  | 开启插件                                     |
+| `annopulse.disable`         | Disable AnnoPulse                 | 关闭插件                                     |
+| `annopulse.toggle`          | Toggle AnnoPulse                  | 切换开启状态                                 |
+| `annopulse.refresh`         | Refresh Annotations               | 重新扫描可见编辑器和当前索引                 |
+| `annopulse.scanWorkspace`   | Scan Workspace for Annotations    | 扫描工作区                                   |
+| `annopulse.scanActiveFile`  | Scan Active File for Annotations  | 只扫描当前文件                               |
+| `annopulse.scanOpenEditors` | Scan Open Editors for Annotations | 只扫描打开的编辑器                           |
+| `annopulse.focusExplorer`   | Focus AnnoPulse Explorer          | 聚焦 TreeView                                |
+| `annopulse.reveal`          | Reveal Annotation                 | 打开文件并定位                               |
+| `annopulse.copyLink`        | Copy Annotation Link              | 复制 `file:line:column`                      |
+| `annopulse.copyMarkdown`    | Copy Annotation as Markdown       | 复制 Markdown 列表项                         |
+| `annopulse.markResolved`    | Mark AnnoPulse Resolved           | 将 annotation 标记为已解决                   |
+| `annopulse.ignore`          | Ignore Annotation                 | 对当前行添加 ignore directive 或写入本地状态 |
+| `annopulse.clearIgnored`    | Clear Ignored Annotations         | 清除忽略状态                                 |
+| `annopulse.exportMarkdown`  | Export Annotations as Markdown    | 导出 Markdown                                |
+| `annopulse.exportJson`      | Export Annotations as JSON        | 导出 JSON                                    |
+| `annopulse.exportCsv`       | Export Annotations as CSV         | 导出 CSV                                     |
+| `annopulse.showBlame`       | Show AnnoPulse Blame              | 展示 blame 信息                              |
+| `annopulse.explain`         | Explain Annotation                | AI 解释                                      |
+| `annopulse.generateFix`     | Generate Annotation Fix           | AI 生成修复                                  |
+| `annopulse.createIssue`     | Create Issue from AnnoPulse       | 创建 issue 草稿或复制 issue body             |
+| `annopulse.openSettings`    | Open AnnoPulse Settings           | 打开配置                                     |
+| `annopulse.clearCache`      | Clear AnnoPulse Cache             | 清理扫描与 blame 缓存                        |
 
 ## 5. 配置设计
 
-配置仍由 `vscode-ext-gen --scope=code-beacon` 生成类型，运行时代码使用 `config.xxx`。
+配置仍由 `vscode-ext-gen --scope=annopulse` 生成类型，运行时代码使用 `config.xxx`。
 
 ### 5.1 顶层配置
 
 ```jsonc
 {
-  "code-beacon.enable": true,
-  "code-beacon.debug": false,
-  "code-beacon.languages": ["*"],
-  "code-beacon.rules": [],
-  "code-beacon.include": ["**/*"],
-  "code-beacon.exclude": [
+  "annopulse.enable": true,
+  "annopulse.debug": false,
+  "annopulse.languages": ["*"],
+  "annopulse.rules": [],
+  "annopulse.include": ["**/*"],
+  "annopulse.exclude": [
     "**/node_modules/**",
     "**/bower_components/**",
     "**/dist/**",
@@ -333,23 +333,23 @@ CodeLens 默认关闭，可按 rule/category 开启。
     "**/package-lock.json",
     "**/yarn.lock",
   ],
-  "code-beacon.respectFilesExclude": true,
-  "code-beacon.respectSearchExclude": true,
-  "code-beacon.respectGitignore": true,
-  "code-beacon.maxFileSize": 1000000,
-  "code-beacon.maxFilesForSearch": 5000,
-  "code-beacon.scanMode": "visibleEditors",
-  "code-beacon.commentOnly": true,
-  "code-beacon.decorations.enabled": true,
-  "code-beacon.diagnostics.mode": "off",
-  "code-beacon.explorer.enabled": true,
-  "code-beacon.explorer.groupBy": "file",
-  "code-beacon.codelens.enabled": false,
-  "code-beacon.hover.enabled": true,
-  "code-beacon.git.enabled": false,
-  "code-beacon.git.staleDays": 90,
-  "code-beacon.ai.enabled": false,
-  "code-beacon.export.defaultFormat": "markdown",
+  "annopulse.respectFilesExclude": true,
+  "annopulse.respectSearchExclude": true,
+  "annopulse.respectGitignore": true,
+  "annopulse.maxFileSize": 1000000,
+  "annopulse.maxFilesForSearch": 5000,
+  "annopulse.scanMode": "visibleEditors",
+  "annopulse.commentOnly": true,
+  "annopulse.decorations.enabled": true,
+  "annopulse.diagnostics.mode": "off",
+  "annopulse.explorer.enabled": true,
+  "annopulse.explorer.groupBy": "file",
+  "annopulse.codelens.enabled": false,
+  "annopulse.hover.enabled": true,
+  "annopulse.git.enabled": false,
+  "annopulse.git.staleDays": 90,
+  "annopulse.ai.enabled": false,
+  "annopulse.export.defaultFormat": "markdown",
 }
 ```
 
@@ -357,7 +357,7 @@ CodeLens 默认关闭，可按 rule/category 开启。
 
 ```jsonc
 {
-  "code-beacon.rules": [
+  "annopulse.rules": [
     {
       "id": "security",
       "label": "Security",
@@ -422,7 +422,7 @@ CodeLens 默认关闭，可按 rule/category 开启。
 ### 5.3 配置枚举
 
 ```ts
-type BeaconCategory =
+type AnnoPulseCategory =
   | 'todo'
   | 'fixme'
   | 'bug'
@@ -434,7 +434,7 @@ type BeaconCategory =
   | 'question'
   | 'custom'
 
-type BeaconSeverity = 'hint' | 'information' | 'warning' | 'error'
+type AnnoPulseSeverity = 'hint' | 'information' | 'warning' | 'error'
 
 type ScanMode = 'visibleEditors' | 'openEditors' | 'workspace' | 'manual'
 
@@ -447,29 +447,29 @@ type ExplorerGroupBy =
 ## 6. 核心类型设计
 
 ```ts
-export interface BeaconRule {
+export interface AnnoPulseRule {
   readonly id: string
   readonly label: string
-  readonly category: BeaconCategory
+  readonly category: AnnoPulseCategory
   readonly enabled: boolean
-  readonly matcher: BeaconMatcher
-  readonly message?: BeaconMessageSpec
-  readonly owner?: BeaconCaptureSpec
-  readonly due?: BeaconCaptureSpec
-  readonly severity: BeaconSeverity
+  readonly matcher: AnnoPulseMatcher
+  readonly message?: AnnoPulseMessageSpec
+  readonly owner?: AnnoPulseCaptureSpec
+  readonly due?: AnnoPulseCaptureSpec
+  readonly severity: AnnoPulseSeverity
   readonly commentOnly?: boolean
   readonly languages?: readonly string[]
   readonly include?: readonly string[]
   readonly exclude?: readonly string[]
-  readonly style?: BeaconStyle
-  readonly diagnostics?: BeaconDiagnosticsSpec
-  readonly codelens?: BeaconCodeLensSpec
+  readonly style?: AnnoPulseStyle
+  readonly diagnostics?: AnnoPulseDiagnosticsSpec
+  readonly codelens?: AnnoPulseCodeLensSpec
   readonly hideFromTree?: boolean
 }
 
-export type BeaconMatcher = BeaconTextMatcher | BeaconRegexMatcher
+export type AnnoPulseMatcher = AnnoPulseTextMatcher | AnnoPulseRegexMatcher
 
-export interface BeaconTextMatcher {
+export interface AnnoPulseTextMatcher {
   readonly type: 'text'
   readonly value: string
   readonly caseSensitive?: boolean
@@ -477,17 +477,17 @@ export interface BeaconTextMatcher {
   readonly colon?: 'required' | 'optional' | 'forbidden'
 }
 
-export interface BeaconRegexMatcher {
+export interface AnnoPulseRegexMatcher {
   readonly type: 'regex'
   readonly pattern: string
   readonly flags?: string
 }
 
-export interface BeaconAnnotation {
+export interface AnnoPulseAnnotation {
   readonly id: string
   readonly ruleId: string
-  readonly category: BeaconCategory
-  readonly severity: BeaconSeverity
+  readonly category: AnnoPulseCategory
+  readonly severity: AnnoPulseSeverity
   readonly uri: string
   readonly range: SerializedRange
   readonly keywordRange: SerializedRange
@@ -500,23 +500,23 @@ export interface BeaconAnnotation {
   readonly due?: string
   readonly source: 'visibleEditor' | 'openEditor' | 'workspace' | 'notebook'
   readonly languageId: string
-  readonly git?: BeaconGitInfo
+  readonly git?: AnnoPulseGitInfo
   readonly ignored?: boolean
   readonly resolved?: boolean
   readonly createdAt?: string
   readonly updatedAt?: string
 }
 
-export interface BeaconScanResult {
+export interface AnnoPulseScanResult {
   readonly uri: string
   readonly version?: number
   readonly languageId: string
-  readonly annotations: readonly BeaconAnnotation[]
-  readonly skipped?: BeaconSkipReason
+  readonly annotations: readonly AnnoPulseAnnotation[]
+  readonly skipped?: AnnoPulseSkipReason
   readonly durationMs: number
 }
 
-export interface BeaconGitInfo {
+export interface AnnoPulseGitInfo {
   readonly authorName?: string
   readonly authorEmail?: string
   readonly commit?: string
@@ -537,19 +537,19 @@ src/
   meta.ts
   adapters/
     vscode/
-      beacon-command-adapter.ts
+      annotation-command-adapter.ts
   composables/
-    use-beacon-commands.ts
-    use-beacon-highlight.ts
+    use-annotation-commands.ts
+    use-annotation-highlight.ts
     use-workspace-scan.ts
-    use-beacon-explorer.ts
-    use-beacon-diagnostics.ts
-    use-beacon-codelens.ts
-    use-beacon-hover.ts
-    use-beacon-git.ts
-    use-beacon-source-control.ts
-    use-beacon-notebook.ts
-    use-beacon-language-model-tools.ts
+    use-annotation-explorer.ts
+    use-annotation-diagnostics.ts
+    use-annotation-codelens.ts
+    use-annotation-hover.ts
+    use-annotation-git.ts
+    use-annotation-source-control.ts
+    use-annotation-notebook.ts
+    use-annotation-language-model-tools.ts
   constants/
     defaults.ts
   types/
@@ -565,8 +565,8 @@ src/
       workspace-annotation-summary.ts
     commands/
       annotation-target.ts
-      beacon-command-handlers.ts
-      register-beacon-commands.ts
+      annotation-command-handlers.ts
+      register-annotation-commands.ts
     codelens/
       commands.ts
     decorations/
@@ -574,7 +574,7 @@ src/
       decoration-type-cache.ts
       editor-decoration-caches.ts
     diagnostics/
-      beacon-diagnostics.ts
+      annotation-diagnostics.ts
     explorer/
       filter.ts
       git-metadata-index.ts
@@ -615,19 +615,19 @@ src/
 
 ```ts
 const { activate, deactivate } = defineExtension(context => {
-  useBeaconCommands(context.workspaceState)
-  useBeaconDiagnostics()
-  const beaconGit = useBeaconGit()
-  const changedUriIndex = createChangedUriIndex(beaconGit)
+  useAnnoPulseCommands(context.workspaceState)
+  useAnnoPulseDiagnostics()
+  const annotationGit = useAnnoPulseGit()
+  const changedUriIndex = createChangedUriIndex(annotationGit)
   useDisposable(changedUriIndex)
-  useBeaconExplorer(beaconGit, changedUriIndex)
+  useAnnoPulseExplorer(annotationGit, changedUriIndex)
   useWorkspaceScan()
-  const beaconHighlight = useBeaconHighlight()
-  useBeaconNotebook(beaconHighlight.scanTextDocument)
-  useBeaconHover(beaconGit.getMetadata)
-  useBeaconSourceControl(changedUriIndex)
-  useBeaconCodeLens()
-  useBeaconLanguageModelTools()
+  const annotationHighlight = useAnnoPulseHighlight()
+  useAnnoPulseNotebook(annotationHighlight.scanTextDocument)
+  useAnnoPulseHover(annotationGit.getMetadata)
+  useAnnoPulseSourceControl(changedUriIndex)
+  useAnnoPulseCodeLens()
+  useAnnoPulseLanguageModelTools()
 })
 ```
 
@@ -659,14 +659,14 @@ const { activate, deactivate } = defineExtension(context => {
 
 - trusted desktop workspace 中可选 `ripgrep`。
 - 如果 native rg 不可用，自动 fallback，不报错打断用户。
-- Todo Tree 的近期 issue 中反复出现 ripgrep 找不到、Virtual Workspace 不支持的问题，因此 Code Beacon 不能把 rg 作为唯一路径。
+- Todo Tree 的近期 issue 中反复出现 ripgrep 找不到、Virtual Workspace 不支持的问题，因此 AnnoPulse 不能把 rg 作为唯一路径。
 
 ### 8.3 Ignore engine
 
 合并来源：
 
-- `code-beacon.exclude`
-- `code-beacon.include`
+- `annopulse.exclude`
+- `annopulse.include`
 - `files.exclude`
 - `search.exclude`
 - `.gitignore`（trusted workspace 下读取）
@@ -702,18 +702,18 @@ const { activate, deactivate } = defineExtension(context => {
   "viewsContainers": {
     "activitybar": [
       {
-        "id": "codeBeacon",
-        "title": "Code Beacon",
+        "id": "annopulse",
+        "title": "AnnoPulse",
         "icon": "res/icon.png",
       },
     ],
   },
   "views": {
-    "codeBeacon": [
+    "annopulse": [
       {
-        "id": "codeBeacon.annotations",
-        "name": "Beacons",
-        "when": "code-beacon.explorer.enabled",
+        "id": "annopulse.annotations",
+        "name": "Annotations",
+        "when": "annopulse.explorer.enabled",
       },
     ],
   },
@@ -730,13 +730,13 @@ const { activate, deactivate } = defineExtension(context => {
 ### 9.4 when contexts
 
 ```ts
-codeBeacon.enabled
-codeBeacon.hasAnnotations
-codeBeacon.hasWorkspace
-codeBeacon.aiAvailable
-codeBeacon.gitAvailable
-codeBeacon.diagnosticsEnabled
-codeBeacon.activeAnnotation
+annopulse.enabled
+annopulse.hasAnnotations
+annopulse.hasWorkspace
+annopulse.aiAvailable
+annopulse.gitAvailable
+annopulse.diagnosticsEnabled
+annopulse.activeAnnotation
 ```
 
 ## 10. 实现里程碑
@@ -784,7 +784,7 @@ codeBeacon.activeAnnotation
 - [x] Language Model Tool contribution。
 - [x] explain/generate fix/summarize commands。
 - [x] TODO quality scoring。
-- [x] Workspace annotation digest（`code-beacon.summarizeWorkspace`）。
+- [x] Workspace annotation digest（`annopulse.summarizeWorkspace`）。
 - [ ] AI action telemetry opt-in（等待项目自有遥测目标、凭据、数据保留与隐私策略；条件具备前保持无网络发送）。
 
 ### Phase 5：0.1.0 Preview 发布收口
@@ -819,9 +819,9 @@ codeBeacon.activeAnnotation
 
 当前发布元数据已经包含：
 
-- `displayName`: `Code Beacon`
-- `name`: `vscode-code-beacon`
-- `scope`: `code-beacon`
+- `displayName`: `AnnoPulse`
+- `name`: `annopulse`
+- `scope`: `annopulse`
 - `main`: `./dist/index.js`
 - `browser`: `./dist/index.cjs`
 - `extensionKind`: `["ui", "workspace"]`

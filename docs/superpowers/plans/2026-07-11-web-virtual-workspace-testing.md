@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a browser-host E2E test that verifies Code Beacon scans a VS Code Web virtual workspace.
+**Goal:** Add a browser-host E2E test that verifies AnnoPulse scans a VS Code Web virtual workspace.
 
 **Architecture:** A browser-safe test module is bundled separately and executed by `@vscode/test-web`. Its Node-only launcher opens the existing playground as the harness virtual workspace. The browser test uses only VS Code APIs and confirms the scanner publishes diagnostics to a `vscode-test-web` resource.
 
@@ -90,19 +90,19 @@ Commit: `test: add web extension host harness`
 
 **Interfaces:**
 
-- Produces `export async function run(): Promise<void>` that activates Code Beacon, scans the virtual workspace, and asserts its expected diagnostic.
+- Produces `export async function run(): Promise<void>` that activates AnnoPulse, scans the virtual workspace, and asserts its expected diagnostic.
 
 - [ ] **Step 1: Make the test assert the desired Web behavior**
 
 Replace the placeholder with a browser-worker test that uses only `vscode`:
 
 ```ts
-const extension = vscode.extensions.getExtension('ntnyq.vscode-code-beacon')
-assert(extension, 'Expected Code Beacon to be installed')
+const extension = vscode.extensions.getExtension('ntnyq.annopulse')
+assert(extension, 'Expected AnnoPulse to be installed')
 await extension.activate()
 
 await vscode.workspace
-  .getConfiguration('code-beacon')
+  .getConfiguration('annopulse')
   .update('diagnostics.mode', 'workspace', vscode.ConfigurationTarget.Global)
 const [documentUri] = await vscode.workspace.findFiles(
   'src/example.ts',
@@ -111,11 +111,11 @@ const [documentUri] = await vscode.workspace.findFiles(
 )
 assert(documentUri, 'Expected virtual workspace example.ts')
 assert.equal(documentUri.scheme, 'vscode-test-web')
-await vscode.commands.executeCommand('code-beacon.scanWorkspace')
+await vscode.commands.executeCommand('annopulse.scanWorkspace')
 ```
 
 Poll `vscode.languages.getDiagnostics(documentUri)` until it contains a
-Code Beacon TODO diagnostic. Do not import `node:assert`; implement a small
+AnnoPulse TODO diagnostic. Do not import `node:assert`; implement a small
 local assertion helper and a timeout loop using browser timers.
 
 - [ ] **Step 2: Run the browser test and verify RED**

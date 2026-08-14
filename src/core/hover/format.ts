@@ -1,15 +1,15 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import type { BeaconGitMetadata } from '../git/blame'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import type { AnnoPulseGitMetadata } from '../git/blame'
 import {
-  beaconDisplayOwner,
-  beaconDisplayState,
-  formatBeaconGitAge,
+  annopulseDisplayOwner,
+  annopulseDisplayState,
+  formatAnnoPulseGitAge,
 } from '../git/presentation'
 
 /**
  * Formats a one-based annotation location for hover content.
  */
-function formatAnnotationLocation(annotation: BeaconAnnotation): string {
+function formatAnnotationLocation(annotation: AnnoPulseAnnotation): string {
   return `${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`
 }
 
@@ -18,14 +18,14 @@ function escapeMarkdown(value: string): string {
 }
 
 /**
- * Builds Markdown hover content for a beacon annotation.
+ * Builds Markdown hover content for an AnnoPulse annotation.
  */
-export function formatBeaconHoverMarkdown(
-  annotation: BeaconAnnotation,
-  metadata?: BeaconGitMetadata,
+export function formatAnnoPulseHoverMarkdown(
+  annotation: AnnoPulseAnnotation,
+  metadata?: AnnoPulseGitMetadata,
   now: Date = new Date(),
 ): string {
-  const owner = beaconDisplayOwner(annotation)
+  const owner = annopulseDisplayOwner(annotation)
   const title = annotation.message
     ? `**${escapeMarkdown(annotation.keyword)}** ${escapeMarkdown(annotation.message)}`
     : `**${escapeMarkdown(annotation.keyword)}**`
@@ -44,10 +44,10 @@ export function formatBeaconHoverMarkdown(
     details.push(`- Owner: @${escapeMarkdown(owner)}`)
   }
 
-  details.push(`- State: ${beaconDisplayState(annotation)}`)
+  details.push(`- State: ${annopulseDisplayState(annotation)}`)
 
   if (metadata) {
-    const age = formatBeaconGitAge(metadata, now)
+    const age = formatAnnoPulseGitAge(metadata, now)
 
     details.push(
       '',

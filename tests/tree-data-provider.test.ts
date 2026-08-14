@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import {
-  BeaconTreeDataProvider,
-  type BeaconTreeElement,
+  AnnoPulseTreeDataProvider,
+  type AnnoPulseTreeElement,
 } from '../src/core/explorer/tree-data-provider'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
 import { commands } from '../src/meta'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 vi.mock(
   import('vscode'),
@@ -44,8 +44,8 @@ vi.mock(
 
 function createAnnotation(
   id: string,
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -70,9 +70,9 @@ function createAnnotation(
   }
 }
 
-describe(BeaconTreeDataProvider, () => {
+describe(AnnoPulseTreeDataProvider, () => {
   it('groups annotations by file', async () => {
-    const provider = new BeaconTreeDataProvider(() => [
+    const provider = new AnnoPulseTreeDataProvider(() => [
       createAnnotation('a'),
       createAnnotation('b', {
         id: 'b',
@@ -80,7 +80,7 @@ describe(BeaconTreeDataProvider, () => {
       }),
     ])
 
-    const roots = (await provider.getChildren()) as BeaconTreeElement[]
+    const roots = (await provider.getChildren()) as AnnoPulseTreeElement[]
 
     expect(roots).toHaveLength(2)
     expect(
@@ -92,7 +92,7 @@ describe(BeaconTreeDataProvider, () => {
   })
 
   it('groups annotations by captured owner when available', async () => {
-    const provider = new BeaconTreeDataProvider(
+    const provider = new AnnoPulseTreeDataProvider(
       () => [
         createAnnotation('a', {
           owner: 'alice',
@@ -105,30 +105,30 @@ describe(BeaconTreeDataProvider, () => {
       () => 'owner',
     )
 
-    const roots = (await provider.getChildren()) as BeaconTreeElement[]
+    const roots = (await provider.getChildren()) as AnnoPulseTreeElement[]
 
     expect(
       roots.map(item => (item.type === 'group' ? item.label : '')),
     ).toStrictEqual(['Unassigned', 'alice', 'bob'])
   })
 
-  it('returns beacon leaves for a group', async () => {
+  it('returns annopulse leaves for a group', async () => {
     const annotation = createAnnotation('a')
-    const provider = new BeaconTreeDataProvider(() => [annotation])
-    const [group] = (await provider.getChildren()) as BeaconTreeElement[]
+    const provider = new AnnoPulseTreeDataProvider(() => [annotation])
+    const [group] = (await provider.getChildren()) as AnnoPulseTreeElement[]
 
     await expect(
       Promise.resolve(provider.getChildren(group)),
     ).resolves.toStrictEqual([
       {
         annotation,
-        type: 'beacon',
+        type: 'annopulse',
       },
     ])
   })
 
   it('returns leaves in source-location order', async () => {
-    const provider = new BeaconTreeDataProvider(() => [
+    const provider = new AnnoPulseTreeDataProvider(() => [
       createAnnotation('later-column', { column: 8, line: 1 }),
       createAnnotation('second-file', {
         column: 0,
@@ -139,20 +139,22 @@ describe(BeaconTreeDataProvider, () => {
       createAnnotation('earlier-column', { column: 2, line: 1 }),
     ])
 
-    const roots = (await provider.getChildren()) as BeaconTreeElement[]
-    const leaves = (await provider.getChildren(roots[0])) as BeaconTreeElement[]
+    const roots = (await provider.getChildren()) as AnnoPulseTreeElement[]
+    const leaves = (await provider.getChildren(
+      roots[0],
+    )) as AnnoPulseTreeElement[]
 
     expect(
-      leaves.map(item => (item.type === 'beacon' ? item.annotation.id : '')),
+      leaves.map(item => (item.type === 'annopulse' ? item.annotation.id : '')),
     ).toStrictEqual(['earlier-line', 'earlier-column', 'later-column'])
   })
 
-  it('creates revealable beacon tree items', () => {
+  it('creates revealable annopulse tree items', () => {
     const annotation = createAnnotation('a')
-    const provider = new BeaconTreeDataProvider(() => [annotation])
-    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+    const provider = new AnnoPulseTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'annopulse' })
 
-    expect(item.contextValue).toBe('beacon')
+    expect(item.contextValue).toBe('annopulse')
     expect(item.command).toMatchObject({
       arguments: [annotation],
       command: commands.reveal,
@@ -160,13 +162,13 @@ describe(BeaconTreeDataProvider, () => {
     expect(item.description).toBe('2:4')
   })
 
-  it('presents optional Git metadata in beacon tree items', () => {
+  it('presents optional Git metadata in annopulse tree items', () => {
     const annotation = createAnnotation('a', {
       ignored: true,
       owner: 'Ada',
       resolved: true,
     })
-    const metadataByAnnotationId = new Map<string, BeaconGitMetadata>([
+    const metadataByAnnotationId = new Map<string, AnnoPulseGitMetadata>([
       [
         annotation.id,
         {
@@ -177,13 +179,13 @@ describe(BeaconTreeDataProvider, () => {
         },
       ],
     ])
-    const provider = new BeaconTreeDataProvider(
+    const provider = new AnnoPulseTreeDataProvider(
       () => [annotation],
       () => 'file',
       () => metadataByAnnotationId,
       () => new Date('2026-07-12T12:00:00.000Z'),
     )
-    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+    const item = provider.getTreeItem({ annotation, type: 'annopulse' })
 
     expect(item.description).toBe(
       '2:4 • @Ada • Grace Hopper • 1 day ago • resolved • ignored',
@@ -196,8 +198,8 @@ describe(BeaconTreeDataProvider, () => {
 
   it('retains compact descriptions and provides base tooltips without Git metadata', () => {
     const annotation = createAnnotation('a')
-    const provider = new BeaconTreeDataProvider(() => [annotation])
-    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+    const provider = new AnnoPulseTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'annopulse' })
 
     expect(item.description).toBe('2:4')
     expect(item.tooltip).toContain('Owner: Unassigned')
@@ -207,22 +209,22 @@ describe(BeaconTreeDataProvider, () => {
 
   it('omits whitespace-only owners from compact descriptions without Git metadata', () => {
     const annotation = createAnnotation('a', { owner: '   ' })
-    const provider = new BeaconTreeDataProvider(() => [annotation])
-    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+    const provider = new AnnoPulseTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'annopulse' })
 
     expect(item.description).toBe('2:4')
     expect(item.tooltip).toContain('Owner: Unassigned')
   })
 
-  it('includes resolved and ignored state in beacon tree item context', () => {
+  it('includes resolved and ignored state in annopulse tree item context', () => {
     const annotation = createAnnotation('a', {
       ignored: true,
       resolved: true,
     })
-    const provider = new BeaconTreeDataProvider(() => [annotation])
-    const item = provider.getTreeItem({ annotation, type: 'beacon' })
+    const provider = new AnnoPulseTreeDataProvider(() => [annotation])
+    const item = provider.getTreeItem({ annotation, type: 'annopulse' })
 
-    expect(item.contextValue).toBe('beaconResolvedIgnored')
+    expect(item.contextValue).toBe('annopulseResolvedIgnored')
     expect(item.description).toBe('2:4 resolved ignored')
   })
 })

@@ -3,7 +3,7 @@ import type { Memento } from 'vscode'
 /**
  * Serializable resolved and ignored annotation identifiers.
  */
-export interface BeaconAnnotationState {
+export interface AnnoPulseAnnotationState {
   readonly resolvedIds: readonly string[]
   readonly ignoredIds: readonly string[]
 }
@@ -12,13 +12,13 @@ export interface BeaconAnnotationState {
  * Loads and saves persisted annotation state.
  */
 export interface AnnotationStateStorage {
-  load: () => BeaconAnnotationState
-  save: (state: BeaconAnnotationState) => Thenable<void>
+  load: () => AnnoPulseAnnotationState
+  save: (state: AnnoPulseAnnotationState) => Thenable<void>
 }
 
-const annotationStateKey = 'code-beacon.annotationState'
+const annotationStateKey = 'annopulse.annotationState'
 
-const emptyState: BeaconAnnotationState = {
+const emptyState: AnnoPulseAnnotationState = {
   ignoredIds: [],
   resolvedIds: [],
 }
@@ -39,7 +39,7 @@ function normalizeIds(value: unknown): readonly string[] {
 /**
  * Converts an unknown Memento payload into a safe annotation state snapshot.
  */
-function normalizeState(value: unknown): BeaconAnnotationState {
+function normalizeState(value: unknown): AnnoPulseAnnotationState {
   if (typeof value !== 'object' || value === null) {
     return emptyState
   }

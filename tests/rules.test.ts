@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_BEACON_RULES } from '../src/constants/defaults'
+import { DEFAULT_ANNOPULSE_RULES } from '../src/constants/defaults'
 import { normalizeRules } from '../src/core/rules/normalize'
-import type { BeaconRuleConfig } from '../src/types/annotation'
+import type { AnnoPulseRuleConfig } from '../src/types/annotation'
 
 describe('rule normalization', () => {
   it('returns enabled built-in rules when no custom rules are provided', () => {
@@ -9,7 +9,7 @@ describe('rule normalization', () => {
 
     expect(result.errors).toStrictEqual([])
     expect(result.rules.map(rule => rule.id)).toStrictEqual(
-      DEFAULT_BEACON_RULES.map(rule => rule.id),
+      DEFAULT_ANNOPULSE_RULES.map(rule => rule.id),
     )
     expect(
       result.rules.find(rule => rule.id === 'todo')?.matcherRegex.source,
@@ -17,7 +17,7 @@ describe('rule normalization', () => {
   })
 
   it('overrides a built-in rule by id', () => {
-    const customRules: BeaconRuleConfig[] = [
+    const customRules: AnnoPulseRuleConfig[] = [
       {
         id: 'todo',
         label: 'Work Item',

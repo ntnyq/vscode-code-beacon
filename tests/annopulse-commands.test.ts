@@ -9,12 +9,12 @@ import {
   workspace,
 } from 'vscode'
 import type * as Vscode from 'vscode'
-import { useBeaconCommands } from '../src/composables/use-beacon-commands'
-import type { BeaconLeafTreeElement } from '../src/core/explorer/tree-data-provider'
-import { formatBeaconIssue } from '../src/core/issues/format'
+import { useAnnoPulseCommands } from '../src/composables/use-annopulse-commands'
+import type { AnnoPulseLeafTreeElement } from '../src/core/explorer/tree-data-provider'
+import { formatAnnoPulseIssue } from '../src/core/issues/format'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { commands } from '../src/meta'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
 const {
@@ -80,7 +80,7 @@ const {
     commandHandlers: handlers,
     configState: { aiEnabled: true },
     createOutputChannel: vi.fn<(name: string) => typeof channel>(name =>
-      name === 'Code Beacon Workspace Summary' ? summaryChannel : channel,
+      name === 'AnnoPulse Workspace Summary' ? summaryChannel : channel,
     ),
     outputChannel: channel,
     outputText: channelText,
@@ -309,8 +309,8 @@ function registeredCommand(command: string): (...args: unknown[]) => unknown {
 }
 
 function createAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 2,
@@ -335,14 +335,14 @@ function createAnnotation(
   }
 }
 
-function createLeaf(annotation: BeaconAnnotation): BeaconLeafTreeElement {
+function createLeaf(annotation: AnnoPulseAnnotation): AnnoPulseLeafTreeElement {
   return {
     annotation,
-    type: 'beacon',
+    type: 'annopulse',
   }
 }
 
-function createScannerAnnotation(): BeaconAnnotation {
+function createScannerAnnotation(): AnnoPulseAnnotation {
   return {
     ...createAnnotation(),
     diagnostics: undefined,
@@ -363,8 +363,8 @@ function createScannerAnnotation(): BeaconAnnotation {
 }
 
 function createGenerateFixAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return createAnnotation({
     keywordRange: {
       end: { character: 8, line: 0 },
@@ -397,7 +397,7 @@ function generatedFixResponse(proposal: {
 }
 
 async function expectInvalidIssueAnnotation(value: unknown) {
-  useBeaconCommands({
+  useAnnoPulseCommands({
     get: <T>() => undefined as T | undefined,
     update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   } as unknown as Vscode.Memento)
@@ -408,27 +408,27 @@ async function expectInvalidIssueAnnotation(value: unknown) {
 
   expect(env.clipboard.writeText).not.toHaveBeenCalled()
   expect(window.showWarningMessage).toHaveBeenCalledWith(
-    'Select a beacon in the Explorer to create an issue body.',
+    'Select an annotation in the Explorer to create an issue body.',
   )
 }
 
 async function expectInvalidExplainAnnotation(value: unknown) {
-  useBeaconCommands({
+  useAnnoPulseCommands({
     get: <T>() => undefined as T | undefined,
     update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
   } as unknown as Vscode.Memento)
 
-  await registeredCommand('code-beacon.explain')(value)
+  await registeredCommand('annopulse.explain')(value)
 
   expect(window.showWarningMessage).toHaveBeenCalledWith(
-    'Select a beacon in the Explorer to explain it.',
+    'Select an annotation in the Explorer to explain it.',
   )
   expect(workspace.openTextDocument).not.toHaveBeenCalled()
   expect(lm.selectChatModels).not.toHaveBeenCalled()
   expect(createOutputChannel).not.toHaveBeenCalled()
 }
 
-describe('beacon command persistence', () => {
+describe('annopulse command persistence', () => {
   beforeEach(() => {
     annotationStore.clear()
     commandHandlers.clear()
@@ -465,16 +465,16 @@ describe('beacon command persistence', () => {
     applyEdit.mockResolvedValue(true)
   })
 
-  it('warns when explaining without a selected beacon', async () => {
-    useBeaconCommands({
+  it('warns when explaining without a selected annopulse', async () => {
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')()
+    await registeredCommand('annopulse.explain')()
 
     expect(window.showWarningMessage).toHaveBeenCalledWith(
-      'Select a beacon in the Explorer to explain it.',
+      'Select an annotation in the Explorer to explain it.',
     )
     expect(workspace.openTextDocument).not.toHaveBeenCalled()
     expect(lm.selectChatModels).not.toHaveBeenCalled()
@@ -482,15 +482,15 @@ describe('beacon command persistence', () => {
 
   it('does not access a document or model while AI explanations are disabled', async () => {
     configState.aiEnabled = false
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
     expect(window.showWarningMessage).toHaveBeenCalledWith(
-      'Enable code-beacon.ai.enabled to explain annotations.',
+      'Enable annopulse.ai.enabled to explain annotations.',
     )
     expect(workspace.openTextDocument).not.toHaveBeenCalled()
     expect(lm.selectChatModels).not.toHaveBeenCalled()
@@ -513,13 +513,13 @@ describe('beacon command persistence', () => {
     vi.mocked(workspace.openTextDocument).mockRejectedValueOnce(
       new Error('Document unavailable'),
     )
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
     const annotation = createAnnotation()
 
-    await registeredCommand('code-beacon.explain')(annotation)
+    await registeredCommand('annopulse.explain')(annotation)
 
     expect(uriParse).toHaveBeenCalledWith(annotation.uri)
     expect(window.showWarningMessage).toHaveBeenCalledWith(
@@ -529,12 +529,12 @@ describe('beacon command persistence', () => {
   })
 
   it('reports when no Copilot model is available', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
     expect(lm.selectChatModels).toHaveBeenCalledWith({ vendor: 'copilot' })
     expect(window.showInformationMessage).toHaveBeenCalledWith(
@@ -553,17 +553,17 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
     vi.mocked(workspace.openTextDocument).mockRejectedValueOnce(
       new Error('Document unavailable'),
     )
 
-    await registeredCommand('code-beacon.explain')(
+    await registeredCommand('annopulse.explain')(
       createAnnotation({ uri: 'file:///workspace/src/missing.ts' }),
     )
 
@@ -581,15 +581,15 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
     selectChatModels.mockRejectedValueOnce(new Error('Model unavailable'))
 
-    await registeredCommand('code-beacon.explain')(
+    await registeredCommand('annopulse.explain')(
       createAnnotation({ uri: 'file:///workspace/src/selection-failure.ts' }),
     )
 
@@ -607,14 +607,14 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
-    await registeredCommand('code-beacon.explain')(
+    await registeredCommand('annopulse.explain')(
       createAnnotation({ uri: 'file:///workspace/src/no-model.ts' }),
     )
 
@@ -635,18 +635,18 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(annotation)
+    await registeredCommand('annopulse.explain')(annotation)
 
     expect(withProgress).toHaveBeenCalledWith(
       {
         cancellable: true,
         location: 15,
-        title: 'Explaining Code Beacon annotation',
+        title: 'Explaining AnnoPulse annotation',
       },
       expect.any(Function),
     )
@@ -664,7 +664,7 @@ describe('beacon command persistence', () => {
       undefined,
       cancellationToken,
     )
-    expect(createOutputChannel).toHaveBeenCalledWith('Code Beacon AI')
+    expect(createOutputChannel).toHaveBeenCalledWith('AnnoPulse AI')
     expect(outputChannel.clear).toHaveBeenCalledTimes(1)
     expect(outputChannel.append).toHaveBeenNthCalledWith(
       1,
@@ -695,12 +695,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
     expect(model.sendRequest).toHaveBeenCalledTimes(1)
     expect(window.showWarningMessage).toHaveBeenCalledWith(
@@ -730,13 +730,13 @@ describe('beacon command persistence', () => {
     selectChatModels
       .mockResolvedValueOnce([successfulModel])
       .mockResolvedValueOnce([failedModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(firstAnnotation)
-    await registeredCommand('code-beacon.explain')(failedAnnotation)
+    await registeredCommand('annopulse.explain')(firstAnnotation)
+    await registeredCommand('annopulse.explain')(failedAnnotation)
 
     expect(outputChannel.clear).toHaveBeenCalledTimes(3)
     expect(outputText).toHaveLength(1)
@@ -776,16 +776,15 @@ describe('beacon command persistence', () => {
     selectChatModels
       .mockResolvedValueOnce([firstModel])
       .mockResolvedValueOnce([newerModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const firstInvocation = registeredCommand('code-beacon.explain')(
-      firstAnnotation,
-    )
+    const firstInvocation =
+      registeredCommand('annopulse.explain')(firstAnnotation)
     await firstStreamWaiting.promise
-    await registeredCommand('code-beacon.explain')(newerAnnotation)
+    await registeredCommand('annopulse.explain')(newerAnnotation)
     firstStreamCanYield.resolve()
     await firstInvocation
 
@@ -816,16 +815,15 @@ describe('beacon command persistence', () => {
     selectChatModels
       .mockResolvedValueOnce([newerModel])
       .mockResolvedValueOnce([])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const firstInvocation = registeredCommand('code-beacon.explain')(
-      firstAnnotation,
-    )
+    const firstInvocation =
+      registeredCommand('annopulse.explain')(firstAnnotation)
     await tick()
-    await registeredCommand('code-beacon.explain')(newerAnnotation)
+    await registeredCommand('annopulse.explain')(newerAnnotation)
     firstDocument.resolve({
       getText: () => vscodeState.documentText,
     } as Vscode.TextDocument)
@@ -852,12 +850,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
     expect(outputText.join('')).toContain('First response chunk.')
     expect(outputText.join('')).not.toContain('Cancelled response chunk.')
@@ -877,12 +875,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
     for (const [disposable] of useDisposable.mock.calls) {
       const dispose = (disposable as { dispose?: unknown }).dispose
@@ -911,14 +909,13 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const invocation = registeredCommand('code-beacon.explain')(
-      createAnnotation(),
-    )
+    const invocation =
+      registeredCommand('annopulse.explain')(createAnnotation())
     await streamWaiting.promise
 
     for (const [disposable] of useDisposable.mock.calls) {
@@ -948,12 +945,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
 
     expect(window.showInformationMessage).toHaveBeenCalledWith(
       'Explanation cancelled.',
@@ -962,15 +959,15 @@ describe('beacon command persistence', () => {
   })
 
   it('does not select a model, create output, or access a document for an empty workspace summary', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(window.showInformationMessage).toHaveBeenCalledWith(
-      'No unresolved, non-ignored Code Beacon annotations are currently indexed to summarize.',
+      'No unresolved, non-ignored AnnoPulse annotations are currently indexed to summarize.',
     )
     expect(lm.selectChatModels).not.toHaveBeenCalled()
     expect(createOutputChannel).not.toHaveBeenCalled()
@@ -985,15 +982,15 @@ describe('beacon command persistence', () => {
       createAnnotation(),
     ])
     const initialState = annotationStore.getState()
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(window.showWarningMessage).toHaveBeenCalledWith(
-      'Enable code-beacon.ai.enabled to summarize workspace annotations.',
+      'Enable annopulse.ai.enabled to summarize workspace annotations.',
     )
     expect(lm.selectChatModels).not.toHaveBeenCalled()
     expect(createOutputChannel).not.toHaveBeenCalled()
@@ -1009,12 +1006,12 @@ describe('beacon command persistence', () => {
       createAnnotation(),
     ])
     selectChatModels.mockRejectedValueOnce(new Error('Model unavailable'))
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(window.showWarningMessage).toHaveBeenCalledWith(
       'Unable to select a Copilot language model to summarize workspace annotations.',
@@ -1023,7 +1020,7 @@ describe('beacon command persistence', () => {
     expect(workspaceEdits).toHaveLength(0)
     expect(applyEdit).not.toHaveBeenCalled()
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(window.showInformationMessage).toHaveBeenCalledWith(
       'No Copilot language model is available to summarize workspace annotations.',
@@ -1057,19 +1054,19 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(lm.selectChatModels).toHaveBeenCalledWith({ vendor: 'copilot' })
     expect(withProgress).toHaveBeenCalledWith(
       {
         cancellable: true,
         location: 15,
-        title: 'Summarizing Code Beacon workspace annotations',
+        title: 'Summarizing AnnoPulse workspace annotations',
       },
       expect.any(Function),
     )
@@ -1086,7 +1083,7 @@ describe('beacon command persistence', () => {
       cancellationToken,
     )
     expect(createOutputChannel).toHaveBeenCalledWith(
-      'Code Beacon Workspace Summary',
+      'AnnoPulse Workspace Summary',
     )
     expect(summaryOutputChannel.append).toHaveBeenNthCalledWith(
       1,
@@ -1121,12 +1118,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(model.sendRequest).toHaveBeenCalledTimes(1)
     expect(window.showWarningMessage).toHaveBeenCalledWith(
@@ -1154,12 +1151,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(summaryOutputText.join('')).toContain('First summary chunk.')
     expect(summaryOutputText.join('')).not.toContain('Cancelled summary chunk.')
@@ -1197,14 +1194,14 @@ describe('beacon command persistence', () => {
     selectChatModels
       .mockResolvedValueOnce([delayedModel])
       .mockResolvedValueOnce([newerModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const first = registeredCommand('code-beacon.summarizeWorkspace')()
+    const first = registeredCommand('annopulse.summarizeWorkspace')()
     await streamWaiting.promise
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
     streamCanYield.resolve()
     await first
 
@@ -1227,7 +1224,7 @@ describe('beacon command persistence', () => {
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([disposalModel])
 
-    const disposed = registeredCommand('code-beacon.summarizeWorkspace')()
+    const disposed = registeredCommand('annopulse.summarizeWorkspace')()
     await disposeStreamWaiting.promise
     for (const [disposable] of useDisposable.mock.calls) {
       const dispose = (disposable as { dispose?: unknown }).dispose
@@ -1272,28 +1269,26 @@ describe('beacon command persistence', () => {
     selectChatModels
       .mockResolvedValueOnce([delayedSummaryModel])
       .mockResolvedValueOnce([explainModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const summary = registeredCommand('code-beacon.summarizeWorkspace')()
+    const summary = registeredCommand('annopulse.summarizeWorkspace')()
     await summaryStreamWaiting.promise
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
     summaryStreamCanYield.resolve()
     await summary
 
-    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('# AnnoPulse explanation')
     expect(outputText.join('')).toContain('Explain-only chunk.')
-    expect(outputText.join('')).not.toContain('# Code Beacon workspace summary')
+    expect(outputText.join('')).not.toContain('# AnnoPulse workspace summary')
     expect(outputText.join('')).not.toContain('Summary-only chunk.')
     expect(summaryOutputText.join('')).toContain(
-      '# Code Beacon workspace summary',
+      '# AnnoPulse workspace summary',
     )
     expect(summaryOutputText.join('')).toContain('Summary-only chunk.')
-    expect(summaryOutputText.join('')).not.toContain(
-      '# Code Beacon explanation',
-    )
+    expect(summaryOutputText.join('')).not.toContain('# AnnoPulse explanation')
     expect(summaryOutputText.join('')).not.toContain('Explain-only chunk.')
   })
 
@@ -1314,22 +1309,22 @@ describe('beacon command persistence', () => {
       .mockRejectedValueOnce(new Error('Model unavailable'))
       .mockResolvedValueOnce([explainModel])
       .mockResolvedValueOnce([])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.explain')(createAnnotation())
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
-    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('# AnnoPulse explanation')
     expect(outputText.join('')).toContain('Explanation remains visible.')
     expect(summaryOutputText).toHaveLength(0)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.explain')(createAnnotation())
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
-    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('# AnnoPulse explanation')
     expect(outputText.join('')).toContain('Explanation remains visible.')
     expect(summaryOutputText).toHaveLength(0)
     expect(createOutputChannel).toHaveBeenCalledTimes(1)
@@ -1355,21 +1350,21 @@ describe('beacon command persistence', () => {
     selectChatModels
       .mockResolvedValueOnce([explainModel])
       .mockResolvedValueOnce([rejectedSummaryModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.explain')(createAnnotation())
+    await registeredCommand('annopulse.explain')(createAnnotation())
     const explanationOutput = [...outputText]
     const explainAppendCount = outputChannel.append.mock.calls.length
     const explainClearCount = outputChannel.clear.mock.calls.length
     const explainShowCount = outputChannel.show.mock.calls.length
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(outputText).toStrictEqual(explanationOutput)
-    expect(outputText.join('')).toContain('# Code Beacon explanation')
+    expect(outputText.join('')).toContain('# AnnoPulse explanation')
     expect(outputText.join('')).toContain('Explanation remains visible.')
     expect(outputChannel.append).toHaveBeenCalledTimes(explainAppendCount)
     expect(outputChannel.clear).toHaveBeenCalledTimes(explainClearCount)
@@ -1403,12 +1398,12 @@ describe('beacon command persistence', () => {
       .mockRejectedValueOnce(new Error('Model unavailable'))
       .mockResolvedValueOnce([successfulSummaryModel])
       .mockResolvedValueOnce([rejectedSummaryModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
     const selectionFailureOutput = [...summaryOutputText]
     const selectionFailureClearCount =
       summaryOutputChannel.clear.mock.calls.length
@@ -1417,7 +1412,7 @@ describe('beacon command persistence', () => {
     const selectionFailureShowCount =
       summaryOutputChannel.show.mock.calls.length
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(summaryOutputText).toStrictEqual(selectionFailureOutput)
     expect(summaryOutputChannel.clear).toHaveBeenCalledTimes(
@@ -1430,7 +1425,7 @@ describe('beacon command persistence', () => {
       selectionFailureShowCount,
     )
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
     const requestFailureOutput = [...summaryOutputText]
     const requestFailureClearCount =
       summaryOutputChannel.clear.mock.calls.length
@@ -1438,7 +1433,7 @@ describe('beacon command persistence', () => {
       summaryOutputChannel.append.mock.calls.length
     const requestFailureShowCount = summaryOutputChannel.show.mock.calls.length
 
-    await registeredCommand('code-beacon.summarizeWorkspace')()
+    await registeredCommand('annopulse.summarizeWorkspace')()
 
     expect(summaryOutputText).toStrictEqual(requestFailureOutput)
     expect(summaryOutputChannel.clear).toHaveBeenCalledTimes(
@@ -1487,17 +1482,15 @@ describe('beacon command persistence', () => {
           replacement: '// TODO: use a maintained parser',
         }),
       ])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const summary = registeredCommand('code-beacon.summarizeWorkspace')()
+    const summary = registeredCommand('annopulse.summarizeWorkspace')()
     await summaryStreamWaiting.promise
-    await registeredCommand('code-beacon.explain')(
-      createGenerateFixAnnotation(),
-    )
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.explain')(createGenerateFixAnnotation())
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
     summaryStreamCanYield.resolve()
@@ -1507,15 +1500,15 @@ describe('beacon command persistence', () => {
     expect(applyEdit).toHaveBeenCalledTimes(1)
   })
 
-  it('does not access VS Code data or create edits without a selected beacon or AI opt-in', async () => {
-    useBeaconCommands({
+  it('does not access VS Code data or create edits without a selected annopulse or AI opt-in', async () => {
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')()
+    await registeredCommand('annopulse.generateFix')()
     configState.aiEnabled = false
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1530,12 +1523,12 @@ describe('beacon command persistence', () => {
     vi.mocked(workspace.openTextDocument).mockRejectedValueOnce(
       new Error('Document unavailable'),
     )
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1545,7 +1538,7 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([failedModel])
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1557,12 +1550,12 @@ describe('beacon command persistence', () => {
   it('reports model selection rejection without creating or applying an edit', async () => {
     const snapshot = vscodeState.documentText
     selectChatModels.mockRejectedValueOnce(new Error('Model unavailable'))
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1575,12 +1568,12 @@ describe('beacon command persistence', () => {
   })
 
   it('reports when no Copilot model is available without creating an edit', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1612,12 +1605,12 @@ describe('beacon command persistence', () => {
       selectChatModels.mockResolvedValueOnce([model])
       vscodeState.documentText =
         '// TODO: replace deprecated parser\n// TODO: second annotation\n'
-      useBeaconCommands({
+      useAnnoPulseCommands({
         get: <T>() => undefined as T | undefined,
         update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
       } as unknown as Vscode.Memento)
 
-      await registeredCommand('code-beacon.generateFix')(
+      await registeredCommand('annopulse.generateFix')(
         createGenerateFixAnnotation(),
       )
 
@@ -1638,18 +1631,18 @@ describe('beacon command persistence', () => {
         replacement,
       }),
     ])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(annotation)
+    await registeredCommand('annopulse.generateFix')(annotation)
 
     expect(workspaceEdits).toHaveLength(1)
     expect(workspaceEdits[0]?.replacements).toStrictEqual([
       {
         metadata: {
-          label: 'Apply Code Beacon generated fix',
+          label: 'Apply AnnoPulse generated fix',
           needsConfirmation: true,
         },
         newText: replacement,
@@ -1682,15 +1675,15 @@ describe('beacon command persistence', () => {
     applyEdit
       .mockResolvedValueOnce(false)
       .mockRejectedValueOnce(new Error('No'))
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1725,12 +1718,12 @@ describe('beacon command persistence', () => {
         replacement: '// TODO: use a maintained parser',
       }),
     ])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1765,12 +1758,12 @@ describe('beacon command persistence', () => {
     } as unknown as Vscode.LanguageModelChat
     vscodeState.documentText = `${original}\n`
     selectChatModels.mockResolvedValueOnce([delayedModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const first = registeredCommand('code-beacon.generateFix')(
+    const first = registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
     await streamWaiting.promise
@@ -1795,12 +1788,12 @@ describe('beacon command persistence', () => {
       ),
     } as unknown as Vscode.LanguageModelChat
     selectChatModels.mockResolvedValueOnce([model])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
 
@@ -1845,16 +1838,16 @@ describe('beacon command persistence', () => {
           replacement: '// TODO: use a maintained parser',
         }),
       ])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const first = registeredCommand('code-beacon.generateFix')(
+    const first = registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
     await streamWaiting.promise
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
     streamCanYield.resolve()
@@ -1888,12 +1881,12 @@ describe('beacon command persistence', () => {
     } as unknown as Vscode.LanguageModelChat
     vscodeState.documentText = `${original}\n`
     selectChatModels.mockResolvedValueOnce([delayedModel])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const invocation = registeredCommand('code-beacon.generateFix')(
+    const invocation = registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
     await streamWaiting.promise
@@ -1937,16 +1930,16 @@ describe('beacon command persistence', () => {
           replacement: '// TODO: use a maintained parser',
         }),
       ])
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    const explain = registeredCommand('code-beacon.explain')(
+    const explain = registeredCommand('annopulse.explain')(
       createGenerateFixAnnotation(),
     )
     await explainStreamWaiting.promise
-    await registeredCommand('code-beacon.generateFix')(
+    await registeredCommand('annopulse.generateFix')(
       createGenerateFixAnnotation(),
     )
     explainStreamCanYield.resolve()
@@ -1957,7 +1950,7 @@ describe('beacon command persistence', () => {
   })
 
   it('copies one formatted issue body and confirms success', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -1966,15 +1959,15 @@ describe('beacon command persistence', () => {
     await registeredCommand(commands.createIssue)(annotation)
 
     expect(env.clipboard.writeText).toHaveBeenCalledWith(
-      formatBeaconIssue(annotation).body,
+      formatAnnoPulseIssue(annotation).body,
     )
     expect(window.showInformationMessage).toHaveBeenCalledWith(
       'Issue body copied to clipboard.',
     )
   })
 
-  it('copies the issue body when invoked from an Explorer beacon leaf', async () => {
-    useBeaconCommands({
+  it('copies the issue body when invoked from an Explorer annopulse leaf', async () => {
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -1983,15 +1976,15 @@ describe('beacon command persistence', () => {
     await registeredCommand(commands.createIssue)(createLeaf(annotation))
 
     expect(env.clipboard.writeText).toHaveBeenCalledWith(
-      formatBeaconIssue(annotation).body,
+      formatAnnoPulseIssue(annotation).body,
     )
     expect(window.showInformationMessage).toHaveBeenCalledWith(
       'Issue body copied to clipboard.',
     )
   })
 
-  it('updates annotation state when invoked from Explorer beacon leaves', () => {
-    useBeaconCommands({
+  it('updates annotation state when invoked from Explorer annopulse leaves', () => {
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -2019,7 +2012,7 @@ describe('beacon command persistence', () => {
   })
 
   it('ignores invalid annotation targets for state commands', () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -2031,7 +2024,9 @@ describe('beacon command persistence', () => {
       commands.unignore,
     ]) {
       expect(() => registeredCommand(command)()).not.toThrow()
-      expect(() => registeredCommand(command)({ type: 'beacon' })).not.toThrow()
+      expect(() =>
+        registeredCommand(command)({ type: 'annopulse' }),
+      ).not.toThrow()
     }
 
     expect(annotationStore.getState()).toStrictEqual({
@@ -2041,7 +2036,7 @@ describe('beacon command persistence', () => {
   })
 
   it('copies a scanner-shaped annotation with undefined optional fields', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -2050,7 +2045,7 @@ describe('beacon command persistence', () => {
     await registeredCommand(commands.createIssue)(annotation)
 
     expect(env.clipboard.writeText).toHaveBeenCalledWith(
-      formatBeaconIssue(annotation).body,
+      formatAnnoPulseIssue(annotation).body,
     )
     expect(window.showInformationMessage).toHaveBeenCalledWith(
       'Issue body copied to clipboard.',
@@ -2058,7 +2053,7 @@ describe('beacon command persistence', () => {
   })
 
   it('copies a scanner-shaped Explorer leaf with undefined optional fields', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -2067,15 +2062,15 @@ describe('beacon command persistence', () => {
     await registeredCommand(commands.createIssue)(createLeaf(annotation))
 
     expect(env.clipboard.writeText).toHaveBeenCalledWith(
-      formatBeaconIssue(annotation).body,
+      formatAnnoPulseIssue(annotation).body,
     )
     expect(window.showInformationMessage).toHaveBeenCalledWith(
       'Issue body copied to clipboard.',
     )
   })
 
-  it('warns without changing the clipboard when no beacon is selected', async () => {
-    useBeaconCommands({
+  it('warns without changing the clipboard when no annopulse is selected', async () => {
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -2084,21 +2079,21 @@ describe('beacon command persistence', () => {
 
     expect(env.clipboard.writeText).not.toHaveBeenCalled()
     expect(window.showWarningMessage).toHaveBeenCalledWith(
-      'Select a beacon in the Explorer to create an issue body.',
+      'Select an annotation in the Explorer to create an issue body.',
     )
   })
 
   it('warns without changing the clipboard for an invalid Explorer item', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
 
-    await registeredCommand(commands.createIssue)({ type: 'beacon' })
+    await registeredCommand(commands.createIssue)({ type: 'annopulse' })
 
     expect(env.clipboard.writeText).not.toHaveBeenCalled()
     expect(window.showWarningMessage).toHaveBeenCalledWith(
-      'Select a beacon in the Explorer to create an issue body.',
+      'Select an annotation in the Explorer to create an issue body.',
     )
   })
 
@@ -2128,7 +2123,7 @@ describe('beacon command persistence', () => {
   })
 
   it('propagates clipboard failures without showing success', async () => {
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       update: vi.fn<() => Promise<void>>(() => Promise.resolve()),
     } as unknown as Vscode.Memento)
@@ -2146,7 +2141,7 @@ describe('beacon command persistence', () => {
   it('persists a clear-cache snapshot after the preceding save settles', async () => {
     const pendingUpdates: DeferredUpdate[] = []
     let persistedState: unknown
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       async update(_key: string, state: unknown) {
         const deferredUpdate = Promise.withResolvers<null>()
@@ -2192,7 +2187,7 @@ describe('beacon command persistence', () => {
   it('continues persisting later snapshots after a failed save', async () => {
     const pendingUpdates: DeferredUpdate[] = []
     let persistedState: unknown
-    useBeaconCommands({
+    useAnnoPulseCommands({
       get: <T>() => undefined as T | undefined,
       async update(_key: string, state: unknown) {
         const deferredUpdate = Promise.withResolvers<null>()

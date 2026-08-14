@@ -49,7 +49,7 @@ async function waitForTodoDiagnostic(documentUri: vscode.Uri): Promise<void> {
       .getDiagnostics(documentUri)
       .find(
         candidate =>
-          candidate.source === 'Code Beacon' &&
+          candidate.source === 'AnnoPulse' &&
           candidate.message.startsWith('TODO:'),
       )
 
@@ -61,17 +61,17 @@ async function waitForTodoDiagnostic(documentUri: vscode.Uri): Promise<void> {
   }
 
   throw new Error(
-    `Expected a Code Beacon TODO diagnostic for ${documentUri.toString()}`,
+    `Expected a AnnoPulse TODO diagnostic for ${documentUri.toString()}`,
   )
 }
 
 export async function run(): Promise<void> {
-  const extension = vscode.extensions.getExtension('ntnyq.vscode-code-beacon')
-  assert(extension, 'Expected Code Beacon to be installed')
+  const extension = vscode.extensions.getExtension('ntnyq.annopulse')
+  assert(extension, 'Expected AnnoPulse to be installed')
   await extension.activate()
 
   await vscode.workspace
-    .getConfiguration('code-beacon')
+    .getConfiguration('annopulse')
     .update('diagnostics.mode', 'workspace', vscode.ConfigurationTarget.Global)
   const documentUri = await waitForVirtualDocument()
   assertEqual(
@@ -79,7 +79,7 @@ export async function run(): Promise<void> {
     'vscode-test-web',
     'Expected virtual workspace URI scheme',
   )
-  await vscode.commands.executeCommand('code-beacon.scanWorkspace')
+  await vscode.commands.executeCommand('annopulse.scanWorkspace')
 
   await waitForTodoDiagnostic(documentUri)
   await delay(WORKBENCH_SETTLE_TIMEOUT_MS)

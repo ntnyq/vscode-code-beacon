@@ -1,8 +1,8 @@
-# Code Beacon Publishable MVP Implementation Plan
+# AnnoPulse Publishable MVP Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a publishable Code Beacon MVP that scans code annotations, highlights them in visible editors, lists them in a TreeView, optionally reports them in Problems, exports them, and packages cleanly for the VS Code Marketplace.
+**Goal:** Build a publishable AnnoPulse MVP that scans code annotations, highlights them in visible editors, lists them in a TreeView, optionally reports them in Problems, exports them, and packages cleanly for the VS Code Marketplace.
 
 **Architecture:** Implement a small pure core first: rule normalization, matching, comment ranges, document scanning, and an annotation store. Then wire that core into reactive-vscode composables for decorations, commands, TreeView, diagnostics, workspace scanning, and export. Keep Git blame and AI out of this first publishable MVP; they become separate follow-up plans after the annotation model is stable.
 
@@ -10,11 +10,11 @@
 
 ## Global Constraints
 
-- Extension display name is `Code Beacon`; npm package name is `vscode-code-beacon`; contributed configuration scope is `code-beacon`.
+- Extension display name is `AnnoPulse`; npm package name is `annopulse`; contributed configuration scope is `annopulse`.
 - Keep `main` and `browser` as `./dist/index.js`; runtime must keep supporting VS Code Web, Remote, and Virtual Workspaces.
 - Do not add runtime dependencies for the MVP unless a task explicitly revises this plan; use VS Code APIs, reactive-vscode, and local pure functions.
 - Do not make `ripgrep`, Node `fs`, Git shell commands, or AI APIs required for the MVP.
-- Default Problems integration must remain off: `code-beacon.diagnostics.mode` default is `"off"`.
+- Default Problems integration must remain off: `annopulse.diagnostics.mode` default is `"off"`.
 - Use `workspace.fs` or `workspace.openTextDocument` for workspace reads; avoid Node-only filesystem APIs in extension runtime.
 - Generate `src/meta.ts` with `pnpm generate:meta` after editing `package.json`; do not hand-edit generated metadata except in tests.
 - Follow repository command policy: prefix shell commands with `rtk` except `pnpm typecheck`.
@@ -28,9 +28,9 @@
 
 Follow-up plans after this MVP ships:
 
-- `code-beacon-git-blame.md`
-- `code-beacon-ai-tools.md`
-- `code-beacon-notebook-polish.md`
+- `annopulse-git-blame.md`
+- `annopulse-ai-tools.md`
+- `annopulse-notebook-polish.md`
 
 ## File Structure
 
@@ -45,7 +45,7 @@ Create focused files with these responsibilities:
 - `src/core/store/annotation-store.ts`: mutable in-memory store with subscribe/set/get operations.
 - `src/decorations/decoration-type-cache.ts`: cache `TextEditorDecorationType` by stable rule/style key.
 - `src/decorations/apply-decorations.ts`: apply grouped annotations to an editor.
-- `src/composables/use-beacon-highlight.ts`: watch visible editors and update scan/store/decorations.
+- `src/composables/use-annotation-highlight.ts`: watch visible editors and update scan/store/decorations.
 - `src/commands/index.ts`: register all commands.
 - `src/commands/navigation.ts`: reveal annotations and copy links.
 - `src/commands/export.ts`: export annotations to Markdown/JSON/CSV strings and workspace files.
@@ -97,12 +97,12 @@ const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
     commands: { command: string; title: string }[]
     configuration: { properties: Record<string, unknown> }
     viewsContainers?: { activitybar: { id: string; title: string }[] }
-    views?: { codeBeacon: { id: string; name: string }[] }
+    views?: { annopulse: { id: string; name: string }[] }
   }
 }
 
 describe('package metadata', () => {
-  it('declares marketplace metadata for Code Beacon', () => {
+  it('declares marketplace metadata for AnnoPulse', () => {
     expect(pkg.categories).toEqual(['Other', 'Linters', 'Visualization'])
     expect(pkg.keywords).toContain('todo')
     expect(pkg.keywords).toContain('annotation')
@@ -116,22 +116,22 @@ describe('package metadata', () => {
     const commandIds = pkg.contributes.commands.map(command => command.command)
 
     expect(commandIds).toEqual([
-      'code-beacon.enable',
-      'code-beacon.disable',
-      'code-beacon.toggle',
-      'code-beacon.refresh',
-      'code-beacon.scanWorkspace',
-      'code-beacon.scanActiveFile',
-      'code-beacon.scanOpenEditors',
-      'code-beacon.focusExplorer',
-      'code-beacon.reveal',
-      'code-beacon.copyLink',
-      'code-beacon.copyMarkdown',
-      'code-beacon.exportMarkdown',
-      'code-beacon.exportJson',
-      'code-beacon.exportCsv',
-      'code-beacon.openSettings',
-      'code-beacon.clearCache',
+      'annopulse.enable',
+      'annopulse.disable',
+      'annopulse.toggle',
+      'annopulse.refresh',
+      'annopulse.scanWorkspace',
+      'annopulse.scanActiveFile',
+      'annopulse.scanOpenEditors',
+      'annopulse.focusExplorer',
+      'annopulse.reveal',
+      'annopulse.copyLink',
+      'annopulse.copyMarkdown',
+      'annopulse.exportMarkdown',
+      'annopulse.exportJson',
+      'annopulse.exportCsv',
+      'annopulse.openSettings',
+      'annopulse.clearCache',
     ])
   })
 
@@ -139,42 +139,42 @@ describe('package metadata', () => {
     const keys = Object.keys(pkg.contributes.configuration.properties)
 
     expect(keys).toEqual([
-      'code-beacon.enable',
-      'code-beacon.debug',
-      'code-beacon.languages',
-      'code-beacon.rules',
-      'code-beacon.include',
-      'code-beacon.exclude',
-      'code-beacon.respectFilesExclude',
-      'code-beacon.respectSearchExclude',
-      'code-beacon.maxFileSize',
-      'code-beacon.maxFilesForSearch',
-      'code-beacon.scanMode',
-      'code-beacon.commentOnly',
-      'code-beacon.decorations.enabled',
-      'code-beacon.diagnostics.mode',
-      'code-beacon.explorer.enabled',
-      'code-beacon.explorer.groupBy',
-      'code-beacon.codelens.enabled',
-      'code-beacon.hover.enabled',
-      'code-beacon.export.defaultFormat',
+      'annopulse.enable',
+      'annopulse.debug',
+      'annopulse.languages',
+      'annopulse.rules',
+      'annopulse.include',
+      'annopulse.exclude',
+      'annopulse.respectFilesExclude',
+      'annopulse.respectSearchExclude',
+      'annopulse.maxFileSize',
+      'annopulse.maxFilesForSearch',
+      'annopulse.scanMode',
+      'annopulse.commentOnly',
+      'annopulse.decorations.enabled',
+      'annopulse.diagnostics.mode',
+      'annopulse.explorer.enabled',
+      'annopulse.explorer.groupBy',
+      'annopulse.codelens.enabled',
+      'annopulse.hover.enabled',
+      'annopulse.export.defaultFormat',
     ])
   })
 
-  it('declares the Code Beacon TreeView contribution', () => {
-    expect(pkg.activationEvents).toContain('onView:codeBeacon.annotations')
+  it('declares the AnnoPulse TreeView contribution', () => {
+    expect(pkg.activationEvents).toContain('onView:annopulse.annotations')
     expect(pkg.contributes.viewsContainers?.activitybar).toEqual([
       {
-        id: 'codeBeacon',
-        title: 'Code Beacon',
+        id: 'annopulse',
+        title: 'AnnoPulse',
         icon: './res/icon.png',
       },
     ])
-    expect(pkg.contributes.views?.codeBeacon).toEqual([
+    expect(pkg.contributes.views?.annopulse).toEqual([
       {
-        id: 'codeBeacon.annotations',
-        name: 'Beacons',
-        when: 'code-beacon.explorer.enabled',
+        id: 'annopulse.annotations',
+        name: 'Annotations',
+        when: 'annopulse.explorer.enabled',
       },
     ])
   })
@@ -210,7 +210,7 @@ Update these top-level fields in `package.json`:
     "codelens",
     "vscode web",
     "github.dev",
-    "code beacon",
+    "AnnoPulse",
   ],
   "extensionKind": ["ui", "workspace"],
 }
@@ -221,25 +221,25 @@ Replace `contributes` with this complete MVP contribution object:
 ```jsonc
 {
   "configuration": {
-    "title": "Code Beacon",
+    "title": "AnnoPulse",
     "properties": {
-      "code-beacon.enable": {
+      "annopulse.enable": {
         "type": "boolean",
         "default": true,
-        "description": "Enable or disable Code Beacon.",
+        "description": "Enable or disable AnnoPulse.",
       },
-      "code-beacon.debug": {
+      "annopulse.debug": {
         "type": "boolean",
         "default": false,
         "description": "Enable debug logging.",
       },
-      "code-beacon.languages": {
+      "annopulse.languages": {
         "type": "array",
         "default": ["*"],
         "items": { "type": "string" },
         "description": "Language IDs where annotations are scanned. Use '*' for all languages and prefix with '!' to exclude.",
       },
-      "code-beacon.rules": {
+      "annopulse.rules": {
         "type": "array",
         "default": [],
         "description": "Custom annotation rules. Built-in rules are enabled unless a custom rule with the same id overrides them.",
@@ -314,14 +314,14 @@ Replace `contributes` with this complete MVP contribution object:
           },
         },
       },
-      "code-beacon.include": {
+      "annopulse.include": {
         "type": "array",
         "default": ["**/*"],
         "items": { "type": "string" },
         "scope": "resource",
         "description": "Glob patterns that define files to scan.",
       },
-      "code-beacon.exclude": {
+      "annopulse.exclude": {
         "type": "array",
         "default": [
           "**/node_modules/**",
@@ -344,72 +344,72 @@ Replace `contributes` with this complete MVP contribution object:
         "scope": "resource",
         "description": "Glob patterns that define files and folders to exclude from workspace scans.",
       },
-      "code-beacon.respectFilesExclude": {
+      "annopulse.respectFilesExclude": {
         "type": "boolean",
         "default": true,
         "description": "Respect VS Code files.exclude during workspace scans.",
       },
-      "code-beacon.respectSearchExclude": {
+      "annopulse.respectSearchExclude": {
         "type": "boolean",
         "default": true,
         "description": "Respect VS Code search.exclude during workspace scans.",
       },
-      "code-beacon.maxFileSize": {
+      "annopulse.maxFileSize": {
         "type": "number",
         "default": 1000000,
         "minimum": 0,
         "description": "Maximum document text length, in characters, to scan. Set to 0 to disable this size limit.",
       },
-      "code-beacon.maxFilesForSearch": {
+      "annopulse.maxFilesForSearch": {
         "type": "number",
         "default": 5000,
         "minimum": 1,
         "description": "Maximum number of files to scan during workspace scans.",
       },
-      "code-beacon.scanMode": {
+      "annopulse.scanMode": {
         "type": "string",
         "default": "visibleEditors",
         "enum": ["visibleEditors", "openEditors", "workspace", "manual"],
-        "description": "Default scan mode for Code Beacon.",
+        "description": "Default scan mode for AnnoPulse.",
       },
-      "code-beacon.commentOnly": {
+      "annopulse.commentOnly": {
         "type": "boolean",
         "default": true,
-        "description": "Prefer scanning comments only when Code Beacon knows the language comment syntax.",
+        "description": "Prefer scanning comments only when AnnoPulse knows the language comment syntax.",
       },
-      "code-beacon.decorations.enabled": {
+      "annopulse.decorations.enabled": {
         "type": "boolean",
         "default": true,
         "description": "Show editor decorations for annotations.",
       },
-      "code-beacon.diagnostics.mode": {
+      "annopulse.diagnostics.mode": {
         "type": "string",
         "default": "off",
         "enum": ["off", "openFiles", "workspace"],
         "description": "Controls Problems integration.",
       },
-      "code-beacon.explorer.enabled": {
+      "annopulse.explorer.enabled": {
         "type": "boolean",
         "default": true,
-        "description": "Enable the Code Beacon TreeView.",
+        "description": "Enable the AnnoPulse TreeView.",
       },
-      "code-beacon.explorer.groupBy": {
+      "annopulse.explorer.groupBy": {
         "type": "string",
         "default": "file",
         "enum": ["file", "rule", "category", "severity", "owner", "flat"],
-        "description": "Default grouping mode for the Code Beacon TreeView.",
+        "description": "Default grouping mode for the AnnoPulse TreeView.",
       },
-      "code-beacon.codelens.enabled": {
+      "annopulse.codelens.enabled": {
         "type": "boolean",
         "default": false,
         "description": "Enable CodeLens actions above annotation lines.",
       },
-      "code-beacon.hover.enabled": {
+      "annopulse.hover.enabled": {
         "type": "boolean",
         "default": true,
         "description": "Enable hover details for annotations.",
       },
-      "code-beacon.export.defaultFormat": {
+      "annopulse.export.defaultFormat": {
         "type": "string",
         "default": "markdown",
         "enum": ["markdown", "json", "csv"],
@@ -419,126 +419,126 @@ Replace `contributes` with this complete MVP contribution object:
   },
   "commands": [
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.enable",
-      "title": "Enable Code Beacon",
+      "category": "AnnoPulse",
+      "command": "annopulse.enable",
+      "title": "Enable AnnoPulse",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.disable",
-      "title": "Disable Code Beacon",
+      "category": "AnnoPulse",
+      "command": "annopulse.disable",
+      "title": "Disable AnnoPulse",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.toggle",
-      "title": "Toggle Code Beacon",
+      "category": "AnnoPulse",
+      "command": "annopulse.toggle",
+      "title": "Toggle AnnoPulse",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.refresh",
-      "title": "Refresh Beacons",
+      "category": "AnnoPulse",
+      "command": "annopulse.refresh",
+      "title": "Refresh Annotations",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.scanWorkspace",
-      "title": "Scan Workspace for Beacons",
+      "category": "AnnoPulse",
+      "command": "annopulse.scanWorkspace",
+      "title": "Scan Workspace for Annotations",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.scanActiveFile",
-      "title": "Scan Active File for Beacons",
+      "category": "AnnoPulse",
+      "command": "annopulse.scanActiveFile",
+      "title": "Scan Active File for Annotations",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.scanOpenEditors",
-      "title": "Scan Open Editors for Beacons",
+      "category": "AnnoPulse",
+      "command": "annopulse.scanOpenEditors",
+      "title": "Scan Open Editors for Annotations",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.focusExplorer",
-      "title": "Focus Code Beacon Explorer",
+      "category": "AnnoPulse",
+      "command": "annopulse.focusExplorer",
+      "title": "Focus AnnoPulse Explorer",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.reveal",
-      "title": "Reveal Beacon",
+      "category": "AnnoPulse",
+      "command": "annopulse.reveal",
+      "title": "Reveal Annotation",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.copyLink",
-      "title": "Copy Beacon Link",
+      "category": "AnnoPulse",
+      "command": "annopulse.copyLink",
+      "title": "Copy Annotation Link",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.copyMarkdown",
-      "title": "Copy Beacon as Markdown",
+      "category": "AnnoPulse",
+      "command": "annopulse.copyMarkdown",
+      "title": "Copy Annotation as Markdown",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.exportMarkdown",
-      "title": "Export Beacons as Markdown",
+      "category": "AnnoPulse",
+      "command": "annopulse.exportMarkdown",
+      "title": "Export Annotations as Markdown",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.exportJson",
-      "title": "Export Beacons as JSON",
+      "category": "AnnoPulse",
+      "command": "annopulse.exportJson",
+      "title": "Export Annotations as JSON",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.exportCsv",
-      "title": "Export Beacons as CSV",
+      "category": "AnnoPulse",
+      "command": "annopulse.exportCsv",
+      "title": "Export Annotations as CSV",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.openSettings",
-      "title": "Open Code Beacon Settings",
+      "category": "AnnoPulse",
+      "command": "annopulse.openSettings",
+      "title": "Open AnnoPulse Settings",
     },
     {
-      "category": "Code Beacon",
-      "command": "code-beacon.clearCache",
-      "title": "Clear Code Beacon Cache",
+      "category": "AnnoPulse",
+      "command": "annopulse.clearCache",
+      "title": "Clear AnnoPulse Cache",
     },
   ],
   "viewsContainers": {
     "activitybar": [
       {
-        "id": "codeBeacon",
-        "title": "Code Beacon",
+        "id": "annopulse",
+        "title": "AnnoPulse",
         "icon": "./res/icon.png",
       },
     ],
   },
   "views": {
-    "codeBeacon": [
+    "annopulse": [
       {
-        "id": "codeBeacon.annotations",
-        "name": "Beacons",
-        "when": "code-beacon.explorer.enabled",
+        "id": "annopulse.annotations",
+        "name": "Annotations",
+        "when": "annopulse.explorer.enabled",
       },
     ],
   },
   "menus": {
     "view/title": [
       {
-        "command": "code-beacon.refresh",
-        "when": "view == codeBeacon.annotations",
+        "command": "annopulse.refresh",
+        "when": "view == annopulse.annotations",
         "group": "navigation",
       },
       {
-        "command": "code-beacon.scanWorkspace",
-        "when": "view == codeBeacon.annotations",
+        "command": "annopulse.scanWorkspace",
+        "when": "view == annopulse.annotations",
         "group": "navigation",
       },
     ],
     "view/item/context": [
       {
-        "command": "code-beacon.reveal",
-        "when": "view == codeBeacon.annotations && viewItem == beacon",
+        "command": "annopulse.reveal",
+        "when": "view == annopulse.annotations && viewItem == annotation",
         "group": "inline",
       },
       {
-        "command": "code-beacon.copyLink",
-        "when": "view == codeBeacon.annotations && viewItem == beacon",
+        "command": "annopulse.copyLink",
+        "when": "view == annopulse.annotations && viewItem == annotation",
         "group": "inline",
       },
     ],
@@ -571,7 +571,7 @@ Run:
 rtk pnpm generate:meta
 ```
 
-Expected: `src/meta.ts` contains every new `code-beacon.*` command and config key.
+Expected: `src/meta.ts` contains every new `annopulse.*` command and config key.
 
 - [ ] **Step 5: Run metadata test**
 
@@ -592,7 +592,7 @@ rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
 rtk git add package.json src/meta.ts tests/package-metadata.test.ts README.md
-rtk git commit -m "feat: declare Code Beacon MVP contributions"
+rtk git commit -m "feat: declare AnnoPulse MVP contributions"
 ```
 
 Expected: commit succeeds.
@@ -608,9 +608,9 @@ Expected: commit succeeds.
 
 **Interfaces:**
 
-- Produces type `BeaconRuleConfig`, `BeaconRule`, `CompiledBeaconRule`, `BeaconAnnotation`, `BeaconSeverity`, `BeaconCategory`, `SerializedRange`.
-- Produces function `normalizeRules(customRules: readonly BeaconRuleConfig[]): NormalizedRuleResult`.
-- Later scanner tasks consume `CompiledBeaconRule.matcherRegex`, `CompiledBeaconRule.messageMode`, and `CompiledBeaconRule.style`.
+- Produces type `AnnoPulseRuleConfig`, `AnnoPulseRule`, `CompiledAnnoPulseRule`, `AnnoPulseAnnotation`, `AnnoPulseSeverity`, `AnnoPulseCategory`, `SerializedRange`.
+- Produces function `normalizeRules(customRules: readonly AnnoPulseRuleConfig[]): NormalizedRuleResult`.
+- Later scanner tasks consume `CompiledAnnoPulseRule.matcherRegex`, `CompiledAnnoPulseRule.messageMode`, and `CompiledAnnoPulseRule.style`.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -618,9 +618,9 @@ Create `tests/rules.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_BEACON_RULES } from '../src/constants/defaults'
+import { DEFAULT_ANNOPULSE_RULES } from '../src/constants/defaults'
 import { normalizeRules } from '../src/core/rules/normalize'
-import type { BeaconRuleConfig } from '../src/types/annotation'
+import type { AnnoPulseRuleConfig } from '../src/types/annotation'
 
 describe('normalizeRules', () => {
   it('returns enabled built-in rules when no custom rules are provided', () => {
@@ -628,7 +628,7 @@ describe('normalizeRules', () => {
 
     expect(result.errors).toEqual([])
     expect(result.rules.map(rule => rule.id)).toEqual(
-      DEFAULT_BEACON_RULES.map(rule => rule.id),
+      DEFAULT_ANNOPULSE_RULES.map(rule => rule.id),
     )
     expect(
       result.rules.find(rule => rule.id === 'todo')?.matcherRegex.source,
@@ -636,7 +636,7 @@ describe('normalizeRules', () => {
   })
 
   it('overrides a built-in rule by id', () => {
-    const customRules: BeaconRuleConfig[] = [
+    const customRules: AnnoPulseRuleConfig[] = [
       {
         id: 'todo',
         label: 'Work Item',
@@ -725,7 +725,7 @@ Expected: FAIL because `src/types/annotation.ts`, `src/constants/defaults.ts`, a
 Create `src/types/annotation.ts`:
 
 ```ts
-export type BeaconCategory =
+export type AnnoPulseCategory =
   | 'todo'
   | 'fixme'
   | 'bug'
@@ -737,9 +737,9 @@ export type BeaconCategory =
   | 'question'
   | 'custom'
 
-export type BeaconSeverity = 'hint' | 'information' | 'warning' | 'error'
+export type AnnoPulseSeverity = 'hint' | 'information' | 'warning' | 'error'
 
-export type BeaconMarker = 'keyword' | 'message' | 'line'
+export type AnnoPulseMarker = 'keyword' | 'message' | 'line'
 
 export interface SerializedPosition {
   readonly line: number
@@ -751,7 +751,7 @@ export interface SerializedRange {
   readonly end: SerializedPosition
 }
 
-export interface BeaconTextMatcherConfig {
+export interface AnnoPulseTextMatcherConfig {
   readonly type: 'text'
   readonly value: string
   readonly caseSensitive?: boolean
@@ -759,17 +759,17 @@ export interface BeaconTextMatcherConfig {
   readonly colon?: 'required' | 'optional' | 'forbidden'
 }
 
-export interface BeaconRegexMatcherConfig {
+export interface AnnoPulseRegexMatcherConfig {
   readonly type: 'regex'
   readonly pattern: string
   readonly flags?: string
 }
 
-export type BeaconMatcherConfig =
-  BeaconTextMatcherConfig | BeaconRegexMatcherConfig
+export type AnnoPulseMatcherConfig =
+  AnnoPulseTextMatcherConfig | AnnoPulseRegexMatcherConfig
 
-export interface BeaconStyleConfig {
-  readonly marker?: BeaconMarker
+export interface AnnoPulseStyleConfig {
+  readonly marker?: AnnoPulseMarker
   readonly color?: string
   readonly backgroundColor?: string
   readonly border?: string
@@ -777,54 +777,54 @@ export interface BeaconStyleConfig {
   readonly overviewRulerColor?: string
 }
 
-export interface BeaconDiagnosticsConfig {
+export interface AnnoPulseDiagnosticsConfig {
   readonly enabled?: boolean
-  readonly severity?: BeaconSeverity
+  readonly severity?: AnnoPulseSeverity
 }
 
-export interface BeaconMessageConfig {
+export interface AnnoPulseMessageConfig {
   readonly mode?: 'lineRest' | 'match' | 'group'
   readonly group?: string
   readonly trim?: boolean
 }
 
-export interface BeaconRuleConfig {
+export interface AnnoPulseRuleConfig {
   readonly id: string
   readonly label: string
-  readonly category: BeaconCategory
+  readonly category: AnnoPulseCategory
   readonly enabled?: boolean
-  readonly matcher: BeaconMatcherConfig
-  readonly message?: BeaconMessageConfig
-  readonly severity: BeaconSeverity
+  readonly matcher: AnnoPulseMatcherConfig
+  readonly message?: AnnoPulseMessageConfig
+  readonly severity: AnnoPulseSeverity
   readonly commentOnly?: boolean
   readonly languages?: readonly string[]
-  readonly style?: BeaconStyleConfig
-  readonly diagnostics?: BeaconDiagnosticsConfig
+  readonly style?: AnnoPulseStyleConfig
+  readonly diagnostics?: AnnoPulseDiagnosticsConfig
 }
 
-export interface CompiledBeaconRule extends BeaconRuleConfig {
+export interface CompiledAnnoPulseRule extends AnnoPulseRuleConfig {
   readonly enabled: true
   readonly matcherRegex: RegExp
   readonly caseSensitive: boolean
-  readonly messageMode: Required<BeaconMessageConfig>
-  readonly style: Required<BeaconStyleConfig>
+  readonly messageMode: Required<AnnoPulseMessageConfig>
+  readonly style: Required<AnnoPulseStyleConfig>
 }
 
-export interface BeaconRuleError {
+export interface AnnoPulseRuleError {
   readonly ruleId: string
   readonly message: string
 }
 
 export interface NormalizedRuleResult {
-  readonly rules: readonly CompiledBeaconRule[]
-  readonly errors: readonly BeaconRuleError[]
+  readonly rules: readonly CompiledAnnoPulseRule[]
+  readonly errors: readonly AnnoPulseRuleError[]
 }
 
-export interface BeaconAnnotation {
+export interface AnnoPulseAnnotation {
   readonly id: string
   readonly ruleId: string
-  readonly category: BeaconCategory
-  readonly severity: BeaconSeverity
+  readonly category: AnnoPulseCategory
+  readonly severity: AnnoPulseSeverity
   readonly uri: string
   readonly languageId: string
   readonly range: SerializedRange
@@ -843,7 +843,10 @@ export interface BeaconAnnotation {
 Create `src/constants/defaults.ts`:
 
 ```ts
-import type { BeaconRuleConfig, BeaconStyleConfig } from '../types/annotation'
+import type {
+  AnnoPulseRuleConfig,
+  AnnoPulseStyleConfig,
+} from '../types/annotation'
 
 export const DEFAULT_INCLUDE = ['**/*'] as const
 
@@ -865,7 +868,7 @@ export const DEFAULT_EXCLUDE = [
   '**/yarn.lock',
 ] as const
 
-export const DEFAULT_STYLE: Required<BeaconStyleConfig> = {
+export const DEFAULT_STYLE: Required<AnnoPulseStyleConfig> = {
   marker: 'keyword',
   color: '#ffffff',
   backgroundColor: '#6f42c1',
@@ -874,7 +877,7 @@ export const DEFAULT_STYLE: Required<BeaconStyleConfig> = {
   overviewRulerColor: '#6f42c1',
 }
 
-export const DEFAULT_BEACON_RULES: readonly BeaconRuleConfig[] = [
+export const DEFAULT_ANNOPULSE_RULES: readonly AnnoPulseRuleConfig[] = [
   {
     id: 'todo',
     label: 'TODO',
@@ -1034,15 +1037,18 @@ export const DEFAULT_BEACON_RULES: readonly BeaconRuleConfig[] = [
 Create `src/core/rules/normalize.ts`:
 
 ```ts
-import { DEFAULT_BEACON_RULES, DEFAULT_STYLE } from '../../constants/defaults'
+import {
+  DEFAULT_ANNOPULSE_RULES,
+  DEFAULT_STYLE,
+} from '../../constants/defaults'
 import type {
-  BeaconMessageConfig,
-  BeaconRuleConfig,
-  CompiledBeaconRule,
+  AnnoPulseMessageConfig,
+  AnnoPulseRuleConfig,
+  CompiledAnnoPulseRule,
   NormalizedRuleResult,
 } from '../../types/annotation'
 
-const DEFAULT_MESSAGE_MODE: Required<BeaconMessageConfig> = {
+const DEFAULT_MESSAGE_MODE: Required<AnnoPulseMessageConfig> = {
   mode: 'lineRest',
   group: 'message',
   trim: true,
@@ -1052,7 +1058,7 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-function buildTextPattern(rule: BeaconRuleConfig): string {
+function buildTextPattern(rule: AnnoPulseRuleConfig): string {
   if (rule.matcher.type !== 'text') {
     throw new Error('Expected text matcher')
   }
@@ -1071,7 +1077,7 @@ function buildTextPattern(rule: BeaconRuleConfig): string {
   return `${prefix}${escaped}:?`
 }
 
-function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
+function compileRule(rule: AnnoPulseRuleConfig): CompiledAnnoPulseRule {
   const flags =
     rule.matcher.type === 'regex'
       ? rule.matcher.flags
@@ -1107,12 +1113,12 @@ function compileRule(rule: BeaconRuleConfig): CompiledBeaconRule {
 }
 
 export function normalizeRules(
-  customRules: readonly BeaconRuleConfig[],
+  customRules: readonly AnnoPulseRuleConfig[],
 ): NormalizedRuleResult {
-  const mergedRules = new Map<string, BeaconRuleConfig>()
+  const mergedRules = new Map<string, AnnoPulseRuleConfig>()
   const errors: NormalizedRuleResult['errors'] = []
 
-  for (const rule of DEFAULT_BEACON_RULES) {
+  for (const rule of DEFAULT_ANNOPULSE_RULES) {
     mergedRules.set(rule.id, rule)
   }
 
@@ -1120,7 +1126,7 @@ export function normalizeRules(
     mergedRules.set(rule.id, rule)
   }
 
-  const rules: CompiledBeaconRule[] = []
+  const rules: CompiledAnnoPulseRule[] = []
 
   for (const rule of mergedRules.values()) {
     if (rule.enabled === false) {
@@ -1164,7 +1170,7 @@ rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
 rtk git add src/types/annotation.ts src/constants/defaults.ts src/core/rules/normalize.ts tests/rules.test.ts
-rtk git commit -m "feat: add beacon rule model"
+rtk git commit -m "feat: add annotation rule model"
 ```
 
 Expected: commit succeeds.
@@ -1180,9 +1186,9 @@ Expected: commit succeeds.
 
 **Interfaces:**
 
-- Consumes: `CompiledBeaconRule`, `BeaconAnnotation`, `SerializedRange` from Task 2.
+- Consumes: `CompiledAnnoPulseRule`, `AnnoPulseAnnotation`, `SerializedRange` from Task 2.
 - Produces function `getCommentRanges(text: string, languageId: string): readonly OffsetRange[]`.
-- Produces function `scanDocument(options: ScanDocumentOptions): BeaconScanResult`.
+- Produces function `scanDocument(options: ScanDocumentOptions): AnnoPulseScanResult`.
 - Later highlighter, TreeView, diagnostics, export, and workspace scan consume `scanDocument`.
 
 - [ ] **Step 1: Write comment range tests**
@@ -1423,22 +1429,22 @@ Create `src/core/scanner/scan-document.ts`:
 import { getCommentRanges } from './comment-ranges'
 import type { OffsetRange } from './comment-ranges'
 import type {
-  BeaconAnnotation,
-  CompiledBeaconRule,
+  AnnoPulseAnnotation,
+  CompiledAnnoPulseRule,
   SerializedPosition,
   SerializedRange,
 } from '../../types/annotation'
 
-export interface BeaconSkipReason {
+export interface AnnoPulseSkipReason {
   readonly reason: 'maxFileSize'
   readonly message: string
 }
 
-export interface BeaconScanResult {
+export interface AnnoPulseScanResult {
   readonly uri: string
   readonly languageId: string
-  readonly annotations: readonly BeaconAnnotation[]
-  readonly skipped?: BeaconSkipReason
+  readonly annotations: readonly AnnoPulseAnnotation[]
+  readonly skipped?: AnnoPulseSkipReason
   readonly durationMs: number
 }
 
@@ -1446,8 +1452,8 @@ export interface ScanDocumentOptions {
   readonly text: string
   readonly languageId: string
   readonly uri: string
-  readonly source: BeaconAnnotation['source']
-  readonly rules: readonly CompiledBeaconRule[]
+  readonly source: AnnoPulseAnnotation['source']
+  readonly rules: readonly CompiledAnnoPulseRule[]
   readonly commentOnly: boolean
   readonly maxFileSize: number
 }
@@ -1478,7 +1484,7 @@ function lineEndAt(text: string, offset: number): number {
 function extractMessage(
   text: string,
   matchEnd: number,
-  rule: CompiledBeaconRule,
+  rule: CompiledAnnoPulseRule,
 ): string {
   if (rule.messageMode.mode === 'match') {
     return ''
@@ -1501,8 +1507,8 @@ function scanRange(
   text: string,
   range: OffsetRange,
   options: ScanDocumentOptions,
-): BeaconAnnotation[] {
-  const annotations: BeaconAnnotation[] = []
+): AnnoPulseAnnotation[] {
+  const annotations: AnnoPulseAnnotation[] = []
   const segment = text.slice(range.start, range.end)
 
   for (const rule of options.rules) {
@@ -1543,7 +1549,9 @@ function scanRange(
   return annotations
 }
 
-export function scanDocument(options: ScanDocumentOptions): BeaconScanResult {
+export function scanDocument(
+  options: ScanDocumentOptions,
+): AnnoPulseScanResult {
   const startedAt = Date.now()
 
   if (options.maxFileSize > 0 && options.text.length > options.maxFileSize) {
@@ -1593,7 +1601,7 @@ rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
 rtk git add src/core/scanner/comment-ranges.ts src/core/scanner/scan-document.ts tests/comment-ranges.test.ts tests/scan-document.test.ts
-rtk git commit -m "feat: scan beacon annotations"
+rtk git commit -m "feat: scan annotations"
 ```
 
 Expected: commit succeeds.
@@ -1608,10 +1616,10 @@ Expected: commit succeeds.
 
 **Interfaces:**
 
-- Consumes: `BeaconAnnotation` from Task 2.
+- Consumes: `AnnoPulseAnnotation` from Task 2.
 - Produces singleton `annotationStore`.
-- Produces methods: `setForUri(uri: string, annotations: readonly BeaconAnnotation[]): void`, `getAll(): readonly BeaconAnnotation[]`, `getForUri(uri: string): readonly BeaconAnnotation[]`, `clear(): void`, `subscribe(listener: AnnotationStoreListener): () => void`.
-- Produces utility `formatBeaconLink(annotation: BeaconAnnotation): string`.
+- Produces methods: `setForUri(uri: string, annotations: readonly AnnoPulseAnnotation[]): void`, `getAll(): readonly AnnoPulseAnnotation[]`, `getForUri(uri: string): readonly AnnoPulseAnnotation[]`, `clear(): void`, `subscribe(listener: AnnotationStoreListener): () => void`.
+- Produces utility `formatAnnoPulseLink(annotation: AnnoPulseAnnotation): string`.
 
 - [ ] **Step 1: Write failing store tests**
 
@@ -1620,13 +1628,13 @@ Create `tests/annotation-store.test.ts`:
 ```ts
 import { describe, expect, it, vi } from 'vitest'
 import { createAnnotationStore } from '../src/core/store/annotation-store'
-import { formatBeaconLink } from '../src/utils/ranges'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import { formatAnnoPulseLink } from '../src/utils/ranges'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function createAnnotation(
   id: string,
   uri = 'file:///workspace/src/a.ts',
-): BeaconAnnotation {
+): AnnoPulseAnnotation {
   return {
     id,
     ruleId: 'todo',
@@ -1680,7 +1688,7 @@ describe('annotation store', () => {
   })
 
   it('formats file links with one-based line and column numbers', () => {
-    expect(formatBeaconLink(createAnnotation('a'))).toBe(
+    expect(formatAnnoPulseLink(createAnnotation('a'))).toBe(
       'file:///workspace/src/a.ts:2:4',
     )
   })
@@ -1702,20 +1710,20 @@ Expected: FAIL because store and range utilities do not exist.
 Create `src/core/store/annotation-store.ts`:
 
 ```ts
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 
 export type AnnotationStoreListener = () => void
 
 export interface AnnotationStore {
-  setForUri(uri: string, annotations: readonly BeaconAnnotation[]): void
-  getForUri(uri: string): readonly BeaconAnnotation[]
-  getAll(): readonly BeaconAnnotation[]
+  setForUri(uri: string, annotations: readonly AnnoPulseAnnotation[]): void
+  getForUri(uri: string): readonly AnnoPulseAnnotation[]
+  getAll(): readonly AnnoPulseAnnotation[]
   clear(): void
   subscribe(listener: AnnotationStoreListener): () => void
 }
 
 export function createAnnotationStore(): AnnotationStore {
-  const byUri = new Map<string, readonly BeaconAnnotation[]>()
+  const byUri = new Map<string, readonly AnnoPulseAnnotation[]>()
   const listeners = new Set<AnnotationStoreListener>()
 
   const notify = () => {
@@ -1758,7 +1766,7 @@ Create `src/utils/ranges.ts`:
 ```ts
 import type { Range } from 'vscode'
 import { Range as VscodeRange } from 'vscode'
-import type { BeaconAnnotation, SerializedRange } from '../types/annotation'
+import type { AnnoPulseAnnotation, SerializedRange } from '../types/annotation'
 
 export function toVscodeRange(range: SerializedRange): Range {
   return new VscodeRange(
@@ -1769,7 +1777,7 @@ export function toVscodeRange(range: SerializedRange): Range {
   )
 }
 
-export function formatBeaconLink(annotation: BeaconAnnotation): string {
+export function formatAnnoPulseLink(annotation: AnnoPulseAnnotation): string {
   return `${annotation.uri}:${annotation.line + 1}:${annotation.column + 1}`
 }
 ```
@@ -1805,14 +1813,14 @@ Expected: commit succeeds.
 - Create: `src/utils/editor-filter.ts`
 - Create: `src/decorations/decoration-type-cache.ts`
 - Create: `src/decorations/apply-decorations.ts`
-- Create: `src/composables/use-beacon-highlight.ts`
+- Create: `src/composables/use-annotation-highlight.ts`
 - Modify: `src/index.ts`
 - Create: `tests/decoration-type-cache.test.ts`
 
 **Interfaces:**
 
 - Consumes: `normalizeRules`, `scanDocument`, `annotationStore`, `toVscodeRange`.
-- Produces composable `useBeaconHighlight(): void`.
+- Produces composable `useAnnoPulseHighlight(): void`.
 - Later commands and providers can rely on `annotationStore` being updated for visible editors.
 
 - [ ] **Step 1: Write decoration cache test**
@@ -1913,9 +1921,12 @@ Create `src/decorations/decoration-type-cache.ts`:
 ```ts
 import { OverviewRulerLane, window } from 'vscode'
 import type { TextEditorDecorationType } from 'vscode'
-import type { BeaconStyleConfig } from '../types/annotation'
+import type { AnnoPulseStyleConfig } from '../types/annotation'
 
-function createKey(ruleId: string, style: Required<BeaconStyleConfig>): string {
+function createKey(
+  ruleId: string,
+  style: Required<AnnoPulseStyleConfig>,
+): string {
   return JSON.stringify({ ruleId, style })
 }
 
@@ -1924,7 +1935,7 @@ export class DecorationTypeCache {
 
   public getOrCreate(
     ruleId: string,
-    style: Required<BeaconStyleConfig>,
+    style: Required<AnnoPulseStyleConfig>,
   ): TextEditorDecorationType {
     const key = createKey(ruleId, style)
     const existing = this.cache.get(key)
@@ -1976,14 +1987,17 @@ Create `src/decorations/apply-decorations.ts`:
 ```ts
 import type { TextEditor } from 'vscode'
 import type { DecorationTypeCache } from './decoration-type-cache'
-import type { BeaconAnnotation, CompiledBeaconRule } from '../types/annotation'
+import type {
+  AnnoPulseAnnotation,
+  CompiledAnnoPulseRule,
+} from '../types/annotation'
 import { toVscodeRange } from '../utils/ranges'
 
-export function applyBeaconDecorations(
+export function applyAnnoPulseDecorations(
   editor: TextEditor,
   cache: DecorationTypeCache,
-  annotations: readonly BeaconAnnotation[],
-  rules: readonly CompiledBeaconRule[],
+  annotations: readonly AnnoPulseAnnotation[],
+  rules: readonly CompiledAnnoPulseRule[],
 ) {
   const rulesById = new Map(rules.map(rule => [rule.id, rule]))
   const activeKeys: string[] = []
@@ -2012,7 +2026,7 @@ export function applyBeaconDecorations(
 
 - [ ] **Step 6: Implement visible editor composable**
 
-Create `src/composables/use-beacon-highlight.ts`:
+Create `src/composables/use-annotation-highlight.ts`:
 
 ```ts
 import {
@@ -2028,7 +2042,7 @@ import { config } from '../config'
 import { normalizeRules } from '../core/rules/normalize'
 import { scanDocument } from '../core/scanner/scan-document'
 import { annotationStore } from '../core/store/annotation-store'
-import { applyBeaconDecorations } from '../decorations/apply-decorations'
+import { applyAnnoPulseDecorations } from '../decorations/apply-decorations'
 import { DecorationTypeCache } from '../decorations/decoration-type-cache'
 import { shouldTrackEditor } from '../utils/editor-filter'
 import { logger } from '../utils/logger'
@@ -2113,7 +2127,7 @@ function setupEditor(editor: TextEditor, cache: DecorationTypeCache) {
         result.annotations,
       )
       if (config.enable && config.decorations.enabled) {
-        applyBeaconDecorations(
+        applyAnnoPulseDecorations(
           editor,
           cache,
           result.annotations,
@@ -2132,7 +2146,7 @@ function setupEditor(editor: TextEditor, cache: DecorationTypeCache) {
   }
 }
 
-export function useBeaconHighlight() {
+export function useAnnoPulseHighlight() {
   const visibleEditors = useVisibleTextEditors()
   const states = new Map<
     string,
@@ -2183,13 +2197,13 @@ Modify `src/index.ts`:
 ```ts
 import { defineExtension } from 'reactive-vscode'
 import { version } from '../package.json'
-import { useBeaconHighlight } from './composables/use-beacon-highlight'
+import { useAnnoPulseHighlight } from './composables/use-annotation-highlight'
 import { logger } from './utils/logger'
 
 const { activate, deactivate } = defineExtension(() => {
   logger.info(`Activated, version: ${version}`)
 
-  useBeaconHighlight()
+  useAnnoPulseHighlight()
 })
 
 export { activate, deactivate }
@@ -2213,8 +2227,8 @@ Run:
 rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
-rtk git add src/utils/editor-filter.ts src/decorations/decoration-type-cache.ts src/decorations/apply-decorations.ts src/composables/use-beacon-highlight.ts src/index.ts tests/decoration-type-cache.test.ts
-rtk git commit -m "feat: highlight visible beacon annotations"
+rtk git add src/utils/editor-filter.ts src/decorations/decoration-type-cache.ts src/decorations/apply-decorations.ts src/composables/use-annotation-highlight.ts src/index.ts tests/decoration-type-cache.test.ts
+rtk git commit -m "feat: highlight visible annotations"
 ```
 
 Expected: commit succeeds.
@@ -2231,7 +2245,7 @@ Expected: commit succeeds.
 
 **Interfaces:**
 
-- Consumes: `annotationStore`, `formatBeaconLink`, generated `commands`.
+- Consumes: `annotationStore`, `formatAnnoPulseLink`, generated `commands`.
 - Produces `useCommands(): void`.
 - Produces `formatAnnotationsAsMarkdown`, `formatAnnotationsAsJson`, `formatAnnotationsAsCsv`.
 
@@ -2246,9 +2260,9 @@ import {
   formatAnnotationsAsJson,
   formatAnnotationsAsMarkdown,
 } from '../src/commands/export'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
-const annotation: BeaconAnnotation = {
+const annotation: AnnoPulseAnnotation = {
   id: 'a',
   ruleId: 'todo',
   category: 'todo',
@@ -2309,22 +2323,22 @@ Create `src/commands/export.ts`:
 
 ```ts
 import { env, Selection, Uri, window, workspace } from 'vscode'
-import type { BeaconAnnotation } from '../types/annotation'
-import { formatBeaconLink } from '../utils/ranges'
+import type { AnnoPulseAnnotation } from '../types/annotation'
+import { formatAnnoPulseLink } from '../utils/ranges'
 
 export function formatAnnotationsAsMarkdown(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): string {
   return annotations
     .map(
       annotation =>
-        `- [${annotation.severity}] ${annotation.keyword.replace(/:$/, '')} ${formatBeaconLink(annotation)} - ${annotation.message}`,
+        `- [${annotation.severity}] ${annotation.keyword.replace(/:$/, '')} ${formatAnnoPulseLink(annotation)} - ${annotation.message}`,
     )
     .join('\n')
 }
 
 export function formatAnnotationsAsJson(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): string {
   return JSON.stringify(annotations, null, 2)
 }
@@ -2338,7 +2352,7 @@ function csvEscape(value: string | number): string {
 }
 
 export function formatAnnotationsAsCsv(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): string {
   return [
     'severity,category,rule,file,line,column,message',
@@ -2359,7 +2373,7 @@ export function formatAnnotationsAsCsv(
 }
 
 export async function copyExportedAnnotations(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
   format: 'markdown' | 'json' | 'csv',
 ) {
   const text =
@@ -2371,19 +2385,19 @@ export async function copyExportedAnnotations(
 
   await env.clipboard.writeText(text)
   await window.showInformationMessage(
-    `Copied ${annotations.length} beacons as ${format}.`,
+    `Copied ${annotations.length} annotations as ${format}.`,
   )
 }
 
 export async function writeExportedAnnotations(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
   format: 'markdown' | 'json' | 'csv',
 ) {
   const extension = format === 'json' ? 'json' : format === 'csv' ? 'csv' : 'md'
   const target = await window.showSaveDialog({
-    defaultUri: Uri.file(`code-beacon.${extension}`),
+    defaultUri: Uri.file(`annopulse.${extension}`),
     filters: {
-      'Code Beacon Export': [extension],
+      'AnnoPulse Export': [extension],
     },
   })
 
@@ -2406,10 +2420,10 @@ Create `src/commands/navigation.ts`:
 
 ```ts
 import { env, Uri, window, workspace } from 'vscode'
-import type { BeaconAnnotation } from '../types/annotation'
-import { formatBeaconLink, toVscodeRange } from '../utils/ranges'
+import type { AnnoPulseAnnotation } from '../types/annotation'
+import { formatAnnoPulseLink, toVscodeRange } from '../utils/ranges'
 
-export async function revealAnnotation(annotation: BeaconAnnotation) {
+export async function revealAnnotation(annotation: AnnoPulseAnnotation) {
   const document = await workspace.openTextDocument(Uri.parse(annotation.uri))
   const editor = await window.showTextDocument(document)
   const range = toVscodeRange(annotation.range)
@@ -2417,13 +2431,13 @@ export async function revealAnnotation(annotation: BeaconAnnotation) {
   editor.revealRange(range)
 }
 
-export async function copyAnnotationLink(annotation: BeaconAnnotation) {
-  await env.clipboard.writeText(formatBeaconLink(annotation))
+export async function copyAnnotationLink(annotation: AnnoPulseAnnotation) {
+  await env.clipboard.writeText(formatAnnoPulseLink(annotation))
 }
 
-export async function copyAnnotationMarkdown(annotation: BeaconAnnotation) {
+export async function copyAnnotationMarkdown(annotation: AnnoPulseAnnotation) {
   await env.clipboard.writeText(
-    `- [${annotation.severity}] ${annotation.keyword.replace(/:$/, '')} ${formatBeaconLink(annotation)} - ${annotation.message}`,
+    `- [${annotation.severity}] ${annotation.keyword.replace(/:$/, '')} ${formatAnnoPulseLink(annotation)} - ${annotation.message}`,
   )
 }
 ```
@@ -2441,11 +2455,11 @@ import {
   copyAnnotationMarkdown,
   revealAnnotation,
 } from './navigation'
-import type { BeaconAnnotation } from '../types/annotation'
+import type { AnnoPulseAnnotation } from '../types/annotation'
 
-function firstAnnotation(value: unknown): BeaconAnnotation | undefined {
+function firstAnnotation(value: unknown): AnnoPulseAnnotation | undefined {
   if (value && typeof value === 'object' && 'id' in value) {
-    return value as BeaconAnnotation
+    return value as AnnoPulseAnnotation
   }
   return annotationStore.getAll()[0]
 }
@@ -2480,20 +2494,20 @@ export function useCommands() {
 }
 ```
 
-Modify `src/index.ts` to call `useCommands()` before `useBeaconHighlight()`:
+Modify `src/index.ts` to call `useCommands()` before `useAnnoPulseHighlight()`:
 
 ```ts
 import { defineExtension } from 'reactive-vscode'
 import { version } from '../package.json'
 import { useCommands } from './commands'
-import { useBeaconHighlight } from './composables/use-beacon-highlight'
+import { useAnnoPulseHighlight } from './composables/use-annotation-highlight'
 import { logger } from './utils/logger'
 
 const { activate, deactivate } = defineExtension(() => {
   logger.info(`Activated, version: ${version}`)
 
   useCommands()
-  useBeaconHighlight()
+  useAnnoPulseHighlight()
 })
 
 export { activate, deactivate }
@@ -2518,7 +2532,7 @@ rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
 rtk git add src/commands/index.ts src/commands/navigation.ts src/commands/export.ts src/index.ts tests/export.test.ts
-rtk git commit -m "feat: add beacon commands and export"
+rtk git commit -m "feat: add annotation commands and export"
 ```
 
 Expected: commit succeeds.
@@ -2528,15 +2542,15 @@ Expected: commit succeeds.
 **Files:**
 
 - Create: `src/providers/tree-data-provider.ts`
-- Create: `src/composables/use-beacon-tree.ts`
+- Create: `src/composables/use-annotation-tree.ts`
 - Modify: `src/index.ts`
 - Create: `tests/tree-data-provider.test.ts`
 
 **Interfaces:**
 
-- Consumes: `annotationStore`, `BeaconAnnotation`.
-- Produces class `BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeItem>`.
-- Produces composable `useBeaconTree(): void`.
+- Consumes: `annotationStore`, `AnnoPulseAnnotation`.
+- Produces class `AnnoPulseTreeDataProvider implements TreeDataProvider<AnnoPulseTreeItem>`.
+- Produces composable `useAnnoPulseTree(): void`.
 
 - [ ] **Step 1: Write provider test**
 
@@ -2545,7 +2559,7 @@ Create `tests/tree-data-provider.test.ts`:
 ```ts
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 vi.mock(
   import('vscode'),
@@ -2569,7 +2583,7 @@ vi.mock(
     }) as unknown as Partial<typeof Vscode>,
 )
 
-function annotation(id: string, uri: string): BeaconAnnotation {
+function annotation(id: string, uri: string): AnnoPulseAnnotation {
   return {
     id,
     ruleId: 'todo',
@@ -2593,18 +2607,18 @@ function annotation(id: string, uri: string): BeaconAnnotation {
   }
 }
 
-describe('BeaconTreeDataProvider', () => {
+describe('AnnoPulseTreeDataProvider', () => {
   it('groups annotations by file', async () => {
     const { createAnnotationStore } =
       await import('../src/core/store/annotation-store')
-    const { BeaconTreeDataProvider } =
+    const { AnnoPulseTreeDataProvider } =
       await import('../src/providers/tree-data-provider')
     const store = createAnnotationStore()
     store.setForUri('file:///workspace/src/a.ts', [
       annotation('a', 'file:///workspace/src/a.ts'),
     ])
 
-    const provider = new BeaconTreeDataProvider(store, 'file')
+    const provider = new AnnoPulseTreeDataProvider(store, 'file')
     const roots = await provider.getChildren()
     const children = await provider.getChildren(roots[0])
 
@@ -2639,34 +2653,34 @@ import {
 } from 'vscode'
 import type { Event, TreeDataProvider } from 'vscode'
 import type { AnnotationStore } from '../core/store/annotation-store'
-import type { BeaconAnnotation } from '../types/annotation'
+import type { AnnoPulseAnnotation } from '../types/annotation'
 
-export type BeaconTreeGroupBy =
+export type AnnoPulseTreeGroupBy =
   'file' | 'rule' | 'category' | 'severity' | 'owner' | 'flat'
 
-export type BeaconTreeItem =
+export type AnnoPulseTreeItem =
   | {
       readonly kind: 'group'
       readonly label: string
-      readonly annotations: readonly BeaconAnnotation[]
+      readonly annotations: readonly AnnoPulseAnnotation[]
     }
   | {
-      readonly kind: 'beacon'
+      readonly kind: 'annotation'
       readonly label: string
-      readonly annotation: BeaconAnnotation
+      readonly annotation: AnnoPulseAnnotation
     }
 
-export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeItem> {
+export class AnnoPulseTreeDataProvider implements TreeDataProvider<AnnoPulseTreeItem> {
   private readonly changeEmitter = new EventEmitter<
-    BeaconTreeItem | undefined
+    AnnoPulseTreeItem | undefined
   >()
 
-  public readonly onDidChangeTreeData: Event<BeaconTreeItem | undefined> =
+  public readonly onDidChangeTreeData: Event<AnnoPulseTreeItem | undefined> =
     this.changeEmitter.event
 
   public constructor(
     private readonly store: AnnotationStore,
-    private readonly groupBy: BeaconTreeGroupBy,
+    private readonly groupBy: AnnoPulseTreeGroupBy,
   ) {
     this.store.subscribe(() => this.refresh())
   }
@@ -2675,7 +2689,7 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeItem> 
     this.changeEmitter.fire(undefined)
   }
 
-  public getTreeItem(item: BeaconTreeItem): TreeItem {
+  public getTreeItem(item: AnnoPulseTreeItem): TreeItem {
     const treeItem = new TreeItem(item.label)
 
     if (item.kind === 'group') {
@@ -2686,41 +2700,41 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeItem> 
     }
 
     treeItem.collapsibleState = TreeItemCollapsibleState.None
-    treeItem.contextValue = 'beacon'
+    treeItem.contextValue = 'annotation'
     treeItem.description = `${item.annotation.line + 1}:${item.annotation.column + 1}`
     treeItem.iconPath = new ThemeIcon('bookmark')
     treeItem.command = {
-      command: 'code-beacon.reveal',
-      title: 'Reveal Beacon',
+      command: 'annopulse.reveal',
+      title: 'Reveal Annotation',
       arguments: [item.annotation],
     }
 
     return treeItem
   }
 
-  public getChildren(item?: BeaconTreeItem): BeaconTreeItem[] {
+  public getChildren(item?: AnnoPulseTreeItem): AnnoPulseTreeItem[] {
     if (item?.kind === 'group') {
       return item.annotations.map(annotation => ({
-        kind: 'beacon',
+        kind: 'annotation',
         label: `${annotation.keyword} ${annotation.message}`.trim(),
         annotation,
       }))
     }
 
-    if (item?.kind === 'beacon') {
+    if (item?.kind === 'annotation') {
       return []
     }
 
     const annotations = this.store.getAll()
     if (this.groupBy === 'flat') {
       return annotations.map(annotation => ({
-        kind: 'beacon',
+        kind: 'annotation',
         label: `${annotation.keyword} ${annotation.message}`.trim(),
         annotation,
       }))
     }
 
-    const groups = new Map<string, BeaconAnnotation[]>()
+    const groups = new Map<string, AnnoPulseAnnotation[]>()
     for (const annotation of annotations) {
       const key =
         this.groupBy === 'category'
@@ -2744,22 +2758,22 @@ export class BeaconTreeDataProvider implements TreeDataProvider<BeaconTreeItem> 
 
 - [ ] **Step 4: Implement TreeView composable**
 
-Create `src/composables/use-beacon-tree.ts`:
+Create `src/composables/use-annotation-tree.ts`:
 
 ```ts
 import { watch } from 'reactive-vscode'
 import { window } from 'vscode'
 import { config } from '../config'
 import { annotationStore } from '../core/store/annotation-store'
-import { BeaconTreeDataProvider } from '../providers/tree-data-provider'
+import { AnnoPulseTreeDataProvider } from '../providers/tree-data-provider'
 
-export function useBeaconTree() {
-  const provider = new BeaconTreeDataProvider(
+export function useAnnoPulseTree() {
+  const provider = new AnnoPulseTreeDataProvider(
     annotationStore,
     config.explorer.groupBy,
   )
 
-  window.createTreeView('codeBeacon.annotations', {
+  window.createTreeView('annopulse.annotations', {
     treeDataProvider: provider,
     showCollapseAll: true,
   })
@@ -2777,16 +2791,16 @@ Modify `src/index.ts`:
 import { defineExtension } from 'reactive-vscode'
 import { version } from '../package.json'
 import { useCommands } from './commands'
-import { useBeaconHighlight } from './composables/use-beacon-highlight'
-import { useBeaconTree } from './composables/use-beacon-tree'
+import { useAnnoPulseHighlight } from './composables/use-annotation-highlight'
+import { useAnnoPulseTree } from './composables/use-annotation-tree'
 import { logger } from './utils/logger'
 
 const { activate, deactivate } = defineExtension(() => {
   logger.info(`Activated, version: ${version}`)
 
   useCommands()
-  useBeaconHighlight()
-  useBeaconTree()
+  useAnnoPulseHighlight()
+  useAnnoPulseTree()
 })
 
 export { activate, deactivate }
@@ -2810,8 +2824,8 @@ Run:
 rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
-rtk git add src/providers/tree-data-provider.ts src/composables/use-beacon-tree.ts src/index.ts tests/tree-data-provider.test.ts
-rtk git commit -m "feat: add beacon explorer"
+rtk git add src/providers/tree-data-provider.ts src/composables/use-annotation-tree.ts src/index.ts tests/tree-data-provider.test.ts
+rtk git commit -m "feat: add annotation explorer"
 ```
 
 Expected: commit succeeds.
@@ -2821,15 +2835,15 @@ Expected: commit succeeds.
 **Files:**
 
 - Create: `src/providers/diagnostics.ts`
-- Create: `src/composables/use-beacon-diagnostics.ts`
+- Create: `src/composables/use-annotation-diagnostics.ts`
 - Modify: `src/index.ts`
 - Create: `tests/diagnostics.test.ts`
 
 **Interfaces:**
 
 - Consumes: `annotationStore`, `toVscodeRange`, `config.diagnostics.mode`.
-- Produces function `createDiagnosticsFromAnnotations(annotations: readonly BeaconAnnotation[]): Diagnostic[]`.
-- Produces composable `useBeaconDiagnostics(): void`.
+- Produces function `createDiagnosticsFromAnnotations(annotations: readonly AnnoPulseAnnotation[]): Diagnostic[]`.
+- Produces composable `useAnnoPulseDiagnostics(): void`.
 
 - [ ] **Step 1: Write diagnostics test**
 
@@ -2838,7 +2852,7 @@ Create `tests/diagnostics.test.ts`:
 ```ts
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 vi.mock(
   import('vscode'),
@@ -2870,7 +2884,7 @@ vi.mock(
     }) as unknown as Partial<typeof Vscode>,
 )
 
-const annotation: BeaconAnnotation = {
+const annotation: AnnoPulseAnnotation = {
   id: 'a',
   ruleId: 'fixme',
   category: 'fixme',
@@ -2893,7 +2907,7 @@ const annotation: BeaconAnnotation = {
 }
 
 describe('createDiagnosticsFromAnnotations', () => {
-  it('maps beacon annotations to VS Code diagnostics', async () => {
+  it('maps annotations to VS Code diagnostics', async () => {
     const { createDiagnosticsFromAnnotations } =
       await import('../src/providers/diagnostics')
 
@@ -2903,7 +2917,7 @@ describe('createDiagnosticsFromAnnotations', () => {
     expect(diagnostics[0]).toMatchObject({
       message: 'FIXME: repair this',
       severity: 1,
-      source: 'Code Beacon',
+      source: 'AnnoPulse',
       code: 'fixme',
     })
   })
@@ -2926,10 +2940,13 @@ Create `src/providers/diagnostics.ts`:
 
 ```ts
 import { Diagnostic, DiagnosticSeverity } from 'vscode'
-import type { BeaconAnnotation, BeaconSeverity } from '../types/annotation'
+import type {
+  AnnoPulseAnnotation,
+  AnnoPulseSeverity,
+} from '../types/annotation'
 import { toVscodeRange } from '../utils/ranges'
 
-function toDiagnosticSeverity(severity: BeaconSeverity): DiagnosticSeverity {
+function toDiagnosticSeverity(severity: AnnoPulseSeverity): DiagnosticSeverity {
   if (severity === 'error') {
     return DiagnosticSeverity.Error
   }
@@ -2943,7 +2960,7 @@ function toDiagnosticSeverity(severity: BeaconSeverity): DiagnosticSeverity {
 }
 
 export function createDiagnosticsFromAnnotations(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
 ): Diagnostic[] {
   return annotations.map(annotation => {
     const diagnostic = new Diagnostic(
@@ -2951,7 +2968,7 @@ export function createDiagnosticsFromAnnotations(
       `${annotation.keyword} ${annotation.message}`.trim(),
       toDiagnosticSeverity(annotation.severity),
     )
-    diagnostic.source = 'Code Beacon'
+    diagnostic.source = 'AnnoPulse'
     diagnostic.code = annotation.ruleId
     return diagnostic
   })
@@ -2960,7 +2977,7 @@ export function createDiagnosticsFromAnnotations(
 
 - [ ] **Step 4: Implement diagnostics composable**
 
-Create `src/composables/use-beacon-diagnostics.ts`:
+Create `src/composables/use-annotation-diagnostics.ts`:
 
 ```ts
 import { watch } from 'reactive-vscode'
@@ -2969,8 +2986,8 @@ import { config } from '../config'
 import { annotationStore } from '../core/store/annotation-store'
 import { createDiagnosticsFromAnnotations } from '../providers/diagnostics'
 
-export function useBeaconDiagnostics() {
-  const collection = languages.createDiagnosticCollection('code-beacon')
+export function useAnnoPulseDiagnostics() {
+  const collection = languages.createDiagnosticCollection('annopulse')
 
   const refresh = () => {
     collection.clear()
@@ -3005,18 +3022,18 @@ Modify `src/index.ts`:
 import { defineExtension } from 'reactive-vscode'
 import { version } from '../package.json'
 import { useCommands } from './commands'
-import { useBeaconDiagnostics } from './composables/use-beacon-diagnostics'
-import { useBeaconHighlight } from './composables/use-beacon-highlight'
-import { useBeaconTree } from './composables/use-beacon-tree'
+import { useAnnoPulseDiagnostics } from './composables/use-annotation-diagnostics'
+import { useAnnoPulseHighlight } from './composables/use-annotation-highlight'
+import { useAnnoPulseTree } from './composables/use-annotation-tree'
 import { logger } from './utils/logger'
 
 const { activate, deactivate } = defineExtension(() => {
   logger.info(`Activated, version: ${version}`)
 
   useCommands()
-  useBeaconHighlight()
-  useBeaconTree()
-  useBeaconDiagnostics()
+  useAnnoPulseHighlight()
+  useAnnoPulseTree()
+  useAnnoPulseDiagnostics()
 })
 
 export { activate, deactivate }
@@ -3040,8 +3057,8 @@ Run:
 rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
-rtk git add src/providers/diagnostics.ts src/composables/use-beacon-diagnostics.ts src/index.ts tests/diagnostics.test.ts
-rtk git commit -m "feat: add beacon diagnostics"
+rtk git add src/providers/diagnostics.ts src/composables/use-annotation-diagnostics.ts src/index.ts tests/diagnostics.test.ts
+rtk git commit -m "feat: add annotation diagnostics"
 ```
 
 Expected: commit succeeds.
@@ -3058,8 +3075,8 @@ Expected: commit succeeds.
 **Interfaces:**
 
 - Consumes: `scanDocument`, `normalizeRules`, generated config, `annotationStore`.
-- Produces function `scanWorkspace(options: ScanWorkspaceOptions): Promise<readonly BeaconAnnotation[]>`.
-- Produces command behavior for `code-beacon.scanWorkspace`, `code-beacon.scanActiveFile`, `code-beacon.scanOpenEditors`.
+- Produces function `scanWorkspace(options: ScanWorkspaceOptions): Promise<readonly AnnoPulseAnnotation[]>`.
+- Produces command behavior for `annopulse.scanWorkspace`, `annopulse.scanActiveFile`, `annopulse.scanOpenEditors`.
 
 - [ ] **Step 1: Write workspace scanner test**
 
@@ -3111,8 +3128,8 @@ import { workspace } from 'vscode'
 import type { Uri } from 'vscode'
 import { DEFAULT_EXCLUDE, DEFAULT_INCLUDE } from '../../constants/defaults'
 import type {
-  BeaconAnnotation,
-  CompiledBeaconRule,
+  AnnoPulseAnnotation,
+  CompiledAnnoPulseRule,
 } from '../../types/annotation'
 import { scanDocument } from './scan-document'
 
@@ -3122,7 +3139,7 @@ export interface ScanWorkspaceOptions {
   readonly maxFilesForSearch: number
   readonly maxFileSize: number
   readonly commentOnly: boolean
-  readonly rules: readonly CompiledBeaconRule[]
+  readonly rules: readonly CompiledAnnoPulseRule[]
 }
 
 function globToRegExp(glob: string): RegExp {
@@ -3151,7 +3168,7 @@ function braceGlob(patterns: readonly string[]): string {
 
 export async function scanWorkspace(
   options: ScanWorkspaceOptions,
-): Promise<readonly BeaconAnnotation[]> {
+): Promise<readonly AnnoPulseAnnotation[]> {
   const include = braceGlob(options.include)
   const exclude = braceGlob(options.exclude)
   const files = await workspace.findFiles(
@@ -3159,7 +3176,7 @@ export async function scanWorkspace(
     exclude,
     options.maxFilesForSearch,
   )
-  const annotations: BeaconAnnotation[] = []
+  const annotations: AnnoPulseAnnotation[] = []
 
   for (const uri of files) {
     annotations.push(...(await scanUri(uri, options)))
@@ -3171,7 +3188,7 @@ export async function scanWorkspace(
 async function scanUri(
   uri: Uri,
   options: ScanWorkspaceOptions,
-): Promise<readonly BeaconAnnotation[]> {
+): Promise<readonly AnnoPulseAnnotation[]> {
   const document = await workspace.openTextDocument(uri)
   return scanDocument({
     text: document.getText(),
@@ -3300,7 +3317,7 @@ rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
 rtk git add src/core/scanner/scan-workspace.ts src/commands/index.ts playground/annotations.ts tests/workspace-scan.test.ts
-rtk git commit -m "feat: scan workspace beacons"
+rtk git commit -m "feat: scan workspace annotations"
 ```
 
 Expected: commit succeeds.
@@ -3330,17 +3347,17 @@ const readme = readFileSync('README.md', 'utf8')
 
 describe('README', () => {
   it('documents the publishable MVP user flow', () => {
-    expect(readme).toContain('# Code Beacon')
-    expect(readme).toContain('Scan Workspace for Beacons')
-    expect(readme).toContain('Code Beacon Explorer')
+    expect(readme).toContain('# AnnoPulse')
+    expect(readme).toContain('Scan Workspace for Annotations')
+    expect(readme).toContain('AnnoPulse Explorer')
     expect(readme).toContain('Problems integration is off by default')
     expect(readme).toContain('VS Code Web')
   })
 
   it('documents core configuration keys', () => {
-    expect(readme).toContain('code-beacon.rules')
-    expect(readme).toContain('code-beacon.diagnostics.mode')
-    expect(readme).toContain('code-beacon.maxFilesForSearch')
+    expect(readme).toContain('annopulse.rules')
+    expect(readme).toContain('annopulse.diagnostics.mode')
+    expect(readme).toContain('annopulse.maxFilesForSearch')
   })
 })
 ```
@@ -3360,17 +3377,17 @@ Expected: FAIL until README is updated.
 Replace the top content of `README.md` with this structure while keeping badges and license:
 
 ````md
-# Code Beacon
+# AnnoPulse
 
-Code Beacon highlights and organizes code annotations such as TODO, FIXME, BUG, NOTE, REVIEW, SECURITY, and PERF. It gives you editor highlights, a Code Beacon Explorer, optional Problems integration, workspace scans, and export commands without requiring native tools.
+AnnoPulse highlights and organizes code annotations such as TODO, FIXME, BUG, NOTE, REVIEW, SECURITY, and PERF. It gives you editor highlights, a AnnoPulse Explorer, optional Problems integration, workspace scans, and export commands without requiring native tools.
 
 ## Features
 
 - Highlight annotation keywords in visible editors.
-- List annotations in the Code Beacon Explorer.
+- List annotations in the AnnoPulse Explorer.
 - Scan the active file, open editors, or the workspace.
 - Copy annotation links and Markdown snippets.
-- Export beacons as Markdown, JSON, or CSV.
+- Export annotations as Markdown, JSON, or CSV.
 - Keep Problems integration off by default to avoid noisy workspaces.
 - Support VS Code Web, Remote, and Virtual Workspaces through VS Code workspace APIs.
 
@@ -3378,24 +3395,24 @@ Code Beacon highlights and organizes code annotations such as TODO, FIXME, BUG, 
 
 <!-- commands -->
 
-| Command                       | Title                                      |
-| ----------------------------- | ------------------------------------------ |
-| `code-beacon.enable`          | Code Beacon: Enable Code Beacon            |
-| `code-beacon.disable`         | Code Beacon: Disable Code Beacon           |
-| `code-beacon.toggle`          | Code Beacon: Toggle Code Beacon            |
-| `code-beacon.refresh`         | Code Beacon: Refresh Beacons               |
-| `code-beacon.scanWorkspace`   | Code Beacon: Scan Workspace for Beacons    |
-| `code-beacon.scanActiveFile`  | Code Beacon: Scan Active File for Beacons  |
-| `code-beacon.scanOpenEditors` | Code Beacon: Scan Open Editors for Beacons |
-| `code-beacon.focusExplorer`   | Code Beacon: Focus Code Beacon Explorer    |
-| `code-beacon.reveal`          | Code Beacon: Reveal Beacon                 |
-| `code-beacon.copyLink`        | Code Beacon: Copy Beacon Link              |
-| `code-beacon.copyMarkdown`    | Code Beacon: Copy Beacon as Markdown       |
-| `code-beacon.exportMarkdown`  | Code Beacon: Export Beacons as Markdown    |
-| `code-beacon.exportJson`      | Code Beacon: Export Beacons as JSON        |
-| `code-beacon.exportCsv`       | Code Beacon: Export Beacons as CSV         |
-| `code-beacon.openSettings`    | Code Beacon: Open Code Beacon Settings     |
-| `code-beacon.clearCache`      | Code Beacon: Clear Code Beacon Cache       |
+| Command                     | Title                                        |
+| --------------------------- | -------------------------------------------- |
+| `annopulse.enable`          | AnnoPulse: Enable AnnoPulse                  |
+| `annopulse.disable`         | AnnoPulse: Disable AnnoPulse                 |
+| `annopulse.toggle`          | AnnoPulse: Toggle AnnoPulse                  |
+| `annopulse.refresh`         | AnnoPulse: Refresh Annotations               |
+| `annopulse.scanWorkspace`   | AnnoPulse: Scan Workspace for Annotations    |
+| `annopulse.scanActiveFile`  | AnnoPulse: Scan Active File for Annotations  |
+| `annopulse.scanOpenEditors` | AnnoPulse: Scan Open Editors for Annotations |
+| `annopulse.focusExplorer`   | AnnoPulse: Focus AnnoPulse Explorer          |
+| `annopulse.reveal`          | AnnoPulse: Reveal Annotation                 |
+| `annopulse.copyLink`        | AnnoPulse: Copy Annotation Link              |
+| `annopulse.copyMarkdown`    | AnnoPulse: Copy Annotation as Markdown       |
+| `annopulse.exportMarkdown`  | AnnoPulse: Export Annotations as Markdown    |
+| `annopulse.exportJson`      | AnnoPulse: Export Annotations as JSON        |
+| `annopulse.exportCsv`       | AnnoPulse: Export Annotations as CSV         |
+| `annopulse.openSettings`    | AnnoPulse: Open AnnoPulse Settings           |
+| `annopulse.clearCache`      | AnnoPulse: Clear AnnoPulse Cache             |
 
 <!-- commands -->
 
@@ -3403,21 +3420,21 @@ Code Beacon highlights and organizes code annotations such as TODO, FIXME, BUG, 
 
 The most important settings are:
 
-- `code-beacon.enable`: enable or disable Code Beacon.
-- `code-beacon.rules`: custom annotation rules. Built-in rules cover TODO, FIXME, BUG, HACK, NOTE, REVIEW, SECURITY, PERF, and QUESTION.
-- `code-beacon.include`: workspace scan include globs.
-- `code-beacon.exclude`: workspace scan exclude globs.
-- `code-beacon.maxFileSize`: maximum document text length to scan.
-- `code-beacon.maxFilesForSearch`: maximum files scanned by workspace scan.
-- `code-beacon.commentOnly`: scan known comment ranges before falling back to full-text scanning.
-- `code-beacon.diagnostics.mode`: Problems integration mode. Problems integration is off by default.
-- `code-beacon.explorer.groupBy`: TreeView grouping mode.
+- `annopulse.enable`: enable or disable AnnoPulse.
+- `annopulse.rules`: custom annotation rules. Built-in rules cover TODO, FIXME, BUG, HACK, NOTE, REVIEW, SECURITY, PERF, and QUESTION.
+- `annopulse.include`: workspace scan include globs.
+- `annopulse.exclude`: workspace scan exclude globs.
+- `annopulse.maxFileSize`: maximum document text length to scan.
+- `annopulse.maxFilesForSearch`: maximum files scanned by workspace scan.
+- `annopulse.commentOnly`: scan known comment ranges before falling back to full-text scanning.
+- `annopulse.diagnostics.mode`: Problems integration mode. Problems integration is off by default.
+- `annopulse.explorer.groupBy`: TreeView grouping mode.
 
 Example custom rule:
 
 ```jsonc
 {
-  "code-beacon.rules": [
+  "annopulse.rules": [
     {
       "id": "security",
       "label": "Security",
@@ -3439,13 +3456,13 @@ Example custom rule:
 
 ## VS Code Web
 
-Code Beacon supports browser-based VS Code environments, including vscode.dev and github.dev. Runtime workspace scans use VS Code APIs instead of native ripgrep by default.
+AnnoPulse supports browser-based VS Code environments, including vscode.dev and github.dev. Runtime workspace scans use VS Code APIs instead of native ripgrep by default.
 
 ## Current MVP Limits
 
 - Git blame and AI actions are planned follow-up features.
 - Comment-only scanning uses built-in comment syntax for common languages and falls back to full-text scanning for unknown languages.
-- Problems integration is opt-in through `code-beacon.diagnostics.mode`.
+- Problems integration is opt-in through `annopulse.diagnostics.mode`.
 
 ## License
 
@@ -3504,7 +3521,7 @@ Run:
 
 ```bash
 rtk git add README.md tests/readme.test.ts tests/e2e/run.ts package.json
-rtk git commit -m "docs: prepare Code Beacon for marketplace"
+rtk git commit -m "docs: prepare AnnoPulse for marketplace"
 ```
 
 Expected: commit succeeds.
@@ -3533,5 +3550,5 @@ Placeholder scan:
 
 Type consistency:
 
-- `BeaconAnnotation`, `BeaconRuleConfig`, `CompiledBeaconRule`, `SerializedRange`, `annotationStore`, `scanDocument`, `normalizeRules`, and formatter names are defined before later tasks consume them.
+- `AnnoPulseAnnotation`, `AnnoPulseRuleConfig`, `CompiledAnnoPulseRule`, `SerializedRange`, `annotationStore`, `scanDocument`, `normalizeRules`, and formatter names are defined before later tasks consume them.
 - Command IDs match the Task 1 `package.json` contribution list.

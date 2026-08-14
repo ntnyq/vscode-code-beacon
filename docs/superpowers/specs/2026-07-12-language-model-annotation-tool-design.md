@@ -2,14 +2,14 @@
 
 ## Goal
 
-Expose the annotations Code Beacon has already discovered to VS Code Agent mode through one opt-in, read-only Language Model Tool. The tool gives an agent structured, bounded context for later explanation, quality analysis, and fix-generation features without calling a model itself or modifying a workspace.
+Expose the annotations AnnoPulse has already discovered to VS Code Agent mode through one opt-in, read-only Language Model Tool. The tool gives an agent structured, bounded context for later explanation, quality analysis, and fix-generation features without calling a model itself or modifying a workspace.
 
 ## Decision
 
-Implement `code_beacon_list_annotations` first.
+Implement `annopulse_list_annotations` first.
 
-- Add `code-beacon.ai.enabled`, default `false`.
-- Contribute and register one `code_beacon_list_annotations` tool only when the extension is activated; its `when` clause makes it available only while the opt-in setting is true.
+- Add `annopulse.ai.enabled`, default `false`.
+- Contribute and register one `annopulse_list_annotations` tool only when the extension is activated; its `when` clause makes it available only while the opt-in setting is true.
 - Return a JSON text result containing a bounded snapshot of annotations currently held in `annotationStore`; it never starts a scan, opens a document, invokes a language model, writes a file, invokes Git, reaches the network, or sends telemetry.
 - Use `prepareInvocation` to name the selected scope and explain that the agent will receive already-indexed annotation metadata. The public extension-tool flow presents a confirmation before the tool runs.
 
@@ -21,26 +21,26 @@ This immediately looks powerful but requires prompt composition, model availabil
 
 ### 2. Recommended: a bounded read-only annotation tool
 
-The agent can use the current annotation snapshot in a chat conversation, while Code Beacon remains a deterministic data provider. The output schema and scope semantics can be fully unit-tested without a model. Later commands and tools can reuse the same selector and serializer.
+The agent can use the current annotation snapshot in a chat conversation, while AnnoPulse remains a deterministic data provider. The output schema and scope semantics can be fully unit-tested without a model. Later commands and tools can reuse the same selector and serializer.
 
 ### 3. Workspace-wide automatic scan on every invocation
 
-This can be slow, expands file access, and is misleading in Web/Remote/Virtual Workspace cases. It is out of scope: the tool reports only what Code Beacon has already indexed.
+This can be slow, expands file access, and is misleading in Web/Remote/Virtual Workspace cases. It is out of scope: the tool reports only what AnnoPulse has already indexed.
 
 ## Tool Contract
 
 ### Manifest Identity
 
-The `package.json` contribution is named `code_beacon_list_annotations`, uses `toolReferenceName: "codeBeaconAnnotations"`, and is referenceable in Agent chat. Its model description explicitly says it returns only annotations already in Code Beacon's in-memory store; it must not be used to search for unscanned annotations or read arbitrary file content.
+The `package.json` contribution is named `annopulse_list_annotations`, uses `toolReferenceName: "annopulseAnnotations"`, and is referenceable in Agent chat. Its model description explicitly says it returns only annotations already in AnnoPulse's in-memory store; it must not be used to search for unscanned annotations or read arbitrary file content.
 
-The extension adds `onLanguageModelTool:code_beacon_list_annotations` beside the existing startup activation event so VS Code can activate it before invocation. At runtime it calls `lm.registerTool` with the same name and disposes the registration with the extension lifecycle.
+The extension adds `onLanguageModelTool:annopulse_list_annotations` beside the existing startup activation event so VS Code can activate it before invocation. At runtime it calls `lm.registerTool` with the same name and disposes the registration with the extension lifecycle.
 
 ### Input Schema
 
 The tool accepts one optional object:
 
 ```ts
-interface BeaconListAnnotationsInput {
+interface AnnoPulseListAnnotationsInput {
   scope?: 'all' | 'activeFile' | 'openEditors'
   limit?: number
   includeResolved?: boolean
@@ -57,7 +57,7 @@ interface BeaconListAnnotationsInput {
 The tool returns one `LanguageModelTextPart` containing JSON:
 
 ```ts
-interface BeaconListAnnotationsResult {
+interface AnnoPulseListAnnotationsResult {
   annotations: readonly {
     id: string
     uri: string
@@ -65,13 +65,13 @@ interface BeaconListAnnotationsResult {
     column: number
     keyword: string
     message: string
-    category: BeaconCategory
-    severity: BeaconSeverity
+    category: AnnoPulseCategory
+    severity: AnnoPulseSeverity
     ruleId: string
     owner?: string
     resolved: boolean
     ignored: boolean
-    source: BeaconAnnotation['source']
+    source: AnnoPulseAnnotation['source']
   }[]
   returned: number
   scope: 'all' | 'activeFile' | 'openEditors'
@@ -85,18 +85,18 @@ Annotations retain deterministic source-location ordering. Owners are trimmed, w
 ## Architecture
 
 ```text
-Agent prompt / #codeBeaconAnnotations
+Agent prompt / #annopulseAnnotations
         |
         v
 VS Code validates manifest input schema and asks user confirmation
         |
         v
-useBeaconLanguageModelTools
+useAnnoPulseLanguageModelTools
         |
-        +--> selectBeaconToolAnnotations (pure)
+        +--> selectAnnoPulseToolAnnotations (pure)
         |      current store + editor scope + state filters + deterministic limit
         |
-        `--> serializeBeaconToolResult (pure)
+        `--> serializeAnnoPulseToolResult (pure)
                JSON snapshot -> LanguageModelTextPart -> LanguageModelToolResult
 ```
 
@@ -106,17 +106,17 @@ useBeaconLanguageModelTools
 
 ### VS Code Adapter
 
-`src/composables/use-beacon-language-model-tools.ts` owns the public `lm.registerTool` call. It passes `annotationStore.getAll()`, `window.activeTextEditor?.document.uri.toString()`, and `window.visibleTextEditors` into the pure core. `prepareInvocation` has no side effects and returns an invocation message plus confirmation that describes the selected scope and maximum result count. `invoke` checks `config.ai.enabled` again, returns a useful error when disabled, and otherwise constructs the documented `LanguageModelToolResult`.
+`src/composables/use-annotation-language-model-tools.ts` owns the public `lm.registerTool` call. It passes `annotationStore.getAll()`, `window.activeTextEditor?.document.uri.toString()`, and `window.visibleTextEditors` into the pure core. `prepareInvocation` has no side effects and returns an invocation message plus confirmation that describes the selected scope and maximum result count. `invoke` checks `config.ai.enabled` again, returns a useful error when disabled, and otherwise constructs the documented `LanguageModelToolResult`.
 
 ## Configuration and Compatibility
 
 Add this generated setting:
 
 ```json
-"code-beacon.ai.enabled": {
+"annopulse.ai.enabled": {
   "type": "boolean",
   "default": false,
-  "description": "Enable Code Beacon's read-only Language Model Tools. Tools return only annotations already discovered by Code Beacon and require confirmation before sharing their result with an agent."
+  "description": "Enable AnnoPulse's read-only Language Model Tools. Tools return only annotations already discovered by AnnoPulse and require confirmation before sharing their result with an agent."
 }
 ```
 

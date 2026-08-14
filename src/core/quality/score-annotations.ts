@@ -1,9 +1,9 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import { compareBeaconAnnotations } from '../explorer/filter'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import { compareAnnoPulseAnnotations } from '../explorer/filter'
 
-export type BeaconQualityLevel = 'good' | 'needsAttention' | 'poor'
+export type AnnoPulseQualityLevel = 'good' | 'needsAttention' | 'poor'
 
-export type BeaconQualityIssueCode =
+export type AnnoPulseQualityIssueCode =
   | 'emptyMessage'
   | 'vagueMessage'
   | 'missingAction'
@@ -14,25 +14,25 @@ export type BeaconQualityIssueCode =
   | 'overdue'
   | 'expired'
 
-export interface BeaconQualityIssue {
-  readonly code: BeaconQualityIssueCode
+export interface AnnoPulseQualityIssue {
+  readonly code: AnnoPulseQualityIssueCode
   readonly message: string
   readonly penalty: number
 }
 
-export interface BeaconAnnotationQuality {
+export interface AnnoPulseAnnotationQuality {
   readonly annotationId: string
-  readonly issues: readonly BeaconQualityIssue[]
-  readonly level: BeaconQualityLevel
+  readonly issues: readonly AnnoPulseQualityIssue[]
+  readonly level: AnnoPulseQualityLevel
   readonly score: number
 }
 
-export interface BeaconQualityReport {
-  readonly annotations: readonly BeaconAnnotationQuality[]
-  readonly counts: Readonly<Record<BeaconQualityLevel, number>>
+export interface AnnoPulseQualityReport {
+  readonly annotations: readonly AnnoPulseAnnotationQuality[]
+  readonly counts: Readonly<Record<AnnoPulseQualityLevel, number>>
 }
 
-export interface ScoreBeaconAnnotationsOptions {
+export interface ScoreAnnoPulseAnnotationsOptions {
   readonly includeIgnored?: boolean
   readonly includeResolved?: boolean
   readonly now: Date
@@ -60,7 +60,7 @@ const englishActionPattern =
 const chineseActionPattern = /添加|删除|修复|重构|检查|更新|处理|补充|验证/u
 
 const issueDefinitions: Readonly<
-  Record<BeaconQualityIssueCode, Omit<BeaconQualityIssue, 'code'>>
+  Record<AnnoPulseQualityIssueCode, Omit<AnnoPulseQualityIssue, 'code'>>
 > = {
   emptyMessage: {
     message: 'Add a descriptive message.',
@@ -154,8 +154,8 @@ function isBefore(left: CalendarDate, right: CalendarDate): boolean {
 }
 
 function addIssue(
-  issues: BeaconQualityIssue[],
-  code: BeaconQualityIssueCode,
+  issues: AnnoPulseQualityIssue[],
+  code: AnnoPulseQualityIssueCode,
 ): void {
   issues.push({ code, ...issueDefinitions[code] })
 }
@@ -166,7 +166,7 @@ function hasAction(message: string): boolean {
   )
 }
 
-function qualityLevel(score: number): BeaconQualityLevel {
+function qualityLevel(score: number): AnnoPulseQualityLevel {
   if (score >= 80) {
     return 'good'
   }
@@ -179,7 +179,7 @@ function qualityLevel(score: number): BeaconQualityLevel {
 }
 
 function addMessageIssues(
-  issues: BeaconQualityIssue[],
+  issues: AnnoPulseQualityIssue[],
   message: string,
   taskOriented: boolean,
 ): void {
@@ -208,8 +208,8 @@ function addMessageIssues(
 }
 
 function addDateIssues(
-  issues: BeaconQualityIssue[],
-  annotation: BeaconAnnotation,
+  issues: AnnoPulseQualityIssue[],
+  annotation: AnnoPulseAnnotation,
   today: CalendarDate,
 ): void {
   const dueDate = parseCalendarDate(annotation.dueDate ?? '')
@@ -232,11 +232,11 @@ function addDateIssues(
   }
 }
 
-export function scoreBeaconAnnotation(
-  annotation: BeaconAnnotation,
+export function scoreAnnoPulseAnnotation(
+  annotation: AnnoPulseAnnotation,
   now: Date,
-): BeaconAnnotationQuality {
-  const issues: BeaconQualityIssue[] = []
+): AnnoPulseAnnotationQuality {
+  const issues: AnnoPulseQualityIssue[] = []
   const message = normalizeMessage(annotation.message)
   const taskOriented = annotation.category !== 'note'
 
@@ -261,10 +261,10 @@ export function scoreBeaconAnnotation(
   }
 }
 
-export function scoreBeaconAnnotations(
-  annotations: readonly BeaconAnnotation[],
-  options: ScoreBeaconAnnotationsOptions,
-): BeaconQualityReport {
+export function scoreAnnoPulseAnnotations(
+  annotations: readonly AnnoPulseAnnotation[],
+  options: ScoreAnnoPulseAnnotationsOptions,
+): AnnoPulseQualityReport {
   const qualities = annotations
     .filter(annotation => {
       if (annotation.resolved && !options.includeResolved) {
@@ -273,9 +273,9 @@ export function scoreBeaconAnnotations(
 
       return !annotation.ignored || options.includeIgnored === true
     })
-    .toSorted(compareBeaconAnnotations)
-    .map(annotation => scoreBeaconAnnotation(annotation, options.now))
-  const counts: Record<BeaconQualityLevel, number> = {
+    .toSorted(compareAnnoPulseAnnotations)
+    .map(annotation => scoreAnnoPulseAnnotation(annotation, options.now))
+  const counts: Record<AnnoPulseQualityLevel, number> = {
     good: 0,
     needsAttention: 0,
     poor: 0,

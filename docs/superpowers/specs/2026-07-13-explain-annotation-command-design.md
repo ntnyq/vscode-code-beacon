@@ -2,14 +2,14 @@
 
 ## Goal
 
-Add one opt-in, user-triggered `code-beacon.explain` command that sends a strictly bounded context for one Code Beacon annotation to a VS Code language model and streams a read-only explanation to the `Code Beacon AI` OutputChannel.
+Add one opt-in, user-triggered `annopulse.explain` command that sends a strictly bounded context for one AnnoPulse annotation to a VS Code language model and streams a read-only explanation to the `AnnoPulse AI` OutputChannel.
 
 ## Decision
 
 Implement Explain before Generate Fix and Workspace Summary. Explain is read-only, scoped to one annotation, and establishes the direct Language Model API safety and UX contract that later AI commands can reuse.
 
 - Use VS Code's direct Language Model API from a command, not a Language Model Tool or Chat Participant.
-- Gate invocation with the existing `code-beacon.ai.enabled` setting, which remains false by default. Update its generated description to cover all Code Beacon AI features, not only read-only tools.
+- Gate invocation with the existing `annopulse.ai.enabled` setting, which remains false by default. Update its generated description to cover all AnnoPulse AI features, not only read-only tools.
 - Select an available Copilot model with `lm.selectChatModels({ vendor: 'copilot' })` only after the command is explicitly invoked. Do not pin a model family because available model IDs and families change.
 - Read only the annotation's document, then send annotation metadata plus a capped nearby source window. Never scan the workspace, use Git metadata, write a file, apply an edit, or emit telemetry.
 - Stream Markdown text to a dedicated output channel. The command does not create a chat participant, webview, untitled document, or code edit.
@@ -30,19 +30,19 @@ The command is an explicit user action, so VS Code can request model consent at 
 
 ## Command Contract
 
-`code-beacon.explain` accepts either a `BeaconAnnotation` or the existing Explorer leaf wrapper. It uses the same runtime validation as state-changing Explorer commands. If no valid annotation is supplied, it shows:
+`annopulse.explain` accepts either a `AnnoPulseAnnotation` or the existing Explorer leaf wrapper. It uses the same runtime validation as state-changing Explorer commands. If no valid annotation is supplied, it shows:
 
 ```text
-Select a beacon in the Explorer to explain it.
+Select an annotation in the Explorer to explain it.
 ```
 
 If AI is disabled, it shows:
 
 ```text
-Enable code-beacon.ai.enabled to explain annotations.
+Enable annopulse.ai.enabled to explain annotations.
 ```
 
-The package contributes the command as `Explain Beacon` and adds it to the Beacon Explorer item context menu. It is visible only for beacon leaf items and is not restricted to trusted workspaces: the user explicitly invokes it, and VS Code's model-consent flow remains authoritative.
+The package contributes the command as `Explain Annotation` and adds it to the AnnoPulse Explorer item context menu. It is visible only for annotation leaf items and is not restricted to trusted workspaces: the user explicitly invokes it, and VS Code's model-consent flow remains authoritative.
 
 ## Bounded Context
 
@@ -64,10 +64,10 @@ Explorer / CodeLens command
   -> build bounded pure context and prompt
   -> select available Copilot model (user-initiated consent)
   -> sendRequest with cancellable progress
-  -> stream LanguageModelTextPart values to Code Beacon AI OutputChannel
+  -> stream LanguageModelTextPart values to AnnoPulse AI OutputChannel
 ```
 
-The adapter uses `window.withProgress` with a cancellable notification. It creates the `Code Beacon AI` OutputChannel lazily, clears it for each command, writes a heading with the annotation location, appends streamed text chunks in order, and shows the channel once the first chunk arrives. It displays a concise error for unavailable models, `LanguageModelError` failures, document-read failures, cancellation, and unexpected failures. It never forwards the original exception text to the model.
+The adapter uses `window.withProgress` with a cancellable notification. It creates the `AnnoPulse AI` OutputChannel lazily, clears it for each command, writes a heading with the annotation location, appends streamed text chunks in order, and shows the channel once the first chunk arrives. It displays a concise error for unavailable models, `LanguageModelError` failures, document-read failures, cancellation, and unexpected failures. It never forwards the original exception text to the model.
 
 The response is informational only. No `WorkspaceEdit`, `workspace.fs.writeFile`, command execution, mutation of the annotation store, or automatic follow-up action is allowed.
 

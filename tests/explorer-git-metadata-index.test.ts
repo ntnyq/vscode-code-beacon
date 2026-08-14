@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
-  BeaconExplorerGitMetadataIndex,
-  type BeaconExplorerMetadataResolver,
+  AnnoPulseExplorerGitMetadataIndex,
+  type AnnoPulseExplorerMetadataResolver,
 } from '../src/core/explorer/git-metadata-index'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 interface Deferred<T> {
   readonly promise: Promise<T>
@@ -24,11 +24,11 @@ function deferred<T>(): Deferred<T> {
   return { promise, reject, resolve }
 }
 
-function annotation(id: string): BeaconAnnotation {
-  return { id } as BeaconAnnotation
+function annotation(id: string): AnnoPulseAnnotation {
+  return { id } as AnnoPulseAnnotation
 }
 
-function metadata(hash: string): BeaconGitMetadata {
+function metadata(hash: string): AnnoPulseGitMetadata {
   return {
     authorName: 'Ada Lovelace',
     commitDate: '2020-01-01T00:00:00.000Z',
@@ -37,15 +37,15 @@ function metadata(hash: string): BeaconGitMetadata {
   }
 }
 
-describe(BeaconExplorerGitMetadataIndex, () => {
+describe(AnnoPulseExplorerGitMetadataIndex, () => {
   it('publishes metadata after each sequential target resolves', async () => {
-    const first = deferred<ReadonlyMap<string, BeaconGitMetadata>>()
-    const second = deferred<ReadonlyMap<string, BeaconGitMetadata>>()
+    const first = deferred<ReadonlyMap<string, AnnoPulseGitMetadata>>()
+    const second = deferred<ReadonlyMap<string, AnnoPulseGitMetadata>>()
     const onUpdate = vi.fn<() => void>()
-    const resolve = vi.fn<BeaconExplorerMetadataResolver<string>>(document =>
-      document === 'first' ? first.promise : second.promise,
+    const resolve = vi.fn<AnnoPulseExplorerMetadataResolver<string>>(
+      document => (document === 'first' ? first.promise : second.promise),
     )
-    const index = new BeaconExplorerGitMetadataIndex<string>()
+    const index = new AnnoPulseExplorerGitMetadataIndex<string>()
 
     const hydration = index.hydrate(
       [
@@ -82,7 +82,7 @@ describe(BeaconExplorerGitMetadataIndex, () => {
   })
 
   it('clears published metadata', async () => {
-    const index = new BeaconExplorerGitMetadataIndex<string>()
+    const index = new AnnoPulseExplorerGitMetadataIndex<string>()
 
     await index.hydrate(
       [{ annotations: [annotation('a')], document: 'document' }],
@@ -95,10 +95,10 @@ describe(BeaconExplorerGitMetadataIndex, () => {
   })
 
   it('discards results that complete from an older hydration generation', async () => {
-    const oldResult = deferred<ReadonlyMap<string, BeaconGitMetadata>>()
-    const newResult = deferred<ReadonlyMap<string, BeaconGitMetadata>>()
+    const oldResult = deferred<ReadonlyMap<string, AnnoPulseGitMetadata>>()
+    const newResult = deferred<ReadonlyMap<string, AnnoPulseGitMetadata>>()
     const onUpdate = vi.fn<() => void>()
-    const index = new BeaconExplorerGitMetadataIndex<string>()
+    const index = new AnnoPulseExplorerGitMetadataIndex<string>()
 
     const oldHydration = index.hydrate(
       [{ annotations: [annotation('old')], document: 'old' }],
@@ -123,13 +123,14 @@ describe(BeaconExplorerGitMetadataIndex, () => {
   })
 
   it('does not resolve later targets after a rejected superseded generation', async () => {
-    const oldResult = deferred<ReadonlyMap<string, BeaconGitMetadata>>()
-    const resolve = vi.fn<BeaconExplorerMetadataResolver<string>>(document =>
-      document === 'old-first'
-        ? oldResult.promise
-        : Promise.resolve(new Map([['old-second', metadata('old-second')]])),
+    const oldResult = deferred<ReadonlyMap<string, AnnoPulseGitMetadata>>()
+    const resolve = vi.fn<AnnoPulseExplorerMetadataResolver<string>>(
+      document =>
+        document === 'old-first'
+          ? oldResult.promise
+          : Promise.resolve(new Map([['old-second', metadata('old-second')]])),
     )
-    const index = new BeaconExplorerGitMetadataIndex<string>()
+    const index = new AnnoPulseExplorerGitMetadataIndex<string>()
 
     const oldHydration = index.hydrate(
       [

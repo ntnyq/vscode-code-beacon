@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
-import { formatBeaconIssue } from '../src/core/issues/format'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
+import { formatAnnoPulseIssue } from '../src/core/issues/format'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function createAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 2,
@@ -32,10 +32,10 @@ function createAnnotation(
 
 describe('issue formatter', () => {
   it('formats a complete annotation as a portable issue body', () => {
-    const content = formatBeaconIssue(createAnnotation({ owner: 'alice' }))
+    const content = formatAnnoPulseIssue(createAnnotation({ owner: 'alice' }))
 
     expect(content.title).toBe('TODO: Replace deprecated parser')
-    expect(content.body).toContain('## Code Beacon')
+    expect(content.body).toContain('## AnnoPulse')
     expect(content.body).toContain('- **Category:** `todo`')
     expect(content.body).toContain('- **Severity:** `information`')
     expect(content.body).toContain('- **Rule:** `todo`')
@@ -47,13 +47,13 @@ describe('issue formatter', () => {
   })
 
   it.each([undefined, '', '   \t'])('omits an empty owner %j', owner => {
-    const content = formatBeaconIssue(createAnnotation({ owner }))
+    const content = formatAnnoPulseIssue(createAnnotation({ owner }))
 
     expect(content.body).not.toContain('**Owner:**')
   })
 
   it('uses the first nonempty message line for the title', () => {
-    const content = formatBeaconIssue(
+    const content = formatAnnoPulseIssue(
       createAnnotation({
         message:
           '\r\n  Replace deprecated parser  \r\nKeep the current fallback.',
@@ -67,7 +67,7 @@ describe('issue formatter', () => {
   })
 
   it('formats inline values safely and renders a multiline message as literal body text', () => {
-    const content = formatBeaconIssue(
+    const content = formatAnnoPulseIssue(
       createAnnotation({
         message: 'Replace `deprecated` parser\r\n## Injected section',
         owner: 'Ada`Lovelace\r\nTeam',
@@ -108,7 +108,7 @@ describe('issue formatter', () => {
   ])(
     'keeps a %s first line as literal annotation text',
     (message, title, paragraph) => {
-      const content = formatBeaconIssue(createAnnotation({ message }))
+      const content = formatAnnoPulseIssue(createAnnotation({ message }))
 
       expect(content.title).toBe(title)
       expect(content.body).toContain(`## Annotation\n\n${paragraph}`)
@@ -117,7 +117,7 @@ describe('issue formatter', () => {
   )
 
   it('uses a code span delimiter longer than the longest backtick run', () => {
-    const content = formatBeaconIssue(
+    const content = formatAnnoPulseIssue(
       createAnnotation({ ruleId: 'match ```literal``` text' }),
     )
 
@@ -128,7 +128,7 @@ describe('issue formatter', () => {
   })
 
   it('pads a code span when the value starts or ends with a backtick', () => {
-    const content = formatBeaconIssue(
+    const content = formatAnnoPulseIssue(
       createAnnotation({ ruleId: '``literal``' }),
     )
 
@@ -136,18 +136,20 @@ describe('issue formatter', () => {
   })
 
   it('omits Git details without metadata', () => {
-    expect(formatBeaconIssue(createAnnotation()).body).not.toContain('## Git')
+    expect(formatAnnoPulseIssue(createAnnotation()).body).not.toContain(
+      '## Git',
+    )
   })
 
   it('includes normalized Git details when metadata is provided', () => {
-    const metadata: BeaconGitMetadata = {
+    const metadata: AnnoPulseGitMetadata = {
       authorName: 'Ada Lovelace',
       commitDate: '2026-07-12T04:00:00.000Z',
       hash: 'a1b2c3d4e5f6',
       summary: 'Replace parser',
     }
 
-    const content = formatBeaconIssue(createAnnotation(), metadata)
+    const content = formatAnnoPulseIssue(createAnnotation(), metadata)
 
     expect(content.body).toContain('## Git')
     expect(content.body).toContain('- **Author:** Ada Lovelace')
@@ -157,14 +159,14 @@ describe('issue formatter', () => {
   })
 
   it('renders hostile Git author and summary text as literal body text', () => {
-    const metadata: BeaconGitMetadata = {
+    const metadata: AnnoPulseGitMetadata = {
       authorName: 'Ada\n```markdown\n## Forged author',
       commitDate: '2026-07-12T04:00:00.000Z',
       hash: 'a1b2c3d4e5f6',
       summary: 'Replace parser\r\n## Forged summary\r\n~~~markdown',
     }
 
-    const content = formatBeaconIssue(createAnnotation(), metadata)
+    const content = formatAnnoPulseIssue(createAnnotation(), metadata)
 
     expect(content.body).toContain(
       '- **Author:** Ada \\`\\`\\`markdown \\#\\# Forged author',

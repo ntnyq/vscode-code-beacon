@@ -1,4 +1,4 @@
-// oxlint-disable eslint/no-warning-comments -- Playground intentionally contains beacon keywords.
+// oxlint-disable eslint/no-warning-comments -- Playground intentionally contains annotation keywords.
 
 export function Banner({ title }) {
   // REVIEW: hover should show this annotation in JSX files

@@ -24,13 +24,13 @@
 **Files:**
 
 - Modify: `src/core/explorer/filter.ts`
-- Modify: `src/composables/use-beacon-explorer.ts`
-- Modify: `tests/beacon-explorer-filter.test.ts`
+- Modify: `src/composables/use-annotation-explorer.ts`
+- Modify: `tests/annotation-explorer-filter.test.ts`
 - Modify: `package.json`
 - Regenerate: `src/meta.ts`
 - Modify: `tests/package-metadata.test.ts`
 
-**Interfaces:** `BeaconExplorerScope` adds `'changedFiles'`; `BeaconExplorerFilter` adds `changedUris: ReadonlySet<string>`.
+**Interfaces:** `AnnoPulseExplorerScope` adds `'changedFiles'`; `AnnoPulseExplorerFilter` adds `changedUris: ReadonlySet<string>`.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -38,7 +38,7 @@ Extend the shared filter fixture with `changedUris: new Set()`. Add a test with 
 
 - [ ] **Step 2: Verify RED**
 
-Run: `pnpm vitest tests/beacon-explorer-filter.test.ts tests/package-metadata.test.ts`
+Run: `pnpm vitest tests/annotation-explorer-filter.test.ts tests/package-metadata.test.ts`
 
 Expected: FAIL because the scope literal and changed URI input do not exist.
 
@@ -55,13 +55,13 @@ if (
 }
 ```
 
-Add `"changedFiles"` to the `code-beacon.explorer.scope` package enum and description, run `pnpm generate:meta`, and update metadata expectations.
+Add `"changedFiles"` to the `annopulse.explorer.scope` package enum and description, run `pnpm generate:meta`, and update metadata expectations.
 
-To retain a compiling Explorer until Task 3 supplies its asynchronous URI snapshot, pass `changedUris: new Set()` to `filterBeaconAnnotations` from `useBeaconExplorer`. Task 3 replaces this inert set with Explorer-owned state; this interim value safely yields no changed-file results without affecting any existing scope.
+To retain a compiling Explorer until Task 3 supplies its asynchronous URI snapshot, pass `changedUris: new Set()` to `filterAnnoPulseAnnotations` from `useAnnoPulseExplorer`. Task 3 replaces this inert set with Explorer-owned state; this interim value safely yields no changed-file results without affecting any existing scope.
 
 - [ ] **Step 4: Verify GREEN and commit**
 
-Run: `pnpm vitest tests/beacon-explorer-filter.test.ts tests/package-metadata.test.ts && pnpm typecheck && pnpm format:check`
+Run: `pnpm vitest tests/annotation-explorer-filter.test.ts tests/package-metadata.test.ts && pnpm typecheck && pnpm format:check`
 
 Commit: `feat: add changed files Explorer scope`
 
@@ -69,10 +69,10 @@ Commit: `feat: add changed files Explorer scope`
 
 **Files:**
 
-- Modify: `src/composables/use-beacon-git.ts`
-- Modify: `tests/beacon-git.test.ts`
+- Modify: `src/composables/use-annotation-git.ts`
+- Modify: `tests/annotation-git.test.ts`
 
-**Interfaces:** `useBeaconGit()` adds `getChangedUris(): Promise<ReadonlySet<string>>` and `subscribeToChangedUris(listener: () => void): Promise<Disposable>`.
+**Interfaces:** `useAnnoPulseGit()` adds `getChangedUris(): Promise<ReadonlySet<string>>` and `subscribeToChangedUris(listener: () => void): Promise<Disposable>`.
 
 - [ ] **Step 1: Write failing adapter tests**
 
@@ -80,7 +80,7 @@ Mock API `repositories`, repository `state` arrays/events, and API open/close ev
 
 - [ ] **Step 2: Verify RED**
 
-Run: `pnpm vitest tests/beacon-git.test.ts`
+Run: `pnpm vitest tests/annotation-git.test.ts`
 
 Expected: FAIL because changed URI methods and repository-state shapes do not exist.
 
@@ -101,7 +101,7 @@ Store `change.uri.toString()` in a set. Subscription wires state events for curr
 
 - [ ] **Step 4: Verify GREEN and commit**
 
-Run: `pnpm vitest tests/beacon-git.test.ts tests/git-blame.test.ts && pnpm typecheck && pnpm format:check`
+Run: `pnpm vitest tests/annotation-git.test.ts tests/git-blame.test.ts && pnpm typecheck && pnpm format:check`
 
 Commit: `feat: observe changed Git file URIs`
 
@@ -109,8 +109,8 @@ Commit: `feat: observe changed Git file URIs`
 
 **Files:**
 
-- Modify: `src/composables/use-beacon-explorer.ts`
-- Modify: `tests/beacon-explorer.test.ts`
+- Modify: `src/composables/use-annotation-explorer.ts`
+- Modify: `tests/annotation-explorer.test.ts`
 - Modify: `README.md`
 - Modify: `docs/plan.md`
 
@@ -120,13 +120,13 @@ Extend config fixtures with `scope: 'changedFiles'` support and mock the new Git
 
 - [ ] **Step 2: Verify RED**
 
-Run: `pnpm vitest tests/beacon-explorer.test.ts`
+Run: `pnpm vitest tests/annotation-explorer.test.ts`
 
 Expected: FAIL because Explorer does not own changed URI state or subscribe to Git changes.
 
 - [ ] **Step 3: Implement generation-safe Explorer integration**
 
-Maintain `changedUris`, a request counter, and an optional Git subscription. Pass the set into `filterBeaconAnnotations`. On refresh/config change: immediately refresh provider; if scope is not changedFiles, clear set/dispose subscription; otherwise obtain/reuse subscription and asynchronously replace the set only when its request is current and scope remains changedFiles. Subscription callbacks schedule the same refresh. Dispose the subscription through `useDisposable` and on scope exit.
+Maintain `changedUris`, a request counter, and an optional Git subscription. Pass the set into `filterAnnoPulseAnnotations`. On refresh/config change: immediately refresh provider; if scope is not changedFiles, clear set/dispose subscription; otherwise obtain/reuse subscription and asynchronously replace the set only when its request is current and scope remains changedFiles. Subscription callbacks schedule the same refresh. Dispose the subscription through `useDisposable` and on scope exit.
 
 - [ ] **Step 4: Document and verify**
 

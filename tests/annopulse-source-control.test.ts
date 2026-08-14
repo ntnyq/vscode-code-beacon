@@ -1,12 +1,12 @@
 import type * as ReactiveVscode from 'reactive-vscode'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import type { BeaconGitAdapter } from '../src/composables/use-beacon-git'
-import { useBeaconSourceControl } from '../src/composables/use-beacon-source-control'
-import type * as CodeBeaconConfig from '../src/config'
+import type { AnnoPulseGitAdapter } from '../src/composables/use-annopulse-git'
+import { useAnnoPulseSourceControl } from '../src/composables/use-annopulse-source-control'
+import type * as AnnoPulseConfig from '../src/config'
 import { createChangedUriIndex } from '../src/core/git/changed-uri-index'
 import { annotationStore } from '../src/core/store/annotation-store'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
 function deferred<T>() {
@@ -85,7 +85,7 @@ vi.mock(
       config: {
         scm: configState,
       },
-    }) as unknown as Partial<typeof CodeBeaconConfig>,
+    }) as unknown as Partial<typeof AnnoPulseConfig>,
 )
 
 vi.mock(
@@ -120,8 +120,8 @@ vi.mock(
 
 function annotation(
   id: string,
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 0,
@@ -151,9 +151,9 @@ async function flushPromises() {
   await Promise.resolve()
 }
 
-describe('beacon Source Control', () => {
+describe('annopulse Source Control', () => {
   const git: Pick<
-    BeaconGitAdapter,
+    AnnoPulseGitAdapter,
     'getChangedUris' | 'subscribeToChangedUris'
   > = {
     getChangedUris,
@@ -188,7 +188,7 @@ describe('beacon Source Control', () => {
   })
 
   it('does not create a Source Control provider while disabled', () => {
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
 
     expect(createSourceControl).not.toHaveBeenCalled()
     expect(sourceControl.count).toBe(0)
@@ -206,16 +206,13 @@ describe('beacon Source Control', () => {
       annotation('b-1', { resolved: true, uri: 'file:///b.ts' }),
     ])
 
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
     await flushPromises()
 
-    expect(createSourceControl).toHaveBeenCalledWith(
-      'code-beacon',
-      'Code Beacon',
-    )
+    expect(createSourceControl).toHaveBeenCalledWith('annopulse', 'AnnoPulse')
     expect(createResourceGroup).toHaveBeenCalledWith(
-      'changedBeacons',
-      'Changed Beacons',
+      'changedAnnotations',
+      'Changed Annotations',
     )
     expect(sourceControl.count).toBe(2)
     expect(resourceGroup.resourceStates).toMatchObject([
@@ -223,12 +220,12 @@ describe('beacon Source Control', () => {
         command: {
           arguments: [expect.objectContaining({ value: 'file:///a.ts' })],
           command: 'vscode.open',
-          title: 'Open Beacon File',
+          title: 'Open AnnoPulse File',
         },
-        contextValue: 'codeBeaconChangedResource',
+        contextValue: 'annopulseChangedResource',
         decorations: {
           icon: expect.objectContaining({ id: 'comment-discussion' }),
-          tooltip: '2 Code Beacon annotations (TODO)',
+          tooltip: '2 AnnoPulse annotations (TODO)',
         },
       },
       { resourceUri: expect.objectContaining({ value: 'file:///b.ts' }) },
@@ -238,7 +235,7 @@ describe('beacon Source Control', () => {
   it('refreshes from annotation and Git state changes', async () => {
     configState.enabled = true
     getChangedUris.mockResolvedValueOnce(new Set(['file:///a.ts']))
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
     await flushPromises()
 
     expect(sourceControl.count).toBe(0)
@@ -263,7 +260,7 @@ describe('beacon Source Control', () => {
     configState.enabled = true
     getChangedUris.mockResolvedValueOnce(new Set(['file:///a.ts']))
     seedAnnotationStore(annotationStore, 'file:///a.ts', [annotation('a-1')])
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
     await flushPromises()
 
     expect(sourceControl.count).toBe(1)
@@ -293,7 +290,7 @@ describe('beacon Source Control', () => {
       annotation('c-1', { uri: 'file:///c.ts' }),
     ])
 
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
     await flushPromises()
     gitChangedUrisListeners[0]!()
 
@@ -327,13 +324,13 @@ describe('beacon Source Control', () => {
 
   it('disposes provider, group, and Git subscription when disabled', async () => {
     configState.enabled = true
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
     await flushPromises()
     const gitSubscription = gitChangedUrisSubscriptions[0]!
 
     configState.enabled = false
     configurationListeners[0]!({
-      affectsConfiguration: (key: string) => key === 'code-beacon.scm.enabled',
+      affectsConfiguration: (key: string) => key === 'annopulse.scm.enabled',
     })
 
     expect(gitSubscription.dispose).toHaveBeenCalledTimes(1)
@@ -350,11 +347,11 @@ describe('beacon Source Control', () => {
     configState.enabled = true
     getChangedUris.mockReturnValueOnce(changedUris.promise)
     subscribeToChangedUris.mockReturnValueOnce(subscription.promise)
-    useBeaconSourceControl(changedUriIndex)
+    useAnnoPulseSourceControl(changedUriIndex)
 
     configState.enabled = false
     configurationListeners[0]!({
-      affectsConfiguration: (key: string) => key === 'code-beacon.scm.enabled',
+      affectsConfiguration: (key: string) => key === 'annopulse.scm.enabled',
     })
     changedUris.resolve(new Set(['file:///a.ts']))
     subscription.resolve(lateSubscription)

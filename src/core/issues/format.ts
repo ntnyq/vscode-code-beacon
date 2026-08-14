@@ -1,10 +1,10 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import type { BeaconGitMetadata } from '../git/blame'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import type { AnnoPulseGitMetadata } from '../git/blame'
 
 /**
- * Portable issue content generated from a Code Beacon annotation.
+ * Portable issue content generated from a AnnoPulse annotation.
  */
-export interface BeaconIssueContent {
+export interface AnnoPulseIssueContent {
   readonly title: string
   readonly body: string
 }
@@ -92,17 +92,17 @@ function firstNonemptyLine(value: string): string {
 /**
  * Formats a one-based annotation location for an issue body.
  */
-function formatLocation(annotation: BeaconAnnotation): string {
+function formatLocation(annotation: AnnoPulseAnnotation): string {
   return `${normalizeInlineText(annotation.uri)}:${annotation.line + 1}:${annotation.column + 1}`
 }
 
 /**
- * Builds a portable Markdown title and body for one Code Beacon annotation.
+ * Builds a portable Markdown title and body for one AnnoPulse annotation.
  */
-export function formatBeaconIssue(
-  annotation: BeaconAnnotation,
-  metadata?: BeaconGitMetadata,
-): BeaconIssueContent {
+export function formatAnnoPulseIssue(
+  annotation: AnnoPulseAnnotation,
+  metadata?: AnnoPulseGitMetadata,
+): AnnoPulseIssueContent {
   const title = [
     normalizeInlineText(annotation.keyword),
     firstNonemptyLine(annotation.message),
@@ -128,7 +128,7 @@ export function formatBeaconIssue(
   return {
     title,
     body: [
-      '## Code Beacon',
+      '## AnnoPulse',
       '',
       `- **Category:** ${formatInlineCode(annotation.category)}`,
       `- **Severity:** ${formatInlineCode(annotation.severity)}`,

@@ -1,4 +1,4 @@
-# Code Beacon Playground Notes
+# AnnoPulse Playground Notes
 
 <!-- TODO: Markdown HTML comments should be detected -->
 

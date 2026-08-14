@@ -13,7 +13,7 @@ const readmePath = resolve(root, 'README.md')
 const changelogPath = resolve(root, 'CHANGELOG.md')
 const playgroundPath = resolve(root, 'playground')
 const extensionTestsPath = resolve(root, 'tests/e2e/extension-host.cjs')
-const packageOutputPath = resolve(tmpdir(), 'vscode-code-beacon-e2e.vsix')
+const packageOutputPath = resolve(tmpdir(), 'annopulse-e2e.vsix')
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -51,26 +51,26 @@ async function main() {
   const commands = new Set(
     packageJson.contributes?.commands?.map(command => command.command),
   )
-  const views = packageJson.contributes?.views?.codeBeacon ?? []
+  const views = packageJson.contributes?.views?.annopulse ?? []
 
   assert(
-    packageJson.displayName === 'Code Beacon',
-    'displayName must be Code Beacon',
+    packageJson.displayName === 'AnnoPulse',
+    'displayName must be AnnoPulse',
   )
   assert(await pathExists(distPath), 'dist/index.js must exist after build')
   assert(await pathExists(readmePath), 'README.md must exist')
   assert(await pathExists(changelogPath), 'CHANGELOG.md must exist')
   assert(
-    commands.has('code-beacon.scanWorkspace'),
+    commands.has('annopulse.scanWorkspace'),
     'scanWorkspace command missing',
   )
   assert(
-    commands.has('code-beacon.exportMarkdown'),
+    commands.has('annopulse.exportMarkdown'),
     'exportMarkdown command missing',
   )
   assert(
-    views.some(view => view.id === 'codeBeacon.annotations'),
-    'Code Beacon annotations view missing',
+    views.some(view => view.id === 'annopulse.annotations'),
+    'AnnoPulse annotations view missing',
   )
 
   await runCommand('pnpm', [
@@ -84,17 +84,14 @@ async function main() {
   assert(await pathExists(packageOutputPath), 'vsce package must create a VSIX')
 
   const userDataDir = await mkdtemp(
-    resolve(
-      process.platform === 'win32' ? tmpdir() : '/tmp',
-      'code-beacon-e2e-',
-    ),
+    resolve(process.platform === 'win32' ? tmpdir() : '/tmp', 'annopulse-e2e-'),
   )
 
   try {
     await runTests({
       extensionDevelopmentPath: root,
       extensionTestsEnv: {
-        CODE_BEACON_E2E_WORKSPACE: playgroundPath,
+        ANNOPULSE_E2E_WORKSPACE: playgroundPath,
       },
       extensionTestsPath,
       launchArgs: [playgroundPath, `--user-data-dir=${userDataDir}`],

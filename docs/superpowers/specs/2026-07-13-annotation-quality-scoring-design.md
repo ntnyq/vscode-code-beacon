@@ -2,9 +2,9 @@
 
 ## Goal
 
-Make Code Beacon able to evaluate the quality of its existing annotation records without a language model. The result must identify the concrete reason an actionable annotation is incomplete or stale: no usable message, too little context, no clear action, no owner, malformed date metadata, an overdue due date, or an expired expiry date.
+Make AnnoPulse able to evaluate the quality of its existing annotation records without a language model. The result must identify the concrete reason an actionable annotation is incomplete or stale: no usable message, too little context, no clear action, no owner, malformed date metadata, an overdue due date, or an expired expiry date.
 
-The score is exposed through the opt-in, read-only `code_beacon_quality_check` Language Model Tool. The extension does not call a model itself, read files outside its current annotation store, modify annotations, add Explorer UI, or emit telemetry.
+The score is exposed through the opt-in, read-only `annopulse_quality_check` Language Model Tool. The extension does not call a model itself, read files outside its current annotation store, modify annotations, add Explorer UI, or emit telemetry.
 
 ## Decision
 
@@ -14,7 +14,7 @@ Use a pure, deterministic rubric plus scanner-owned date metadata.
 - The scanner does not silently treat a malformed calendar date as valid. It retains the raw directive value so the quality evaluator can report it.
 - The evaluator accepts annotations and an explicit current time. It returns a bounded `0`–`100` score, a stable quality level, and ordered findings with machine-readable codes and fixed penalties.
 - Quality is advisory. It never changes `resolved`, `ignored`, owners, dates, document text, or rules. Resolved and ignored annotations are excluded from aggregate reports by default, but evaluating one directly remains possible.
-- The existing opt-in Language Model Tool adapter contributes `code_beacon_quality_check`. It reuses the list tool's scope and state inputs, asks for confirmation, evaluates only the bounded current-store snapshot, and returns structured JSON rather than invoking a model.
+- The existing opt-in Language Model Tool adapter contributes `annopulse_quality_check`. It reuses the list tool's scope and state inputs, asks for confirmation, evaluates only the bounded current-store snapshot, and returns structured JSON rather than invoking a model.
 
 ## Alternatives Considered
 
@@ -32,7 +32,7 @@ This can later help explain a finding or suggest a rewrite, but it needs a depen
 
 ## Annotation Metadata
 
-`BeaconAnnotation` gains optional `dueDate` and `expiresDate` strings. Each holds the raw value captured from a `due:` or `expires:` directive; it is present whether the value is valid or malformed. A valid date is exactly a real Gregorian calendar date in `YYYY-MM-DD` form, interpreted at the start of that date in the local calendar used by the evaluator.
+`AnnoPulseAnnotation` gains optional `dueDate` and `expiresDate` strings. Each holds the raw value captured from a `due:` or `expires:` directive; it is present whether the value is valid or malformed. A valid date is exactly a real Gregorian calendar date in `YYYY-MM-DD` form, interpreted at the start of that date in the local calendar used by the evaluator.
 
 The scanner continues to recognize existing owners such as `TODO(alice):`, `TODO @alice:`, and `TODO [owner=alice]:`. It then extracts date directives while preserving the rest of a multiline message. Repeated directives use the last occurrence, so the annotation has one unambiguous value for each field. A directive's surrounding separator whitespace is removed; ordinary message text remains in its original order.
 
@@ -51,7 +51,7 @@ These produce, respectively: owner `alice` plus message `add retry limit` and `d
 `src/core/quality/score-annotations.ts` owns a VS Code-independent API:
 
 ```ts
-type BeaconQualityIssueCode =
+type AnnoPulseQualityIssueCode =
   | 'emptyMessage'
   | 'vagueMessage'
   | 'missingAction'
@@ -62,11 +62,11 @@ type BeaconQualityIssueCode =
   | 'overdue'
   | 'expired'
 
-interface BeaconAnnotationQuality {
+interface AnnoPulseAnnotationQuality {
   annotationId: string
   score: number
   level: 'good' | 'needsAttention' | 'poor'
-  issues: readonly BeaconQualityIssue[]
+  issues: readonly AnnoPulseQualityIssue[]
 }
 ```
 
@@ -98,7 +98,7 @@ Levels are `good` for 80–100, `needsAttention` for 50–79, and `poor` for 0�
 ```text
 document text
   -> scanner parses owner + due/expires directives
-  -> BeaconAnnotation { message, owner?, dueDate?, expiresDate? }
+  -> AnnoPulseAnnotation { message, owner?, dueDate?, expiresDate? }
   -> pure quality evaluator + explicit now
   -> score, level, ordered remediation findings
   -> future Explorer / quality tool / digest consumers
@@ -108,9 +108,9 @@ The scanner is the only component that understands raw directive syntax. The eva
 
 ## Language Model Tool Contract
 
-The manifest contributes `code_beacon_quality_check` with the reference name `codeBeaconAnnotationQuality`, beside the existing list tool. It uses the same opt-in `config.code-beacon.ai.enabled` `when` clause and the `onLanguageModelTool:code_beacon_quality_check` activation event. Its input schema is the existing bounded annotation selector: `scope` (`all`, `activeFile`, or `openEditors`), `limit` (1–100), `includeResolved`, and `includeIgnored`.
+The manifest contributes `annopulse_quality_check` with the reference name `annopulseAnnotationQuality`, beside the existing list tool. It uses the same opt-in `config.annopulse.ai.enabled` `when` clause and the `onLanguageModelTool:annopulse_quality_check` activation event. Its input schema is the existing bounded annotation selector: `scope` (`all`, `activeFile`, or `openEditors`), `limit` (1–100), `includeResolved`, and `includeIgnored`.
 
-`useBeaconLanguageModelTools` shares one snapshot-selection path between the list and quality tools. `prepareInvocation` reports the selected scope and maximum number of already-indexed annotations, then requests confirmation before an agent receives the result. `invoke` rechecks the opt-in setting synchronously, reads the current store/editor context only after that check, selects annotations with the existing bounded selector, and passes the selected annotations plus `new Date()` to the pure evaluator.
+`useAnnoPulseLanguageModelTools` shares one snapshot-selection path between the list and quality tools. `prepareInvocation` reports the selected scope and maximum number of already-indexed annotations, then requests confirmation before an agent receives the result. `invoke` rechecks the opt-in setting synchronously, reads the current store/editor context only after that check, selects annotations with the existing bounded selector, and passes the selected annotations plus `new Date()` to the pure evaluator.
 
 The text result is JSON containing the selector metadata (`scope`, `returned`, `total`, `truncated`), the quality aggregate, and one quality record per returned annotation. Each record includes the same safe annotation projection used by the list tool plus `score`, `level`, and issue objects. No document text, ranges, Git metadata, email, model response, or workspace write capability is exposed.
 

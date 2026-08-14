@@ -1,4 +1,7 @@
-import type { BeaconRuleConfig, BeaconStyleConfig } from '../types/annotation'
+import type {
+  AnnoPulseRuleConfig,
+  AnnoPulseStyleConfig,
+} from '../types/annotation'
 
 /**
  * Default workspace include pattern used by workspace scans.
@@ -27,9 +30,9 @@ export const DEFAULT_EXCLUDE = [
 ] as const
 
 /**
- * Baseline decoration style merged into every normalized beacon rule.
+ * Baseline decoration style merged into every normalized AnnoPulse rule.
  */
-export const DEFAULT_STYLE: Required<BeaconStyleConfig> = {
+export const DEFAULT_STYLE: Required<AnnoPulseStyleConfig> = {
   backgroundColor: '#6f42c1',
   border: '1px solid transparent',
   borderRadius: '3px',
@@ -39,9 +42,9 @@ export const DEFAULT_STYLE: Required<BeaconStyleConfig> = {
 }
 
 /**
- * Built-in beacon rules available before any user configuration overrides.
+ * Built-in AnnoPulse rules available before any user configuration overrides.
  */
-export const DEFAULT_BEACON_RULES: readonly BeaconRuleConfig[] = [
+export const DEFAULT_ANNOPULSE_RULES: readonly AnnoPulseRuleConfig[] = [
   {
     category: 'todo',
     commentOnly: true,

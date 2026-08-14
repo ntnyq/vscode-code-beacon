@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import { createAnnotationStore } from '../src/core/store/annotation-store'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
 vi.mock(
@@ -32,7 +32,7 @@ vi.mock(
 function createAnnotation(
   id: string,
   uri = 'file:///workspace/src/a.ts',
-): BeaconAnnotation {
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -57,9 +57,9 @@ function createAnnotation(
 }
 
 function shiftAnnotationLines(
-  annotation: BeaconAnnotation,
+  annotation: AnnoPulseAnnotation,
   lineOffset: number,
-): BeaconAnnotation {
+): AnnoPulseAnnotation {
   return {
     ...annotation,
     id: `shifted-${annotation.id}`,
@@ -396,9 +396,9 @@ describe('annotation store', () => {
   })
 
   it('formats file links with one-based line and column numbers', async () => {
-    const { formatBeaconLink } = await import('../src/utils/ranges')
+    const { formatAnnoPulseLink } = await import('../src/utils/ranges')
 
-    expect(formatBeaconLink(createAnnotation('a'))).toBe(
+    expect(formatAnnoPulseLink(createAnnotation('a'))).toBe(
       'file:///workspace/src/a.ts:2:4',
     )
   })

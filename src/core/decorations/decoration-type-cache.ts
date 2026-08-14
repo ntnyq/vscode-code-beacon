@@ -6,12 +6,12 @@ import {
   type TextEditor,
   type TextEditorDecorationType,
 } from 'vscode'
-import type { BeaconStyleConfig } from '../../types/annotation'
+import type { AnnoPulseStyleConfig } from '../../types/annotation'
 
 /**
  * Fully resolved decoration style used as the decoration cache input.
  */
-type DecorationStyle = Required<BeaconStyleConfig>
+type DecorationStyle = Required<AnnoPulseStyleConfig>
 
 /**
  * Builds a stable cache key for a resolved decoration style.
@@ -28,7 +28,7 @@ export function decorationStyleKey(style: DecorationStyle): string {
 }
 
 /**
- * Converts a beacon style into VS Code decoration render options.
+ * Converts an AnnoPulse style into VS Code decoration render options.
  */
 export function createDecorationRenderOptions(
   style: DecorationStyle,

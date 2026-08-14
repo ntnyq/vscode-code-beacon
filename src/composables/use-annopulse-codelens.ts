@@ -1,17 +1,17 @@
 import { useDisposable } from 'reactive-vscode'
 import { CodeLens, languages } from 'vscode'
 import { config } from '../config'
-import { createBeaconCodeLensCommands } from '../core/codelens/commands'
+import { createAnnoPulseCodeLensCommands } from '../core/codelens/commands'
 import { annotationStore } from '../core/store/annotation-store'
-import { beaconDocumentSelector } from '../core/workspace/documents'
+import { annopulseDocumentSelector } from '../core/workspace/documents'
 import { toVscodeRange } from '../utils/ranges'
 
 /**
- * Registers CodeLens actions for beacon annotations.
+ * Registers CodeLens actions for AnnoPulse annotations.
  */
-export function useBeaconCodeLens() {
+export function useAnnoPulseCodeLens() {
   useDisposable(
-    languages.registerCodeLensProvider(beaconDocumentSelector, {
+    languages.registerCodeLensProvider(annopulseDocumentSelector, {
       provideCodeLenses(document) {
         if (!config.enable || !config.codelens.enabled) {
           return []
@@ -20,7 +20,7 @@ export function useBeaconCodeLens() {
         return annotationStore
           .getForUri(document.uri.toString())
           .flatMap(annotation =>
-            createBeaconCodeLensCommands(annotation).map(
+            createAnnoPulseCodeLensCommands(annotation).map(
               command => new CodeLens(toVscodeRange(annotation.range), command),
             ),
           )

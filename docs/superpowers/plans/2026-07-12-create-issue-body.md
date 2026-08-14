@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a safe command that turns one selected Beacon annotation into a portable Markdown issue body and copies it to the clipboard.
+**Goal:** Add a safe command that turns one selected AnnoPulse annotation into a portable Markdown issue body and copies it to the clipboard.
 
 **Architecture:** A VS Code-free issue formatter produces a deterministic title/body from an annotation and optional Git metadata. The command adapter copies only that body and reports success or missing selection; Explorer and CodeLens pass the selected annotation to the same command.
 
@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Do not add runtime dependencies, Node APIs, shell commands, web requests, credentials, or external issue creation.
-- A valid explicit `BeaconAnnotation` is required; never infer an issue from all annotations.
+- A valid explicit `AnnoPulseAnnotation` is required; never infer an issue from all annotations.
 - The command writes only the local VS Code clipboard and must not claim success after a failed write.
 - Location uses the existing one-based `uri:line:column` convention.
 - Owner data comes only from `annotation.owner`; Git data is optional input and is never resolved by this command.
@@ -29,8 +29,8 @@
 
 **Interfaces:**
 
-- `BeaconIssueContent` has readonly `title: string` and `body: string`.
-- `formatBeaconIssue(annotation, metadata?): BeaconIssueContent` accepts `BeaconAnnotation` and optional `BeaconGitMetadata`.
+- `AnnoPulseIssueContent` has readonly `title: string` and `body: string`.
+- `formatAnnoPulseIssue(annotation, metadata?): AnnoPulseIssueContent` accepts `AnnoPulseAnnotation` and optional `AnnoPulseGitMetadata`.
 
 - [ ] **Step 1: Write failing formatter tests**
 
@@ -50,7 +50,7 @@ Create helpers that normalize line endings, take the first nonempty line for a t
 return {
   title,
   body: [
-    '## Code Beacon',
+    '## AnnoPulse',
     '',
     `- **Category:** \`${annotation.category}\``,
     `- **Severity:** \`${annotation.severity}\``,
@@ -77,7 +77,7 @@ Run: `pnpm vitest tests/issue-format.test.ts && pnpm typecheck && pnpm format:ch
 
 Expected: formatter tests, type check, and formatting pass.
 
-Commit: `feat: format Beacon issue bodies`
+Commit: `feat: format AnnoPulse issue bodies`
 
 ### Task 2: Register the clipboard command and expose it in VS Code UI
 
@@ -85,46 +85,46 @@ Commit: `feat: format Beacon issue bodies`
 
 - Modify: `package.json`
 - Regenerate: `src/meta.ts`
-- Modify: `src/composables/use-beacon-commands.ts`
+- Modify: `src/composables/use-annotation-commands.ts`
 - Modify: `src/core/codelens/commands.ts`
-- Modify: `tests/beacon-commands.test.ts`
+- Modify: `tests/annotation-commands.test.ts`
 - Modify: `tests/codelens-commands.test.ts`
 - Modify: `tests/package-metadata.test.ts`
 
 **Interfaces:**
 
-- New generated command key `commands.createIssue` equals `code-beacon.createIssue`.
-- `useBeaconCommands()` registers `commands.createIssue` with `(annotation?: BeaconAnnotation) => Promise<void>`.
+- New generated command key `commands.createIssue` equals `annopulse.createIssue`.
+- `useAnnoPulseCommands()` registers `commands.createIssue` with `(annotation?: AnnoPulseAnnotation) => Promise<void>`.
 
 - [ ] **Step 1: Write failing command, CodeLens, and package tests**
 
-Add a command test that calls the registered handler with an annotation, asserts `env.clipboard.writeText()` receives `formatBeaconIssue(annotation).body`, and asserts `window.showInformationMessage('Issue body copied to clipboard.')`. Add another test with no annotation that asserts no clipboard call and `window.showWarningMessage('Select a beacon in the Explorer to create an issue body.')`.
+Add a command test that calls the registered handler with an annotation, asserts `env.clipboard.writeText()` receives `formatAnnoPulseIssue(annotation).body`, and asserts `window.showInformationMessage('Issue body copied to clipboard.')`. Add another test with no annotation that asserts no clipboard call and `window.showWarningMessage('Select an annotation in the Explorer to create an issue body.')`.
 
-Add a CodeLens test asserting the generated commands include `commands.createIssue` with the annotation argument. Add package tests for the command contribution and Explorer beacon-item context menu contribution.
+Add a CodeLens test asserting the generated commands include `commands.createIssue` with the annotation argument. Add package tests for the command contribution and Explorer annotation-item context menu contribution.
 
 - [ ] **Step 2: Verify RED**
 
-Run: `pnpm vitest tests/beacon-commands.test.ts tests/codelens-commands.test.ts tests/package-metadata.test.ts`
+Run: `pnpm vitest tests/annotation-commands.test.ts tests/codelens-commands.test.ts tests/package-metadata.test.ts`
 
 Expected: FAIL because `commands.createIssue` and its handler/contributions do not exist.
 
 - [ ] **Step 3: Implement the command and contributions**
 
-Add this command contribution and a `view/item/context` item gated by the existing beacon-item expression:
+Add this command contribution and a `view/item/context` item gated by the existing annotation-item expression:
 
 ```json
 {
-  "category": "Code Beacon",
-  "command": "code-beacon.createIssue",
+  "category": "AnnoPulse",
+  "command": "annopulse.createIssue",
   "title": "Create Issue Body"
 }
 ```
 
-Run `pnpm generate:meta`. In `useBeaconCommands`, import `formatBeaconIssue` and register an async handler that warns and returns for a missing annotation; otherwise awaits `env.clipboard.writeText(formatBeaconIssue(annotation).body)` then awaits `window.showInformationMessage(...)`. Do not catch clipboard failures. Add a `Create Issue` CodeLens descriptor with `[annotation]` arguments.
+Run `pnpm generate:meta`. In `useAnnoPulseCommands`, import `formatAnnoPulseIssue` and register an async handler that warns and returns for a missing annotation; otherwise awaits `env.clipboard.writeText(formatAnnoPulseIssue(annotation).body)` then awaits `window.showInformationMessage(...)`. Do not catch clipboard failures. Add a `Create Issue` CodeLens descriptor with `[annotation]` arguments.
 
 - [ ] **Step 4: Verify GREEN and commit**
 
-Run: `pnpm vitest tests/beacon-commands.test.ts tests/codelens-commands.test.ts tests/package-metadata.test.ts && pnpm typecheck && pnpm format:check`
+Run: `pnpm vitest tests/annotation-commands.test.ts tests/codelens-commands.test.ts tests/package-metadata.test.ts && pnpm typecheck && pnpm format:check`
 
 Expected: command registration, command behavior, UI metadata, and generated types pass.
 
@@ -144,7 +144,7 @@ Extend package/document-focused coverage if needed to assert the new generated c
 
 - [ ] **Step 2: Document the command**
 
-Add `code-beacon.createIssue` to the README command table and a short usage note: select an Explorer beacon, invoke Create Issue Body, then edit/paste the copied GitHub-compatible Markdown. State that no issue tracker account or network request is used.
+Add `annopulse.createIssue` to the README command table and a short usage note: select an Explorer annotation, invoke Create Issue Body, then edit/paste the copied GitHub-compatible Markdown. State that no issue tracker account or network request is used.
 
 In `docs/plan.md`, mark only `Create Issue body generator` complete in Phase 3; leave changed-files scope, Source Control integration, and richer TreeView metadata pending.
 

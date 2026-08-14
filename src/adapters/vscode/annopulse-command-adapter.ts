@@ -20,19 +20,19 @@ import type {
   AiActionExecutionDependencies,
 } from '../../core/ai/action-execution'
 import type {
-  BeaconCommandAdapter,
-  BeaconCommandDocument,
-  BeaconCommandHandler,
-  BeaconCommandLanguageModel,
-} from '../../core/commands/beacon-command-handlers'
-import type { BeaconExportFormat } from '../../core/export/format'
+  AnnoPulseCommandAdapter,
+  AnnoPulseCommandDocument,
+  AnnoPulseCommandHandler,
+  AnnoPulseCommandLanguageModel,
+} from '../../core/commands/annopulse-command-handlers'
+import type { AnnoPulseExportFormat } from '../../core/export/format'
 import { extensionId } from '../../meta'
 
 const createLanguageModelUserMessage = LanguageModelChatMessage.User
 
 function createVscodeAiActionExecutor() {
   const dependencies: AiActionExecutionDependencies<
-    BeaconCommandLanguageModel,
+    AnnoPulseCommandLanguageModel,
     AiActionCancellation
   > = {
     async selectModel() {
@@ -70,7 +70,7 @@ function createVscodeAiActionExecutor() {
   return createAiActionExecutor(dependencies)
 }
 
-async function openDocument(uri: string): Promise<BeaconCommandDocument> {
+async function openDocument(uri: string): Promise<AnnoPulseCommandDocument> {
   const document = await workspace.openTextDocument(Uri.parse(uri))
 
   return {
@@ -84,7 +84,7 @@ async function openDocument(uri: string): Promise<BeaconCommandDocument> {
         ),
         application.replacement,
         {
-          label: 'Apply Code Beacon generated fix',
+          label: 'Apply AnnoPulse generated fix',
           needsConfirmation: true,
         },
       )
@@ -96,7 +96,10 @@ async function openDocument(uri: string): Promise<BeaconCommandDocument> {
   }
 }
 
-async function openExportDocument(format: BeaconExportFormat, content: string) {
+async function openExportDocument(
+  format: AnnoPulseExportFormat,
+  content: string,
+) {
   const extensionByFormat = {
     csv: 'csv',
     json: 'json',
@@ -113,10 +116,10 @@ async function openExportDocument(format: BeaconExportFormat, content: string) {
 /**
  * Creates the production adapter for VS Code command side effects.
  */
-export function createVscodeBeaconCommandAdapter(): BeaconCommandAdapter & {
+export function createVsannopulseCommandAdapter(): AnnoPulseCommandAdapter & {
   readonly registerCommand: (
     command: string,
-    handler: BeaconCommandHandler,
+    handler: AnnoPulseCommandHandler,
   ) => { dispose: () => void }
 } {
   return {

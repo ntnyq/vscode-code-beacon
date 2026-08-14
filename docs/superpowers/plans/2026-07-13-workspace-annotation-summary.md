@@ -31,12 +31,12 @@
 
 **Files:**
 
-- Modify: `src/composables/use-beacon-commands.ts`
-- Modify: `tests/beacon-commands.test.ts`
+- Modify: `src/composables/use-annotation-commands.ts`
+- Modify: `tests/annotation-commands.test.ts`
 
 - [x] Add failing adapter tests for disabled AI/empty index, no document access, model selection/request failures, bounded prompt/current store snapshot, text-only streaming, cancellation, stale Summary request, lifecycle disposal, and Explain/Generate Fix isolation.
-- [x] Verify RED with `rtk pnpm vitest run tests/beacon-commands.test.ts`.
-- [x] Register private `code-beacon.summarizeWorkspace`; snapshot `annotationStore.getAll()`, use pure payload/prompt, stream only `LanguageModelTextPart` to a dedicated `Code Beacon Workspace Summary` output channel, and apply separate Summary generation/disposal guards. Do not write through any VS Code edit API.
+- [x] Verify RED with `rtk pnpm vitest run tests/annotation-commands.test.ts`.
+- [x] Register private `annopulse.summarizeWorkspace`; snapshot `annotationStore.getAll()`, use pure payload/prompt, stream only `LanguageModelTextPart` to a dedicated `AnnoPulse Workspace Summary` output channel, and apply separate Summary generation/disposal guards. Do not write through any VS Code edit API.
 - [x] Verify focused command/core tests, `pnpm typecheck`, formatter/lint, and diff check; commit `feat: add workspace annotation summary command`.
 
 ## Task 3: Command contribution, generated metadata, and verification
@@ -49,7 +49,7 @@
 - Modify: `tests/package-metadata.test.ts`
 - Modify: `docs/plan.md`
 
-- [x] Add failing metadata tests for `code-beacon.summarizeWorkspace` immediately after Generate Fix with title `Summarize Workspace Beacons`; do not add an Explorer item-context entry.
+- [x] Add failing metadata tests for `annopulse.summarizeWorkspace` immediately after Generate Fix with title `Summarize Workspace Annotations`; do not add an Explorer item-context entry.
 - [x] Add the command contribution, regenerate meta/README twice, and require clean generated diff.
 - [x] Update the combined Phase 4 command milestone to complete only after all three commands exist; leave telemetry unchecked.
 - [x] Run focused suites, `pnpm typecheck`, `rtk pnpm test:unit`, `rtk pnpm release:check`, and `rtk git diff --check`; commit `feat: contribute workspace annotation summary command`.

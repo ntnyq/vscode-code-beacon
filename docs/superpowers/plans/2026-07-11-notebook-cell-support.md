@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make annotations in opened notebook cells flow through Code Beacon's existing store-backed user experience.
+**Goal:** Make annotations in opened notebook cells flow through AnnoPulse's existing store-backed user experience.
 
-**Architecture:** `useBeaconHighlight()` remains the one text-scanning implementation. `useBeaconNotebook(scanTextDocument)` owns only notebook lifecycle bookkeeping, forwards cell documents to that scanner with source `notebook`, and clears recorded cell URIs when cells disappear. The shared annotation store continues to drive Explorer, diagnostics, decorations, and CodeLens.
+**Architecture:** `useAnnoPulseHighlight()` remains the one text-scanning implementation. `useAnnoPulseNotebook(scanTextDocument)` owns only notebook lifecycle bookkeeping, forwards cell documents to that scanner with source `notebook`, and clears recorded cell URIs when cells disappear. The shared annotation store continues to drive Explorer, diagnostics, decorations, and CodeLens.
 
 **Tech Stack:** TypeScript, VS Code Extension API, reactive-vscode, Vitest, `@vscode/test-electron`.
 
@@ -13,7 +13,7 @@
 - Use public VS Code Notebook and workspace APIs only; do not parse `.ipynb`, use Node file APIs, or invoke a shell.
 - Support remote, web, and virtual workspace notebook providers through cell `TextDocument` objects.
 - Reuse existing rule normalization, language filtering, comment-only behavior, and persistent annotation IDs.
-- `code-beacon.scanMode: manual` must not start an automatic notebook scan.
+- `annopulse.scanMode: manual` must not start an automatic notebook scan.
 - Every behavioral change starts with a focused failing Vitest or extension-host assertion, then receives the minimum implementation needed to pass.
 
 ---
@@ -22,13 +22,13 @@
 
 **Files:**
 
-- Create: `src/composables/use-beacon-notebook.ts`
-- Create: `tests/beacon-notebook.test.ts`
+- Create: `src/composables/use-annotation-notebook.ts`
+- Create: `tests/annotation-notebook.test.ts`
 
 **Interfaces:**
 
-- Consumes: `scanTextDocument(document: TextDocument, source: BeaconAnnotation['source']): readonly BeaconAnnotation[]` from `useBeaconHighlight()`.
-- Produces: `useBeaconNotebook(scanTextDocument)`, which registers notebook listeners and returns `{ scanNotebook }` for integration tests.
+- Consumes: `scanTextDocument(document: TextDocument, source: AnnoPulseAnnotation['source']): readonly AnnoPulseAnnotation[]` from `useAnnoPulseHighlight()`.
+- Produces: `useAnnoPulseNotebook(scanTextDocument)`, which registers notebook listeners and returns `{ scanNotebook }` for integration tests.
 
 - [ ] **Step 1: Write failing lifecycle tests**
 
@@ -39,13 +39,13 @@ it('scans cells in notebooks already open at activation', () => {
   notebookDocuments.push(
     notebook('file:///book.ipynb', [cell('vscode-notebook-cell:///a')]),
   )
-  useBeaconNotebook(scanTextDocument)
+  useAnnoPulseNotebook(scanTextDocument)
 
   expect(scanTextDocument).toHaveBeenCalledWith(cellA.document, 'notebook')
 })
 
 it('scans added cells and clears removed and closed notebook cells', () => {
-  useBeaconNotebook(scanTextDocument)
+  useAnnoPulseNotebook(scanTextDocument)
   openListener(notebookA)
   annotationStore.setForUri(cellA.document.uri.toString(), [annotation(cellA)])
   changeListener({
@@ -69,16 +69,16 @@ Add a separate `manual` test that uses the same open listener and expects no sca
 
 - [ ] **Step 2: Run the focused tests and verify RED**
 
-Run: `pnpm vitest tests/beacon-notebook.test.ts`
+Run: `pnpm vitest tests/annotation-notebook.test.ts`
 
-Expected: FAIL because `useBeaconNotebook` does not exist.
+Expected: FAIL because `useAnnoPulseNotebook` does not exist.
 
 - [ ] **Step 3: Implement the lifecycle coordinator**
 
-Implement `src/composables/use-beacon-notebook.ts` with these exact operations:
+Implement `src/composables/use-annotation-notebook.ts` with these exact operations:
 
 ```ts
-export function useBeaconNotebook(scanTextDocument: ScanTextDocument) {
+export function useAnnoPulseNotebook(scanTextDocument: ScanTextDocument) {
   const cellsByNotebookUri = new Map<string, Set<string>>()
 
   const scanNotebook = (notebook: NotebookDocument) => {
@@ -99,7 +99,7 @@ export function useBeaconNotebook(scanTextDocument: ScanTextDocument) {
 
 - [ ] **Step 4: Run focused tests and commit**
 
-Run: `pnpm vitest tests/beacon-notebook.test.ts`
+Run: `pnpm vitest tests/annotation-notebook.test.ts`
 
 Expected: PASS.
 
@@ -111,29 +111,29 @@ Commit: `feat: scan opened notebook cells`
 
 - Modify: `src/index.ts`
 - Modify: `tests/e2e/extension-host.cjs`
-- Create: `playground/notebooks/code-beacon.ipynb`
+- Create: `playground/notebooks/annopulse.ipynb`
 
 **Interfaces:**
 
-- Consumes: `const beaconHighlight = useBeaconHighlight()` and `beaconHighlight.scanTextDocument`.
-- Produces: Activated extension wiring that calls `useBeaconNotebook(beaconHighlight.scanTextDocument)` after the highlighter is registered.
+- Consumes: `const annotationHighlight = useAnnoPulseHighlight()` and `annotationHighlight.scanTextDocument`.
+- Produces: Activated extension wiring that calls `useAnnoPulseNotebook(annotationHighlight.scanTextDocument)` after the highlighter is registered.
 
 - [ ] **Step 1: Add a failing extension-host assertion**
 
-Add a minimal `playground/notebooks/code-beacon.ipynb` with one code cell whose source includes `# TODO: inspect notebook cell`. Extend the extension-host smoke test after activation:
+Add a minimal `playground/notebooks/annopulse.ipynb` with one code cell whose source includes `# TODO: inspect notebook cell`. Extend the extension-host smoke test after activation:
 
 ```js
 await configure('scanMode', 'openEditors')
 const notebook = await vscode.workspace.openNotebookDocument(
-  vscode.Uri.file(resolve(workspacePath, 'notebooks/code-beacon.ipynb')),
+  vscode.Uri.file(resolve(workspacePath, 'notebooks/annopulse.ipynb')),
 )
 const cell = notebook.cellAt(0)
 const notebookDiagnostics = await waitFor(
   () =>
     vscode.languages
       .getDiagnostics(cell.document.uri)
-      .filter(diagnostic => diagnostic.source === 'Code Beacon'),
-  'Expected Code Beacon diagnostics for the notebook cell',
+      .filter(diagnostic => diagnostic.source === 'AnnoPulse'),
+  'Expected AnnoPulse diagnostics for the notebook cell',
 )
 assert.ok(
   notebookDiagnostics.some(diagnostic => diagnostic.message.includes('TODO')),
@@ -151,11 +151,11 @@ Expected: FAIL at the notebook-cell diagnostic assertion because extension activ
 Change extension activation to preserve and compose the highlighter result:
 
 ```ts
-const beaconHighlight = useBeaconHighlight()
-useBeaconNotebook(beaconHighlight.scanTextDocument)
+const annotationHighlight = useAnnoPulseHighlight()
+useAnnoPulseNotebook(annotationHighlight.scanTextDocument)
 ```
 
-Import `useBeaconNotebook` in `src/index.ts`. Keep the existing scan, diagnostics, Explorer, hover, and CodeLens registrations unchanged.
+Import `useAnnoPulseNotebook` in `src/index.ts`. Keep the existing scan, diagnostics, Explorer, hover, and CodeLens registrations unchanged.
 
 - [ ] **Step 4: Run E2E and regression suites**
 

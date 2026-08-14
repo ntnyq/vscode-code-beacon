@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an opt-in Generate Beacon Fix command that validates one model proposal locally and applies it only through VS Code confirmation.
+**Goal:** Add an opt-in Generate Annotation Fix command that validates one model proposal locally and applies it only through VS Code confirmation.
 
 **Architecture:** A pure module builds a bounded fix prompt, parses strict JSON, and turns a unique literal match into a single replacement plan. The command adapter obtains a model response, revalidates the current document, creates one `WorkspaceEdit`, and asks VS Code for confirmation via `workspace.applyEdit` metadata.
 
@@ -15,7 +15,7 @@
 - Model output is text only, never executable edits; reject anything except a strict `{ original, replacement, reason }` JSON object.
 - `original` must be unique in the snapshot and contain the annotation keyword range; no multi-file, multi-range, resource, command, shell, Git, telemetry, scan, or automatic edit.
 - Cap original at 12,000 and replacement at 8,000 UTF-16 code units; fail closed on document drift, cancellation, malformed JSON, ambiguity, or confirmation/apply rejection.
-- Attach `{ label: 'Apply Code Beacon generated fix', needsConfirmation: true }` to the single `WorkspaceEdit.replace` entry, then use `workspace.applyEdit(edit)`; never apply another edit path.
+- Attach `{ label: 'Apply AnnoPulse generated fix', needsConfirmation: true }` to the single `WorkspaceEdit.replace` entry, then use `workspace.applyEdit(edit)`; never apply another edit path.
 - After package changes regenerate meta/README twice and require clean generated diff.
 
 ---
@@ -67,29 +67,29 @@ rtk git commit -m "feat: validate generated annotation fixes"
 
 **Files:**
 
-- Modify: `src/composables/use-beacon-commands.ts`
-- Modify: `tests/beacon-commands.test.ts`
+- Modify: `src/composables/use-annotation-commands.ts`
+- Modify: `tests/annotation-commands.test.ts`
 
 - [x] **Step 1: Add failing adapter tests.**
 
-Test invalid/disabled arguments avoid access; model/document failures leave text unchanged; strict invalid proposals create no `WorkspaceEdit`; valid proposal creates exactly one same-URI replacement and calls `workspace.applyEdit` exactly once with `{ label: 'Apply Code Beacon generated fix', needsConfirmation: true }`; false result reports not applied; document drift before apply creates no edit. Reuse Explain's generation/cancellation rules and test stale/cancel paths.
+Test invalid/disabled arguments avoid access; model/document failures leave text unchanged; strict invalid proposals create no `WorkspaceEdit`; valid proposal creates exactly one same-URI replacement and calls `workspace.applyEdit` exactly once with `{ label: 'Apply AnnoPulse generated fix', needsConfirmation: true }`; false result reports not applied; document drift before apply creates no edit. Reuse Explain's generation/cancellation rules and test stale/cancel paths.
 
 - [x] **Step 2: Run command tests and verify they fail.**
 
-Run: `rtk pnpm vitest run tests/beacon-commands.test.ts`
+Run: `rtk pnpm vitest run tests/annotation-commands.test.ts`
 
 - [x] **Step 3: Implement command adapter.**
 
-Register private `BEACON_GENERATE_FIX_COMMAND = 'code-beacon.generateFix'`. Reuse valid annotation/AI gate/current-document model path, buffer only text parts, parse/plan using Task 1, recheck generation and document text, build a new `WorkspaceEdit` with one `replace(Uri.parse(annotation.uri), new Range(...), replacement, { label: 'Apply Code Beacon generated fix', needsConfirmation: true })`, then call only `workspace.applyEdit(edit)`. Report all failures concisely without applying or retrying.
+Register private `ANNOPULSE_GENERATE_FIX_COMMAND = 'annopulse.generateFix'`. Reuse valid annotation/AI gate/current-document model path, buffer only text parts, parse/plan using Task 1, recheck generation and document text, build a new `WorkspaceEdit` with one `replace(Uri.parse(annotation.uri), new Range(...), replacement, { label: 'Apply AnnoPulse generated fix', needsConfirmation: true })`, then call only `workspace.applyEdit(edit)`. Report all failures concisely without applying or retrying.
 
 - [x] **Step 4: Run focused command/core/tool tests and typecheck.**
 
-Run: `rtk pnpm vitest run tests/beacon-commands.test.ts tests/ai-generate-annotation-fix.test.ts tests/ai-explain-annotation.test.ts && pnpm typecheck`
+Run: `rtk pnpm vitest run tests/annotation-commands.test.ts tests/ai-generate-annotation-fix.test.ts tests/ai-explain-annotation.test.ts && pnpm typecheck`
 
 - [x] **Step 5: Commit.**
 
 ```bash
-rtk git add src/composables/use-beacon-commands.ts tests/beacon-commands.test.ts
+rtk git add src/composables/use-annotation-commands.ts tests/annotation-commands.test.ts
 rtk git commit -m "feat: add generate annotation fix command"
 ```
 
@@ -105,7 +105,7 @@ rtk git commit -m "feat: add generate annotation fix command"
 
 - [x] **Step 1: Write failing metadata tests.**
 
-Assert `code-beacon.generateFix` directly after Explain with title `Generate Beacon Fix`, plus an Explorer beacon menu entry using the existing exact leaf `when` clause.
+Assert `annopulse.generateFix` directly after Explain with title `Generate Annotation Fix`, plus an Explorer annotation menu entry using the existing exact leaf `when` clause.
 
 - [x] **Step 2: Run metadata tests and verify they fail.**
 

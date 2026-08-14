@@ -2,14 +2,14 @@
 
 ## Goal
 
-Make a Code Beacon easier to triage by showing its owner and state consistently, adding a safe, compact Git attribution summary to the Explorer when explicitly enabled, and expanding the Hover with the same contextual metadata.
+Make a AnnoPulse easier to triage by showing its owner and state consistently, adding a safe, compact Git attribution summary to the Explorer when explicitly enabled, and expanding the Hover with the same contextual metadata.
 
 ## Decision
 
 Implement presentation-only enrichment on top of the existing trusted-desktop Git adapter.
 
 - Keep Hover's current on-demand metadata lookup and add annotation owner/state plus Git email and a normalized age when available.
-- Add `code-beacon.git.showMetadata`, default `false`, to opt into Explorer Git details. The setting keeps the current low-cost Explorer default while allowing maintainers to trade Git blame work for attribution in their list.
+- Add `annopulse.git.showMetadata`, default `false`, to opt into Explorer Git details. The setting keeps the current low-cost Explorer default while allowing maintainers to trade Git blame work for attribution in their list.
 - Use the existing batch `getMetadataForAnnotations` API, cache, and generation-safe Explorer metadata index. Do not add Git commands, Git writes, filesystem/process APIs, network requests, credentials, or AI calls.
 
 ## Alternatives Considered
@@ -40,7 +40,7 @@ All annotation and Git text that is interpolated into Markdown is escaped. A com
 
 ### Explorer
 
-Without `code-beacon.git.showMetadata`, Tree labels, descriptions, and Git hydration preserve their current behavior (except the richer state wording in the Tooltip).
+Without `annopulse.git.showMetadata`, Tree labels, descriptions, and Git hydration preserve their current behavior (except the richer state wording in the Tooltip).
 
 With the setting enabled in a trusted local desktop workspace:
 
@@ -61,10 +61,10 @@ annotationStore + optional Git metadata map
             |      - plain Explorer description/tooltip
             |      - Markdown-safe Hover values
             |
-            +--> BeaconTreeDataProvider
+            +--> AnnoPulseTreeDataProvider
             |      - read metadata by annotation id
             |
-            `--> formatBeaconHoverMarkdown
+            `--> formatAnnoPulseHoverMarkdown
 
 Explorer configuration change / store change
             |
@@ -81,11 +81,11 @@ Create a focused pure module under `src/core/git/` for:
 - deriving the stable annotation state labels;
 - assembling compact plain Explorer metadata without VS Code objects.
 
-It receives a `BeaconAnnotation`, optional `BeaconGitMetadata`, and `Date`; it does not call VS Code or Git. Hover remains responsible for Markdown escaping because its output is Markdown, while Tree tooltips remain plain text.
+It receives a `AnnoPulseAnnotation`, optional `AnnoPulseGitMetadata`, and `Date`; it does not call VS Code or Git. Hover remains responsible for Markdown escaping because its output is Markdown, while Tree tooltips remain plain text.
 
 ### Explorer Wiring
 
-`BeaconTreeDataProvider` receives a read-only metadata-map reader in addition to its annotation and grouping readers. It remains responsible for TreeItem construction but delegates display strings to the pure presentation helper. `useBeaconExplorer` passes its existing `BeaconExplorerGitMetadataIndex.metadataByAnnotationId` map to the provider.
+`AnnoPulseTreeDataProvider` receives a read-only metadata-map reader in addition to its annotation and grouping readers. It remains responsible for TreeItem construction but delegates display strings to the pure presentation helper. `useAnnoPulseExplorer` passes its existing `AnnoPulseExplorerGitMetadataIndex.metadataByAnnotationId` map to the provider.
 
 `hydrateGitMetadata` retains its generation guard and existing per-document batch resolution. It hydrates only when `workspace.isTrusted` and either stale filtering or the opt-in metadata setting needs Git data. Disabled, untrusted, virtual, unavailable, or failing Git leaves an empty map and a fully functional Tree.
 
@@ -94,10 +94,10 @@ It receives a `BeaconAnnotation`, optional `BeaconGitMetadata`, and `Date`; it d
 Add this generated configuration schema:
 
 ```json
-"code-beacon.git.showMetadata": {
+"annopulse.git.showMetadata": {
   "type": "boolean",
   "default": false,
-  "description": "Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata."
+  "description": "Show Git author, age, and commit details in AnnoPulse Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata."
 }
 ```
 

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Enrich Code Beacon annotation hovers with the last Git commit's author, date,
+Enrich AnnoPulse annotation hovers with the last Git commit's author, date,
 hash, and summary when the document belongs to a trusted local Git repository,
 without weakening Web, virtual-workspace, or untrusted-workspace support.
 
@@ -25,7 +25,7 @@ without weakening Web, virtual-workspace, or untrusted-workspace support.
    the extension's VS Code API portability strategy. Rejected.
 3. Use the built-in Git extension API (`GitExtension#getAPI(1)`,
    `Repository#blame`, and `Repository#getCommit`). This is the recommended
-   primary provider: it gives local Git data without Code Beacon spawning a
+   primary provider: it gives local Git data without AnnoPulse spawning a
    process, and naturally degrades when Git is unavailable.
 
 ## Architecture
@@ -35,7 +35,7 @@ hash from a single line of `Repository#blame(path)` output, and a versioned
 cache. It has no VS Code imports, so parsing and cache behavior are unit
 testable.
 
-`src/composables/use-beacon-git.ts` owns the VS Code integration. It activates
+`src/composables/use-annotation-git.ts` owns the VS Code integration. It activates
 `vscode.git` when present, gets API version 1, selects the repository for the
 current document, and rejects untrusted or virtual repositories before asking
 for blame. It derives the blame path from `document.uri.path` relative to the
@@ -44,9 +44,9 @@ repository-root-relative path, then resolves the parsed hash through
 `Repository#getCommit`. It returns `undefined` on every unsupported or failed
 path.
 
-`useBeaconHover()` receives the lookup capability. Its provider remains
+`useAnnoPulseHover()` receives the lookup capability. Its provider remains
 asynchronous only while adding optional metadata; the original annotation
-content always remains available. `formatBeaconHoverMarkdown(annotation,
+content always remains available. `formatAnnoPulseHoverMarkdown(annotation,
 metadata?)` adds a compact Git section only when metadata exists.
 
 ## Compatibility and Safety
@@ -58,7 +58,7 @@ metadata?)` adds a compact Git section only when metadata exists.
 - Cached data never crosses document versions, so editing or reloading a file
   cannot show stale line attribution.
 - A provider failure does not surface a notification or suppress the normal
-  Code Beacon hover.
+  AnnoPulse hover.
 
 ## Testing
 

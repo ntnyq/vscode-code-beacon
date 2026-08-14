@@ -4,20 +4,20 @@ import type { NotebookCell, NotebookDocument, TextDocument } from 'vscode'
 import { config } from '../config'
 import { initialScanTarget } from '../core/scanner/scan-mode'
 import { annotationStore } from '../core/store/annotation-store'
-import type { BeaconAnnotation } from '../types/annotation'
+import type { AnnoPulseAnnotation } from '../types/annotation'
 
 /**
  * Scans one text document and returns its stored annotations.
  */
 export type ScanTextDocument = (
   document: TextDocument,
-  source: BeaconAnnotation['source'],
-) => readonly BeaconAnnotation[]
+  source: AnnoPulseAnnotation['source'],
+) => readonly AnnoPulseAnnotation[]
 
 /**
  * Coordinates scans and cleanup for the cells of open notebook documents.
  */
-export function useBeaconNotebook(scanTextDocument: ScanTextDocument) {
+export function useAnnoPulseNotebook(scanTextDocument: ScanTextDocument) {
   const cellsByNotebookUri = new Map<string, Set<string>>()
 
   const trackCell = (notebook: NotebookDocument, cell: NotebookCell) => {

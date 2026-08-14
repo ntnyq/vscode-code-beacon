@@ -2,11 +2,11 @@
 
 ## Goal
 
-Turn one explicit Code Beacon annotation into a concise, GitHub-compatible issue title and Markdown body that the user can review and paste into any issue tracker, without authenticating to or writing to an external service.
+Turn one explicit AnnoPulse annotation into a concise, GitHub-compatible issue title and Markdown body that the user can review and paste into any issue tracker, without authenticating to or writing to an external service.
 
 ## Scope
 
-- Add the `code-beacon.createIssue` command and an Explorer context-menu entry for a selected beacon.
+- Add the `annopulse.createIssue` command and an Explorer context-menu entry for a selected annotation.
 - Generate a deterministic title and Markdown body from a single annotation.
 - Copy the body to the VS Code clipboard and show a success or actionable-selection message.
 - Include optional Git metadata when a caller supplies it; the first command release does not trigger Git lookups.
@@ -30,13 +30,13 @@ The command has a single, reversible effect: it writes formatted text to the loc
 
 ## Command Behavior
 
-`code-beacon.createIssue` accepts a `BeaconAnnotation` from an Explorer item. It never guesses an annotation from the entire store.
+`annopulse.createIssue` accepts a `AnnoPulseAnnotation` from an Explorer item. It never guesses an annotation from the entire store.
 
 - With an annotation, it writes the generated Markdown body to `env.clipboard` and displays `Issue body copied to clipboard.`
-- Without a valid annotation, it does not alter the clipboard and displays `Select a beacon in the Explorer to create an issue body.`
+- Without a valid annotation, it does not alter the clipboard and displays `Select an annotation in the Explorer to create an issue body.`
 - Clipboard write failures propagate through the command promise so VS Code can surface the failure; the extension does not claim success.
 
-The command is contributed to the Command Palette and the Code Beacon Explorer beacon-item context menu. No provider URL is opened and no network API is used.
+The command is contributed to the Command Palette and the AnnoPulse Explorer annotation-item context menu. No provider URL is opened and no network API is used.
 
 ## Generated Content
 
@@ -45,7 +45,7 @@ The formatter returns:
 ```text
 title: "TODO: Replace deprecated parser"
 
-## Code Beacon
+## AnnoPulse
 
 - **Category:** `todo`
 - **Severity:** `information`
@@ -72,25 +72,25 @@ The location remains a one-based `uri:line:column` value, consistent with existi
 ## Architecture
 
 ```text
-BeaconAnnotation (+ optional BeaconGitMetadata)
+AnnoPulseAnnotation (+ optional AnnoPulseGitMetadata)
                  |
                  v
   core/issues/format.ts (pure title/body formatter)
                  |
                  v
-useBeaconCommands command -> VS Code clipboard -> user paste
+useAnnoPulseCommands command -> VS Code clipboard -> user paste
                  ^
                  |
-Explorer context menu passes selected BeaconAnnotation
+Explorer context menu passes selected AnnoPulseAnnotation
 ```
 
-`src/core/issues/format.ts` has no VS Code import. `useBeaconCommands()` owns clipboard interaction and user-facing messages. The Explorer continues to validate its tree item before passing the annotation to the command, following the existing reveal/copy-link pattern.
+`src/core/issues/format.ts` has no VS Code import. `useAnnoPulseCommands()` owns clipboard interaction and user-facing messages. The Explorer continues to validate its tree item before passing the annotation to the command, following the existing reveal/copy-link pattern.
 
 ## Testing
 
 - Pure formatter tests cover a complete annotation, message-less annotation, explicit/whitespace owner, one-based location, special Markdown characters, multiline messages, and optional Git block omission/inclusion.
 - Command tests cover registration, exact copied body, success notification, absent/invalid annotation warning, and no clipboard write on selection failure.
-- Explorer tests cover contribution wiring from a beacon tree item to the command argument.
+- Explorer tests cover contribution wiring from an annotation tree item to the command argument.
 - Package metadata tests cover command and Explorer menu contributions; `src/meta.ts` is regenerated through `pnpm generate:meta`.
 - Documentation tests remain covered by generation/format checks; release verification runs unit, desktop, Web, build, generator idempotence, and diff checks.
 

@@ -2,12 +2,12 @@ import type * as ReactiveVscode from 'reactive-vscode'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import {
-  useBeaconHover,
-  type BeaconGitMetadataLookup,
-} from '../src/composables/use-beacon-hover'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
+  useAnnoPulseHover,
+  type AnnoPulseGitMetadataLookup,
+} from '../src/composables/use-annopulse-hover'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
 import { annotationStore } from '../src/core/store/annotation-store'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
 interface HoverProvider {
@@ -22,7 +22,7 @@ type RegisterHoverProvider = (
   provider: HoverProvider,
 ) => { dispose: () => void }
 
-const missingGitMetadata: { readonly value?: BeaconGitMetadata } = {}
+const missingGitMetadata: { readonly value?: AnnoPulseGitMetadata } = {}
 
 const { hoverProviders, registerHoverProvider, useDisposable } = vi.hoisted(
   () => {
@@ -82,7 +82,7 @@ vi.mock(
     }) as unknown as Partial<typeof Vscode>,
 )
 
-function annotation(): BeaconAnnotation {
+function annotation(): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -138,7 +138,7 @@ function markdownValue(hover: Vscode.Hover | null): string {
   return contents.value
 }
 
-describe('beacon hover', () => {
+describe('annopulse hover', () => {
   beforeEach(() => {
     annotationStore.clear()
     hoverProviders.length = 0
@@ -149,20 +149,20 @@ describe('beacon hover', () => {
   it('awaits Git metadata for the hovered annotation', async () => {
     const testDocument = document()
     const testAnnotation = annotation()
-    const metadata: BeaconGitMetadata = {
+    const metadata: AnnoPulseGitMetadata = {
       authorName: 'Ada Lovelace',
       commitDate: '2026-07-12T04:00:00.000Z',
       hash: 'a1b2c3d4e5f6',
-      summary: 'Add beacon metadata',
+      summary: 'Add annopulse metadata',
     }
-    const getMetadata = vi.fn<BeaconGitMetadataLookup>(() =>
+    const getMetadata = vi.fn<AnnoPulseGitMetadataLookup>(() =>
       Promise.resolve(metadata),
     )
     seedAnnotationStore(annotationStore, testDocument.uri.toString(), [
       testAnnotation,
     ])
 
-    useBeaconHover(getMetadata)
+    useAnnoPulseHover(getMetadata)
 
     const result = await registeredHoverProvider().provideHover(testDocument, {
       character: 3,
@@ -186,7 +186,7 @@ describe('beacon hover', () => {
       annotation(),
     ])
 
-    useBeaconHover(lookup)
+    useAnnoPulseHover(lookup)
 
     const result = await registeredHoverProvider().provideHover(testDocument, {
       character: 3,

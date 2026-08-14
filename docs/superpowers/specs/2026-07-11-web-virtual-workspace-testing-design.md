@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add a repeatable browser-host integration test that proves Code Beacon can
+Add a repeatable browser-host integration test that proves AnnoPulse can
 activate and scan a workspace exposed through VS Code for the Web's virtual
 file system.
 
@@ -12,7 +12,7 @@ file system.
   `@vscode/test-web`.
 - Open the existing playground as the harness-provided `vscode-test-web`
   virtual workspace.
-- From a browser-worker test module, activate Code Beacon, configure workspace
+- From a browser-worker test module, activate AnnoPulse, configure workspace
   diagnostics, invoke the workspace scan command, and assert a TODO diagnostic
   is published for a virtual-scheme document.
 - Keep the browser-worker test bundle free of Node APIs; only the outer Node
@@ -35,10 +35,10 @@ file system.
 ## Architecture
 
 `tests/web/extension-host.ts` is a self-contained browser-worker test module.
-It imports only `vscode`, activates `ntnyq.vscode-code-beacon`, and uses
+It imports only `vscode`, activates `ntnyq.annopulse`, and uses
 workspace-relative URI discovery rather than file paths. The assertion obtains
 a `vscode-test-web` resource through `workspace.findFiles`, executes
-`code-beacon.scanWorkspace`, and waits until its Code Beacon diagnostics
+`annopulse.scanWorkspace`, and waits until its AnnoPulse diagnostics
 contain the expected TODO signal.
 
 `tsdown.web-test.config.ts` bundles that module into one browser-safe output

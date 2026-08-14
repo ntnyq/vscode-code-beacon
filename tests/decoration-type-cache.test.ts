@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import { applyBeaconDecorations } from '../src/core/decorations/apply-decorations'
+import { applyAnnoPulseDecorations } from '../src/core/decorations/apply-decorations'
 import {
   DecorationTypeCache,
   createDecorationRenderOptions,
   decorationStyleKey,
 } from '../src/core/decorations/decoration-type-cache'
 import type {
-  BeaconAnnotation,
-  BeaconStyleConfig,
+  AnnoPulseAnnotation,
+  AnnoPulseStyleConfig,
 } from '../src/types/annotation'
 
 const { createTextEditorDecorationType, dispose } = vi.hoisted(() => {
@@ -64,9 +64,9 @@ const style = {
   color: '#ffffff',
   marker: 'keyword',
   overviewRulerColor: '#0969da',
-} satisfies Required<BeaconStyleConfig>
+} satisfies Required<AnnoPulseStyleConfig>
 
-function createAnnotation(): BeaconAnnotation {
+function createAnnotation(): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -133,9 +133,9 @@ describe(DecorationTypeCache, () => {
       setDecorations,
     } as unknown as Vscode.TextEditor
 
-    applyBeaconDecorations(editor, [createAnnotation()], cache)
+    applyAnnoPulseDecorations(editor, [createAnnotation()], cache)
     const decorationType = createTextEditorDecorationType.mock.results[0]?.value
-    applyBeaconDecorations(editor, [], cache)
+    applyAnnoPulseDecorations(editor, [], cache)
 
     expect(setDecorations).toHaveBeenLastCalledWith(decorationType, [])
   })

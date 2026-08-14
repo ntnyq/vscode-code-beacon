@@ -1,8 +1,8 @@
 import { useDisposable } from 'reactive-vscode'
 import type { Memento } from 'vscode'
-import { createVscodeBeaconCommandAdapter } from '../adapters/vscode/beacon-command-adapter'
-import { createBeaconCommandHandlers } from '../core/commands/beacon-command-handlers'
-import { registerBeaconCommands } from '../core/commands/register-beacon-commands'
+import { createVsannopulseCommandAdapter } from '../adapters/vscode/annopulse-command-adapter'
+import { createAnnoPulseCommandHandlers } from '../core/commands/annopulse-command-handlers'
+import { registerAnnoPulseCommands } from '../core/commands/register-annopulse-commands'
 import { createMementoAnnotationStateStorage } from '../core/store/annotation-state'
 import { annotationStore } from '../core/store/annotation-store'
 
@@ -21,9 +21,9 @@ async function saveAnnotationState(
 /**
  * Connects command handlers, VS Code registrations, and persisted state.
  */
-export function useBeaconCommands(workspaceState: Memento) {
-  const adapter = createVscodeBeaconCommandAdapter()
-  const handlers = createBeaconCommandHandlers(adapter, annotationStore)
+export function useAnnoPulseCommands(workspaceState: Memento) {
+  const adapter = createVsannopulseCommandAdapter()
+  const handlers = createAnnoPulseCommandHandlers(adapter, annotationStore)
   const storage = createMementoAnnotationStateStorage(workspaceState)
   let saveChain = Promise.resolve()
 
@@ -37,7 +37,7 @@ export function useBeaconCommands(workspaceState: Memento) {
     }),
   })
 
-  for (const registration of registerBeaconCommands(
+  for (const registration of registerAnnoPulseCommands(
     adapter.registerCommand,
     handlers,
   )) {

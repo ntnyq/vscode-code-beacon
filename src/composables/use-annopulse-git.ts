@@ -1,8 +1,11 @@
 import { extensions, workspace } from 'vscode'
 import type { Disposable, TextDocument } from 'vscode'
-import { BeaconGitMetadataCache, parseBlameCommitHash } from '../core/git/blame'
-import type { BeaconGitMetadata } from '../core/git/blame'
-import type { BeaconAnnotation } from '../types/annotation'
+import {
+  AnnoPulseGitMetadataCache,
+  parseBlameCommitHash,
+} from '../core/git/blame'
+import type { AnnoPulseGitMetadata } from '../core/git/blame'
+import type { AnnoPulseAnnotation } from '../types/annotation'
 
 interface GitExtension {
   getAPI: (version: 1) => API | undefined
@@ -12,16 +15,16 @@ interface API {
   getRepository: (uri: TextDocument['uri']) => Repository | null | undefined
 }
 
-export interface BeaconGitAdapter {
+export interface AnnoPulseGitAdapter {
   getChangedUris: () => Promise<ReadonlySet<string>>
   getMetadata: (
     document: TextDocument,
-    annotation: BeaconAnnotation,
-  ) => Promise<BeaconGitMetadata | undefined>
+    annotation: AnnoPulseAnnotation,
+  ) => Promise<AnnoPulseGitMetadata | undefined>
   getMetadataForAnnotations: (
     document: TextDocument,
-    annotations: readonly BeaconAnnotation[],
-  ) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
+    annotations: readonly AnnoPulseAnnotation[],
+  ) => Promise<ReadonlyMap<string, AnnoPulseGitMetadata>>
   subscribeToChangedUris: (listener: () => void) => Promise<Disposable>
 }
 
@@ -189,7 +192,7 @@ function isCommit(value: unknown): value is Commit {
   )
 }
 
-function toMetadata(commit: Commit): BeaconGitMetadata {
+function toMetadata(commit: Commit): AnnoPulseGitMetadata {
   return {
     authorEmail: commit.authorEmail,
     authorName: commit.authorName,
@@ -202,8 +205,8 @@ function toMetadata(commit: Commit): BeaconGitMetadata {
 /**
  * Resolves optional Git blame metadata through VS Code's built-in Git extension.
  */
-export function useBeaconGit(): BeaconGitAdapter {
-  const cache = new BeaconGitMetadataCache()
+export function useAnnoPulseGit(): AnnoPulseGitAdapter {
+  const cache = new AnnoPulseGitMetadataCache()
 
   async function getChangedUrisAPI(): Promise<ChangedUrisAPI | undefined> {
     if (!workspace.isTrusted) {
@@ -375,9 +378,9 @@ export function useBeaconGit(): BeaconGitAdapter {
 
   async function getMetadataForAnnotations(
     document: TextDocument,
-    annotations: readonly BeaconAnnotation[],
-  ): Promise<ReadonlyMap<string, BeaconGitMetadata>> {
-    const metadataByAnnotationId = new Map<string, BeaconGitMetadata>()
+    annotations: readonly AnnoPulseAnnotation[],
+  ): Promise<ReadonlyMap<string, AnnoPulseGitMetadata>> {
+    const metadataByAnnotationId = new Map<string, AnnoPulseGitMetadata>()
 
     if (!workspace.isTrusted) {
       return metadataByAnnotationId
@@ -404,7 +407,7 @@ export function useBeaconGit(): BeaconGitAdapter {
         return metadataByAnnotationId
       }
 
-      const uncachedAnnotations: BeaconAnnotation[] = []
+      const uncachedAnnotations: AnnoPulseAnnotation[] = []
       const documentUri = document.uri.toString()
 
       for (const annotation of annotations) {
@@ -426,7 +429,7 @@ export function useBeaconGit(): BeaconGitAdapter {
       }
 
       const blame = await repository.blame(path)
-      const annotationsByHash = new Map<string, BeaconAnnotation[]>()
+      const annotationsByHash = new Map<string, AnnoPulseAnnotation[]>()
 
       for (const annotation of uncachedAnnotations) {
         const hash = parseBlameCommitHash(blame, annotation.line)
@@ -469,8 +472,8 @@ export function useBeaconGit(): BeaconGitAdapter {
     getChangedUris,
     async getMetadata(
       document: TextDocument,
-      annotation: BeaconAnnotation,
-    ): Promise<BeaconGitMetadata | undefined> {
+      annotation: AnnoPulseAnnotation,
+    ): Promise<AnnoPulseGitMetadata | undefined> {
       const metadataByAnnotationId = await getMetadataForAnnotations(document, [
         annotation,
       ])

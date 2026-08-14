@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { decodeAnnotationTarget } from '../src/core/commands/annotation-target'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
-function annotation(): BeaconAnnotation {
+function annotation(): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -31,9 +31,9 @@ describe('annotation command target', () => {
     const target = annotation()
 
     expect(decodeAnnotationTarget(target)).toBe(target)
-    expect(decodeAnnotationTarget({ annotation: target, type: 'beacon' })).toBe(
-      target,
-    )
+    expect(
+      decodeAnnotationTarget({ annotation: target, type: 'annopulse' }),
+    ).toBe(target)
   })
 
   it('rejects incomplete annotations and unrelated tree elements', () => {

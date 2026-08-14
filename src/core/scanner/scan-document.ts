@@ -1,6 +1,6 @@
 import type {
-  BeaconAnnotation,
-  CompiledBeaconRule,
+  AnnoPulseAnnotation,
+  CompiledAnnoPulseRule,
   SerializedPosition,
   SerializedRange,
 } from '../../types/annotation'
@@ -10,19 +10,19 @@ import type { OffsetRange } from './comment-ranges'
 /**
  * Reason a document scan was skipped before matching rules.
  */
-export interface BeaconSkipReason {
+export interface AnnoPulseSkipReason {
   readonly reason: 'maxFileSize'
   readonly message: string
 }
 
 /**
- * Complete result of scanning a single document for beacon annotations.
+ * Complete result of scanning a single document for AnnoPulse annotations.
  */
-export interface BeaconScanResult {
+export interface AnnoPulseScanResult {
   readonly uri: string
   readonly languageId: string
-  readonly annotations: readonly BeaconAnnotation[]
-  readonly skipped?: BeaconSkipReason
+  readonly annotations: readonly AnnoPulseAnnotation[]
+  readonly skipped?: AnnoPulseSkipReason
   readonly durationMs: number
 }
 
@@ -33,8 +33,8 @@ export interface ScanDocumentOptions {
   readonly text: string
   readonly languageId: string
   readonly uri: string
-  readonly source: BeaconAnnotation['source']
-  readonly rules: readonly CompiledBeaconRule[]
+  readonly source: AnnoPulseAnnotation['source']
+  readonly rules: readonly CompiledAnnoPulseRule[]
   readonly commentOnly: boolean
   readonly maxFileSize: number
 }
@@ -226,7 +226,7 @@ function extractMessage(
   text: string,
   match: RegExpExecArray,
   matchEnd: number,
-  rule: CompiledBeaconRule,
+  rule: CompiledAnnoPulseRule,
 ): ExtractedMessage {
   if (rule.messageMode.mode === 'match') {
     const parsed = parseAnnotationMessage(match[0], { trim: false })
@@ -305,7 +305,7 @@ function annotationId(
  * Checks whether a rule is enabled for the current VS Code language id.
  */
 function isRuleEnabledForLanguage(
-  rule: CompiledBeaconRule,
+  rule: CompiledAnnoPulseRule,
   languageId: string,
 ): boolean {
   const languages = rule.languages
@@ -341,8 +341,8 @@ function scanRange(
   range: OffsetRange,
   options: ScanDocumentOptions,
   positionMapper: PositionMapper,
-): BeaconAnnotation[] {
-  const annotations: BeaconAnnotation[] = []
+): AnnoPulseAnnotation[] {
+  const annotations: AnnoPulseAnnotation[] = []
   const segment = text.slice(range.start, range.end)
 
   for (const rule of options.rules) {
@@ -403,9 +403,11 @@ function scanRange(
 }
 
 /**
- * Scans a document text for all configured beacon annotations.
+ * Scans a document text for all configured AnnoPulse annotations.
  */
-export function scanDocument(options: ScanDocumentOptions): BeaconScanResult {
+export function scanDocument(
+  options: ScanDocumentOptions,
+): AnnoPulseScanResult {
   const startedAt = Date.now()
 
   if (options.maxFileSize > 0 && options.text.length > options.maxFileSize) {

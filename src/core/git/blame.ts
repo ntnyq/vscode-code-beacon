@@ -1,7 +1,7 @@
 /**
  * Git commit metadata shown alongside a source line.
  */
-export interface BeaconGitMetadata {
+export interface AnnoPulseGitMetadata {
   authorName: string
   authorEmail?: string
   commitDate: string
@@ -9,7 +9,7 @@ export interface BeaconGitMetadata {
   summary: string
 }
 
-export const MAX_BEACON_GIT_METADATA_CACHE_ENTRIES = 1000
+export const MAX_ANNOPULSE_GIT_METADATA_CACHE_ENTRIES = 1000
 
 /**
  * Extracts the commit hash from one zero-based line of git blame output.
@@ -31,8 +31,8 @@ export function parseBlameCommitHash(
 /**
  * Caches git metadata for a particular document version and line.
  */
-export class BeaconGitMetadataCache {
-  private readonly entries = new Map<string, BeaconGitMetadata>()
+export class AnnoPulseGitMetadataCache {
+  private readonly entries = new Map<string, AnnoPulseGitMetadata>()
 
   /**
    * Returns metadata cached for one document version and line.
@@ -41,8 +41,8 @@ export class BeaconGitMetadataCache {
     uri: string,
     version: number,
     line: number,
-  ): BeaconGitMetadata | undefined {
-    const key = BeaconGitMetadataCache.createKey(uri, version, line)
+  ): AnnoPulseGitMetadata | undefined {
+    const key = AnnoPulseGitMetadataCache.createKey(uri, version, line)
     const metadata = this.entries.get(key)
 
     if (metadata) {
@@ -60,13 +60,13 @@ export class BeaconGitMetadataCache {
     uri: string,
     version: number,
     line: number,
-    metadata: BeaconGitMetadata,
+    metadata: AnnoPulseGitMetadata,
   ) {
-    const key = BeaconGitMetadataCache.createKey(uri, version, line)
+    const key = AnnoPulseGitMetadataCache.createKey(uri, version, line)
     this.entries.delete(key)
     this.entries.set(key, metadata)
 
-    while (this.entries.size > MAX_BEACON_GIT_METADATA_CACHE_ENTRIES) {
+    while (this.entries.size > MAX_ANNOPULSE_GIT_METADATA_CACHE_ENTRIES) {
       const oldestKey = this.entries.keys().next().value
       if (oldestKey === undefined) {
         break

@@ -5,7 +5,12 @@ import type { ConfigKeyTypeMap } from '../src/meta'
 let pkg: {
   activationEvents: string[]
   categories: string[]
+  displayName: string
+  homepage: string
   keywords: string[]
+  name: string
+  publisher: string
+  repository: { type: string; url: string }
   scripts: Record<string, string>
   extensionKind?: string[]
   capabilities: {
@@ -20,7 +25,7 @@ let pkg: {
     configuration: { properties: Record<string, unknown> }
     languageModelTools?: unknown[]
     viewsContainers?: { activitybar: { id: string; title: string }[] }
-    views?: { codeBeacon: { id: string; name: string; when?: string }[] }
+    views?: { annopulse: { id: string; name: string; when?: string }[] }
     menus?: {
       'view/item/context': {
         command: string
@@ -36,7 +41,14 @@ describe('package metadata', () => {
     pkg = JSON.parse(await readFile('package.json', 'utf8')) as typeof pkg
   })
 
-  it('declares marketplace metadata for Code Beacon', () => {
+  it('declares marketplace metadata for AnnoPulse', () => {
+    expect(`${pkg.publisher}.${pkg.name}`).toBe('ntnyq.annopulse')
+    expect(pkg.displayName).toBe('AnnoPulse')
+    expect(pkg.homepage).toBe('https://github.com/ntnyq/vscode-annopulse')
+    expect(pkg.repository).toStrictEqual({
+      type: 'git',
+      url: 'git+https://github.com/ntnyq/vscode-annopulse.git',
+    })
     expect(pkg.categories).toStrictEqual(['Linters', 'Other', 'Visualization'])
     expect(pkg.keywords).toContain('todo')
     expect(pkg.keywords).toContain('annotation')
@@ -46,52 +58,52 @@ describe('package metadata', () => {
     expect(pkg.capabilities.untrustedWorkspaces.supported).toBe('limited')
     expect(
       pkg.capabilities.untrustedWorkspaces.restrictedConfigurations,
-    ).toStrictEqual(['code-beacon.rules'])
+    ).toStrictEqual(['annopulse.rules'])
   })
 
   it('declares the publishable command surface', () => {
     const commandIds = pkg.contributes.commands.map(command => command.command)
 
     expect(commandIds).toStrictEqual([
-      'code-beacon.enable',
-      'code-beacon.disable',
-      'code-beacon.toggle',
-      'code-beacon.refresh',
-      'code-beacon.scanWorkspace',
-      'code-beacon.scanActiveFile',
-      'code-beacon.scanOpenEditors',
-      'code-beacon.focusExplorer',
-      'code-beacon.reveal',
-      'code-beacon.copyLink',
-      'code-beacon.copyMarkdown',
-      'code-beacon.createIssue',
-      'code-beacon.explain',
-      'code-beacon.generateFix',
-      'code-beacon.summarizeWorkspace',
-      'code-beacon.resolve',
-      'code-beacon.unresolve',
-      'code-beacon.ignore',
-      'code-beacon.unignore',
-      'code-beacon.exportMarkdown',
-      'code-beacon.exportJson',
-      'code-beacon.exportCsv',
-      'code-beacon.openSettings',
-      'code-beacon.clearCache',
+      'annopulse.enable',
+      'annopulse.disable',
+      'annopulse.toggle',
+      'annopulse.refresh',
+      'annopulse.scanWorkspace',
+      'annopulse.scanActiveFile',
+      'annopulse.scanOpenEditors',
+      'annopulse.focusExplorer',
+      'annopulse.reveal',
+      'annopulse.copyLink',
+      'annopulse.copyMarkdown',
+      'annopulse.createIssue',
+      'annopulse.explain',
+      'annopulse.generateFix',
+      'annopulse.summarizeWorkspace',
+      'annopulse.resolve',
+      'annopulse.unresolve',
+      'annopulse.ignore',
+      'annopulse.unignore',
+      'annopulse.exportMarkdown',
+      'annopulse.exportJson',
+      'annopulse.exportCsv',
+      'annopulse.openSettings',
+      'annopulse.clearCache',
     ])
     expect(pkg.contributes.commands).toContainEqual({
-      category: 'Code Beacon',
-      command: 'code-beacon.explain',
-      title: 'Explain Beacon',
+      category: 'AnnoPulse',
+      command: 'annopulse.explain',
+      title: 'Explain Annotation',
     })
     expect(pkg.contributes.commands).toContainEqual({
-      category: 'Code Beacon',
-      command: 'code-beacon.generateFix',
-      title: 'Generate Beacon Fix',
+      category: 'AnnoPulse',
+      command: 'annopulse.generateFix',
+      title: 'Generate Annotation Fix',
     })
     expect(pkg.contributes.commands).toContainEqual({
-      category: 'Code Beacon',
-      command: 'code-beacon.summarizeWorkspace',
-      title: 'Summarize Workspace Beacons',
+      category: 'AnnoPulse',
+      command: 'annopulse.summarizeWorkspace',
+      title: 'Summarize Workspace Annotations',
     })
   })
 
@@ -99,42 +111,42 @@ describe('package metadata', () => {
     const keys = Object.keys(pkg.contributes.configuration.properties)
 
     expect(keys).toStrictEqual([
-      'code-beacon.enable',
-      'code-beacon.languages',
-      'code-beacon.rules',
-      'code-beacon.include',
-      'code-beacon.exclude',
-      'code-beacon.respectFilesExclude',
-      'code-beacon.respectSearchExclude',
-      'code-beacon.maxFileSize',
-      'code-beacon.maxFilesForSearch',
-      'code-beacon.scanMode',
-      'code-beacon.commentOnly',
-      'code-beacon.decorations.enabled',
-      'code-beacon.diagnostics.mode',
-      'code-beacon.explorer.enabled',
-      'code-beacon.explorer.groupBy',
-      'code-beacon.explorer.scope',
-      'code-beacon.explorer.categories',
-      'code-beacon.explorer.severities',
-      'code-beacon.explorer.owners',
-      'code-beacon.explorer.query',
-      'code-beacon.explorer.includeResolved',
-      'code-beacon.explorer.includeIgnored',
-      'code-beacon.explorer.onlyStale',
-      'code-beacon.explorer.onlyOwnerless',
-      'code-beacon.git.staleDays',
-      'code-beacon.git.showMetadata',
-      'code-beacon.ai.enabled',
-      'code-beacon.scm.enabled',
-      'code-beacon.codelens.enabled',
-      'code-beacon.hover.enabled',
+      'annopulse.enable',
+      'annopulse.languages',
+      'annopulse.rules',
+      'annopulse.include',
+      'annopulse.exclude',
+      'annopulse.respectFilesExclude',
+      'annopulse.respectSearchExclude',
+      'annopulse.maxFileSize',
+      'annopulse.maxFilesForSearch',
+      'annopulse.scanMode',
+      'annopulse.commentOnly',
+      'annopulse.decorations.enabled',
+      'annopulse.diagnostics.mode',
+      'annopulse.explorer.enabled',
+      'annopulse.explorer.groupBy',
+      'annopulse.explorer.scope',
+      'annopulse.explorer.categories',
+      'annopulse.explorer.severities',
+      'annopulse.explorer.owners',
+      'annopulse.explorer.query',
+      'annopulse.explorer.includeResolved',
+      'annopulse.explorer.includeIgnored',
+      'annopulse.explorer.onlyStale',
+      'annopulse.explorer.onlyOwnerless',
+      'annopulse.git.staleDays',
+      'annopulse.git.showMetadata',
+      'annopulse.ai.enabled',
+      'annopulse.scm.enabled',
+      'annopulse.codelens.enabled',
+      'annopulse.hover.enabled',
     ])
   })
 
   it('requires a positive integer stale-days setting', () => {
     const staleDays = pkg.contributes.configuration.properties[
-      'code-beacon.git.staleDays'
+      'annopulse.git.staleDays'
     ] as {
       default?: unknown
       minimum?: unknown
@@ -151,75 +163,75 @@ describe('package metadata', () => {
 
   it('declares optional Explorer Git metadata', () => {
     const showMetadata = pkg.contributes.configuration.properties[
-      'code-beacon.git.showMetadata'
+      'annopulse.git.showMetadata'
     ] as { default?: unknown; type?: unknown }
 
     expect(showMetadata).toStrictEqual({
       default: false,
       description:
-        "Show Git author, age, and commit details in Code Beacon Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.",
+        "Show Git author, age, and commit details in AnnoPulse Explorer items. This uses VS Code's built-in Git extension only in trusted local desktop workspaces; unavailable Git data and virtual filesystems show no Git metadata.",
       type: 'boolean',
     })
     expectTypeOf<false>().toMatchTypeOf<
-      ConfigKeyTypeMap['code-beacon.git.showMetadata']
+      ConfigKeyTypeMap['annopulse.git.showMetadata']
     >()
   })
 
   it('declares an opt-in read-only Language Model Tools setting', () => {
     const aiEnabled = pkg.contributes.configuration.properties[
-      'code-beacon.ai.enabled'
+      'annopulse.ai.enabled'
     ] as { default?: unknown; description?: unknown; type?: unknown }
 
     expect(aiEnabled).toStrictEqual({
       default: false,
       description:
-        'Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.',
+        'Enable AnnoPulse AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for a selected annotation or a bounded summary of already-indexed workspace annotations.',
       type: 'boolean',
     })
     expectTypeOf<false>().toMatchTypeOf<
-      ConfigKeyTypeMap['code-beacon.ai.enabled']
+      ConfigKeyTypeMap['annopulse.ai.enabled']
     >()
   })
 
   it('declares an opt-in read-only Source Control setting', () => {
     const sourceControl = pkg.contributes.configuration.properties[
-      'code-beacon.scm.enabled'
+      'annopulse.scm.enabled'
     ] as { default?: unknown; description?: unknown; type?: unknown }
 
     expect(sourceControl).toMatchObject({ default: false, type: 'boolean' })
     expect(sourceControl.description).toContain('read-only')
     expectTypeOf<false>().toMatchTypeOf<
-      ConfigKeyTypeMap['code-beacon.scm.enabled']
+      ConfigKeyTypeMap['annopulse.scm.enabled']
     >()
   })
 
   it('supports the changed-files Explorer scope in schema and generated config', () => {
     const explorerScope = pkg.contributes.configuration.properties[
-      'code-beacon.explorer.scope'
+      'annopulse.explorer.scope'
     ] as { enum?: unknown[] }
 
     expect(explorerScope.enum).toContain('changedFiles')
     expectTypeOf<'changedFiles'>().toMatchTypeOf<
-      ConfigKeyTypeMap['code-beacon.explorer.scope']
+      ConfigKeyTypeMap['annopulse.explorer.scope']
     >()
   })
 
   it('normalizes generated metadata outputs', () => {
     expect(pkg.scripts['generate:meta']).toBe(
-      'vscode-ext-gen --output src/meta.ts --scope=code-beacon && node scripts/normalize-generated-meta.mjs && oxfmt README.md',
+      'vscode-ext-gen --output src/meta.ts --scope=annopulse && node scripts/normalize-generated-meta.mjs && oxfmt README.md',
     )
   })
 
   it('declares the read-only annotation Language Model Tool', () => {
     expect(pkg.activationEvents).toStrictEqual([
-      'onLanguageModelTool:code_beacon_list_annotations',
-      'onLanguageModelTool:code_beacon_quality_check',
+      'onLanguageModelTool:annopulse_list_annotations',
+      'onLanguageModelTool:annopulse_quality_check',
       'onStartupFinished',
     ])
     expect(pkg.contributes.languageModelTools).toStrictEqual([
       {
         canBeReferencedInPrompt: true,
-        displayName: 'List Code Beacon Annotations',
+        displayName: 'List AnnoPulse Annotations',
         icon: '$(list-unordered)',
         inputSchema: {
           type: 'object',
@@ -235,15 +247,15 @@ describe('package metadata', () => {
           },
         },
         modelDescription: expect.stringContaining('already-indexed'),
-        name: 'code_beacon_list_annotations',
-        tags: ['code-beacon', 'annotations', 'read-only'],
-        toolReferenceName: 'codeBeaconAnnotations',
+        name: 'annopulse_list_annotations',
+        tags: ['annopulse', 'annotations', 'read-only'],
+        toolReferenceName: 'annopulseAnnotations',
         userDescription: expect.stringContaining('already discovered'),
-        when: 'config.code-beacon.ai.enabled',
+        when: 'config.annopulse.ai.enabled',
       },
       {
         canBeReferencedInPrompt: true,
-        displayName: 'Check Code Beacon Annotation Quality',
+        displayName: 'Check AnnoPulse Annotation Quality',
         icon: '$(checklist)',
         inputSchema: {
           type: 'object',
@@ -259,58 +271,58 @@ describe('package metadata', () => {
           },
         },
         modelDescription: expect.stringContaining('deterministic'),
-        name: 'code_beacon_quality_check',
-        tags: ['code-beacon', 'annotations', 'read-only'],
-        toolReferenceName: 'codeBeaconAnnotationQuality',
+        name: 'annopulse_quality_check',
+        tags: ['annopulse', 'annotations', 'read-only'],
+        toolReferenceName: 'annopulseAnnotationQuality',
         userDescription: expect.stringContaining('quality'),
-        when: 'config.code-beacon.ai.enabled',
+        when: 'config.annopulse.ai.enabled',
       },
     ])
   })
 
-  it('declares the Code Beacon TreeView contribution', () => {
+  it('declares the AnnoPulse TreeView contribution', () => {
     expect(pkg.contributes.viewsContainers?.activitybar).toStrictEqual([
       {
-        id: 'codeBeacon',
-        title: 'Code Beacon',
+        id: 'annopulse',
+        title: 'AnnoPulse',
         icon: './res/icon.png',
       },
     ])
-    expect(pkg.contributes.views?.codeBeacon).toStrictEqual([
+    expect(pkg.contributes.views?.annopulse).toStrictEqual([
       {
         icon: './res/icon.png',
-        id: 'codeBeacon.annotations',
-        name: 'Beacons',
-        when: 'config.code-beacon.explorer.enabled',
+        id: 'annopulse.annotations',
+        name: 'Annotations',
+        when: 'config.annopulse.explorer.enabled',
       },
     ])
   })
 
-  it('declares Create Issue Body for beacon items in the Explorer', () => {
+  it('declares Create Issue Body for annopulse items in the Explorer', () => {
     expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
-      command: 'code-beacon.createIssue',
-      when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+      command: 'annopulse.createIssue',
+      when: 'view == annopulse.annotations && viewItem =~ /^annopulse/',
     })
   })
 
-  it('declares Explain Beacon for beacon items in the Explorer', () => {
+  it('declares Explain Annotation for annopulse items in the Explorer', () => {
     expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
-      command: 'code-beacon.explain',
-      when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+      command: 'annopulse.explain',
+      when: 'view == annopulse.annotations && viewItem =~ /^annopulse/',
     })
   })
 
-  it('declares Generate Beacon Fix for beacon items in the Explorer', () => {
+  it('declares Generate Annotation Fix for annopulse items in the Explorer', () => {
     expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
-      command: 'code-beacon.generateFix',
-      when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+      command: 'annopulse.generateFix',
+      when: 'view == annopulse.annotations && viewItem =~ /^annopulse/',
     })
   })
 
   it('keeps the workspace-wide summary out of the Explorer item menu', () => {
     expect(pkg.contributes.menus?.['view/item/context']).not.toContainEqual(
       expect.objectContaining({
-        command: 'code-beacon.summarizeWorkspace',
+        command: 'annopulse.summarizeWorkspace',
       }),
     )
   })

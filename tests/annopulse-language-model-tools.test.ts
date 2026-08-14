@@ -3,16 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LanguageModelToolResult } from 'vscode'
 import type * as Vscode from 'vscode'
 import {
-  BEACON_LIST_ANNOTATIONS_TOOL_NAME,
-  BEACON_QUALITY_CHECK_TOOL_NAME,
-  useBeaconLanguageModelTools,
-} from '../src/composables/use-beacon-language-model-tools'
-import type { BeaconListAnnotationsInput } from '../src/core/ai/list-annotations'
+  ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME,
+  ANNOPULSE_QUALITY_CHECK_TOOL_NAME,
+  useAnnoPulseLanguageModelTools,
+} from '../src/composables/use-annopulse-language-model-tools'
+import type { AnnoPulseListAnnotationsInput } from '../src/core/ai/list-annotations'
 import { annotationStore } from '../src/core/store/annotation-store'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
-type RegisteredTool = Vscode.LanguageModelTool<BeaconListAnnotationsInput>
+type RegisteredTool = Vscode.LanguageModelTool<AnnoPulseListAnnotationsInput>
 
 const {
   configState,
@@ -103,7 +103,7 @@ const cancellationToken = {} as Vscode.CancellationToken
 function annotation(
   id: string,
   uri = 'file:///workspace/a.ts',
-): BeaconAnnotation {
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -156,8 +156,8 @@ function resultText(result: Vscode.LanguageModelToolResult): string {
 }
 
 function invocation(
-  input: BeaconListAnnotationsInput,
-): Vscode.LanguageModelToolInvocationOptions<BeaconListAnnotationsInput> {
+  input: AnnoPulseListAnnotationsInput,
+): Vscode.LanguageModelToolInvocationOptions<AnnoPulseListAnnotationsInput> {
   return { input, toolInvocationToken: undefined }
 }
 
@@ -193,7 +193,7 @@ function qualityResult(
   return JSON.parse(resultText(toolResult(result)))
 }
 
-describe(useBeaconLanguageModelTools, () => {
+describe(useAnnoPulseLanguageModelTools, () => {
   beforeEach(() => {
     annotationStore.clear()
     configState.enabled = false
@@ -208,17 +208,17 @@ describe(useBeaconLanguageModelTools, () => {
   })
 
   it('registers and disposes both manifest tools', () => {
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
     expect(registerTool).toHaveBeenCalledWith(
-      'code_beacon_list_annotations',
+      'annopulse_list_annotations',
       expect.objectContaining({
         invoke: expect.any(Function),
         prepareInvocation: expect.any(Function),
       }),
     )
     expect(registerTool).toHaveBeenCalledWith(
-      'code_beacon_quality_check',
+      'annopulse_quality_check',
       expect.objectContaining({
         invoke: expect.any(Function),
         prepareInvocation: expect.any(Function),
@@ -227,17 +227,17 @@ describe(useBeaconLanguageModelTools, () => {
     expect(useDisposable).toHaveBeenCalledTimes(2)
     expect(useDisposable).toHaveBeenNthCalledWith(1, toolDisposable)
     expect(useDisposable).toHaveBeenNthCalledWith(2, toolDisposable)
-    expect(BEACON_LIST_ANNOTATIONS_TOOL_NAME).toBe(
-      'code_beacon_list_annotations',
+    expect(ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME).toBe(
+      'annopulse_list_annotations',
     )
-    expect(BEACON_QUALITY_CHECK_TOOL_NAME).toBe('code_beacon_quality_check')
+    expect(ANNOPULSE_QUALITY_CHECK_TOOL_NAME).toBe('annopulse_quality_check')
   })
 
   it('prepares a side-effect-free confirmation for the selected scope and limit', async () => {
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
     const prepared = await registeredTool(
-      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+      ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME,
     ).prepareInvocation?.(
       { input: { limit: 2, scope: 'activeFile' } },
       cancellationToken,
@@ -245,42 +245,42 @@ describe(useBeaconLanguageModelTools, () => {
 
     expect(prepared).toMatchObject({
       invocationMessage:
-        'Listing up to 2 Code Beacon annotations from the active file.',
+        'Listing up to 2 AnnoPulse annotations from the active file.',
       confirmationMessages: {
-        title: 'Share Code Beacon annotations',
+        title: 'Share AnnoPulse annotations',
         message:
-          'Share up to 2 already-indexed Code Beacon annotations from the active file with the agent?',
+          'Share up to 2 already-indexed AnnoPulse annotations from the active file with the agent?',
       },
     })
   })
 
   it('prepares a quality confirmation for the selected scope and limit', async () => {
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
     await expect(
-      registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).prepareInvocation?.(
+      registeredTool(ANNOPULSE_QUALITY_CHECK_TOOL_NAME).prepareInvocation?.(
         { input: { limit: 2, scope: 'openEditors' } },
         cancellationToken,
       ),
     ).resolves.toMatchObject({
-      confirmationMessages: { title: 'Share Code Beacon annotation quality' },
+      confirmationMessages: { title: 'Share AnnoPulse annotation quality' },
       invocationMessage:
-        'Checking up to 2 Code Beacon annotations from open editors.',
+        'Checking up to 2 AnnoPulse annotations from open editors.',
     })
   })
 
   it('throws synchronously without reading the store or editors while AI tools are disabled', () => {
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
     const getAll = vi.spyOn(annotationStore, 'getAll')
 
     try {
       expect(() =>
-        registeredTool(BEACON_LIST_ANNOTATIONS_TOOL_NAME).invoke(
+        registeredTool(ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME).invoke(
           invocation({}),
           cancellationToken,
         ),
       ).toThrow(
-        'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
+        'AnnoPulse Language Model Tools are disabled. Enable annopulse.ai.enabled to use them.',
       )
       expect(getAll).not.toHaveBeenCalled()
       expect(vscodeState.activeTextEditorReads).toBe(0)
@@ -291,17 +291,17 @@ describe(useBeaconLanguageModelTools, () => {
   })
 
   it('throws synchronously without reading the store or editors while quality tools are disabled', () => {
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
     const getAll = vi.spyOn(annotationStore, 'getAll')
 
     try {
       expect(() =>
-        registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).invoke(
+        registeredTool(ANNOPULSE_QUALITY_CHECK_TOOL_NAME).invoke(
           invocation({}),
           cancellationToken,
         ),
       ).toThrow(
-        'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
+        'AnnoPulse Language Model Tools are disabled. Enable annopulse.ai.enabled to use them.',
       )
       expect(getAll).not.toHaveBeenCalled()
       expect(vscodeState.activeTextEditorReads).toBe(0)
@@ -319,10 +319,10 @@ describe(useBeaconLanguageModelTools, () => {
     seedAnnotationStore(annotationStore, 'file:///workspace/b.ts', [
       annotation('b', 'file:///workspace/b.ts'),
     ])
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
     const result = await registeredTool(
-      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+      ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME,
     ).invoke(invocation({ limit: 1 }), cancellationToken)
 
     expect(textPart).toHaveBeenCalledWith(
@@ -341,10 +341,10 @@ describe(useBeaconLanguageModelTools, () => {
     ])
     vscodeState.activeTextEditor = editor('file:///workspace/b.ts')
     vscodeState.visibleTextEditors = [editor('file:///workspace/a.ts')]
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
     const result = await registeredTool(
-      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+      ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME,
     ).invoke(invocation({ scope: 'activeFile' }), cancellationToken)
 
     expect(annotationIds(result)).toStrictEqual(['b'])
@@ -366,10 +366,10 @@ describe(useBeaconLanguageModelTools, () => {
       editor('file:///workspace/b.ts'),
       editor('file:///workspace/c.ts'),
     ]
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
     const result = await registeredTool(
-      BEACON_LIST_ANNOTATIONS_TOOL_NAME,
+      ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME,
     ).invoke(invocation({ scope: 'openEditors' }), cancellationToken)
 
     expect(annotationIds(result)).toStrictEqual(['b', 'c'])
@@ -384,12 +384,11 @@ describe(useBeaconLanguageModelTools, () => {
       annotation('b', 'file:///workspace/b.ts'),
     ])
     vscodeState.activeTextEditor = editor('file:///workspace/b.ts')
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
-    const result = await registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).invoke(
-      invocation({ scope: 'activeFile' }),
-      cancellationToken,
-    )
+    const result = await registeredTool(
+      ANNOPULSE_QUALITY_CHECK_TOOL_NAME,
+    ).invoke(invocation({ scope: 'activeFile' }), cancellationToken)
 
     expect(qualityResult(result)).toMatchObject({
       annotations: [
@@ -423,12 +422,11 @@ describe(useBeaconLanguageModelTools, () => {
       editor('file:///workspace/b.ts'),
       editor('file:///workspace/c.ts'),
     ]
-    useBeaconLanguageModelTools()
+    useAnnoPulseLanguageModelTools()
 
-    const result = await registeredTool(BEACON_QUALITY_CHECK_TOOL_NAME).invoke(
-      invocation({ scope: 'openEditors' }),
-      cancellationToken,
-    )
+    const result = await registeredTool(
+      ANNOPULSE_QUALITY_CHECK_TOOL_NAME,
+    ).invoke(invocation({ scope: 'openEditors' }), cancellationToken)
 
     expect(qualityResult(result)).toMatchObject({
       annotations: [

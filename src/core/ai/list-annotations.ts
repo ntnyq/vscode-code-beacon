@@ -1,52 +1,52 @@
 import type {
-  BeaconAnnotation,
-  BeaconCategory,
-  BeaconSeverity,
+  AnnoPulseAnnotation,
+  AnnoPulseCategory,
+  AnnoPulseSeverity,
 } from '../../types/annotation'
 import * as annotationSelector from './select-annotations'
 
-export const DEFAULT_BEACON_ANNOTATION_LIMIT =
-  annotationSelector.DEFAULT_BEACON_ANNOTATION_LIMIT
-export const MAX_BEACON_ANNOTATION_LIMIT =
-  annotationSelector.MAX_BEACON_ANNOTATION_LIMIT
+export const DEFAULT_ANNOPULSE_ANNOTATION_LIMIT =
+  annotationSelector.DEFAULT_ANNOPULSE_ANNOTATION_LIMIT
+export const MAX_ANNOPULSE_ANNOTATION_LIMIT =
+  annotationSelector.MAX_ANNOPULSE_ANNOTATION_LIMIT
 
-export type BeaconAnnotationToolScope =
-  annotationSelector.BeaconAnnotationToolScope
-export type BeaconListAnnotationsContext =
-  annotationSelector.BeaconListAnnotationsContext
-export type BeaconListAnnotationsInput =
-  annotationSelector.BeaconListAnnotationsInput
-export type NormalizedBeaconListAnnotationsInput =
-  annotationSelector.NormalizedBeaconListAnnotationsInput
+export type AnnoPulseAnnotationToolScope =
+  annotationSelector.AnnoPulseAnnotationToolScope
+export type AnnoPulseListAnnotationsContext =
+  annotationSelector.AnnoPulseListAnnotationsContext
+export type AnnoPulseListAnnotationsInput =
+  annotationSelector.AnnoPulseListAnnotationsInput
+export type NormalizedAnnoPulseListAnnotationsInput =
+  annotationSelector.NormalizedAnnoPulseListAnnotationsInput
 
-export function normalizeBeaconListAnnotationsInput(
-  input: BeaconListAnnotationsInput,
-): NormalizedBeaconListAnnotationsInput {
-  return annotationSelector.normalizeBeaconListAnnotationsInput(input)
+export function normalizeAnnoPulseListAnnotationsInput(
+  input: AnnoPulseListAnnotationsInput,
+): NormalizedAnnoPulseListAnnotationsInput {
+  return annotationSelector.normalizeAnnoPulseListAnnotationsInput(input)
 }
 
-export interface BeaconListedAnnotation {
+export interface AnnoPulseListedAnnotation {
   readonly id: string
   readonly uri: string
   readonly line: number
   readonly column: number
   readonly keyword: string
   readonly message: string
-  readonly category: BeaconCategory
-  readonly severity: BeaconSeverity
+  readonly category: AnnoPulseCategory
+  readonly severity: AnnoPulseSeverity
   readonly ruleId: string
   readonly owner?: string
   readonly dueDate?: string
   readonly expiresDate?: string
   readonly resolved: boolean
   readonly ignored: boolean
-  readonly source: BeaconAnnotation['source']
+  readonly source: AnnoPulseAnnotation['source']
 }
 
-export interface BeaconListAnnotationsResult {
-  readonly annotations: readonly BeaconListedAnnotation[]
+export interface AnnoPulseListAnnotationsResult {
+  readonly annotations: readonly AnnoPulseListedAnnotation[]
   readonly returned: number
-  readonly scope: BeaconAnnotationToolScope
+  readonly scope: AnnoPulseAnnotationToolScope
   readonly total: number
   readonly truncated: boolean
 }
@@ -57,9 +57,9 @@ function trimOptional(value: string | undefined): string | undefined {
   return trimmed === undefined || trimmed === '' ? undefined : trimmed
 }
 
-export function projectBeaconAnnotation(
-  annotation: BeaconAnnotation,
-): BeaconListedAnnotation {
+export function projectAnnoPulseAnnotation(
+  annotation: AnnoPulseAnnotation,
+): AnnoPulseListedAnnotation {
   const owner = trimOptional(annotation.owner)
   const dueDate = trimOptional(annotation.dueDate)
   const expiresDate = trimOptional(annotation.expiresDate)
@@ -83,12 +83,12 @@ export function projectBeaconAnnotation(
   }
 }
 
-export function listBeaconAnnotations(
-  annotations: readonly BeaconAnnotation[],
-  input: BeaconListAnnotationsInput,
-  context: BeaconListAnnotationsContext,
-): BeaconListAnnotationsResult {
-  const selected = annotationSelector.selectBeaconAnnotations(
+export function listAnnoPulseAnnotations(
+  annotations: readonly AnnoPulseAnnotation[],
+  input: AnnoPulseListAnnotationsInput,
+  context: AnnoPulseListAnnotationsContext,
+): AnnoPulseListAnnotationsResult {
+  const selected = annotationSelector.selectAnnoPulseAnnotations(
     annotations,
     input,
     context,
@@ -96,12 +96,12 @@ export function listBeaconAnnotations(
 
   return {
     ...selected,
-    annotations: selected.annotations.map(projectBeaconAnnotation),
+    annotations: selected.annotations.map(projectAnnoPulseAnnotation),
   }
 }
 
-export function serializeBeaconListAnnotations(
-  result: BeaconListAnnotationsResult,
+export function serializeAnnoPulseListAnnotations(
+  result: AnnoPulseListAnnotationsResult,
 ): string {
   return JSON.stringify(result)
 }

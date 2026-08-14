@@ -5,9 +5,8 @@ const { setTimeout: delay } = require('node:timers/promises')
 const vscode = require('vscode')
 
 const workspacePath =
-  process.env.CODE_BEACON_E2E_WORKSPACE ||
-  resolve(__dirname, '../../playground')
-const extensionId = 'ntnyq.vscode-code-beacon'
+  process.env.ANNOPULSE_E2E_WORKSPACE || resolve(__dirname, '../../playground')
+const extensionId = 'ntnyq.annopulse'
 
 async function waitFor(predicate, message, timeoutMs = 10_000) {
   const startedAt = Date.now()
@@ -36,7 +35,7 @@ async function openWorkspaceDocument(relativePath) {
 
 async function configure(key, value) {
   await vscode.workspace
-    .getConfiguration('code-beacon')
+    .getConfiguration('annopulse')
     .update(key, value, vscode.ConfigurationTarget.Global)
 }
 
@@ -56,14 +55,14 @@ module.exports.run = async function run() {
   await configure('scanMode', 'manual')
 
   const document = await openWorkspaceDocument('src/example.ts')
-  await vscode.commands.executeCommand('code-beacon.scanActiveFile')
+  await vscode.commands.executeCommand('annopulse.scanActiveFile')
 
   const diagnostics = await waitFor(
     () =>
       vscode.languages
         .getDiagnostics(document.uri)
-        .filter(diagnostic => diagnostic.source === 'Code Beacon'),
-    'Expected Code Beacon diagnostics for the active file',
+        .filter(diagnostic => diagnostic.source === 'AnnoPulse'),
+    'Expected AnnoPulse diagnostics for the active file',
   )
   assert.ok(
     diagnostics.some(diagnostic => diagnostic.message.includes('TODO')),
@@ -72,15 +71,15 @@ module.exports.run = async function run() {
 
   await configure('scanMode', 'openEditors')
   const notebook = await vscode.workspace.openNotebookDocument(
-    vscode.Uri.file(resolve(workspacePath, 'notebooks/code-beacon.ipynb')),
+    vscode.Uri.file(resolve(workspacePath, 'notebooks/annopulse.ipynb')),
   )
   const cell = notebook.cellAt(0)
   const notebookDiagnostics = await waitFor(
     () =>
       vscode.languages
         .getDiagnostics(cell.document.uri)
-        .filter(diagnostic => diagnostic.source === 'Code Beacon'),
-    'Expected Code Beacon diagnostics for the notebook cell',
+        .filter(diagnostic => diagnostic.source === 'AnnoPulse'),
+    'Expected AnnoPulse diagnostics for the notebook cell',
   )
   assert.ok(
     notebookDiagnostics.some(diagnostic => diagnostic.message.includes('TODO')),
@@ -92,7 +91,7 @@ module.exports.run = async function run() {
     document.uri,
     new vscode.Position(3, 5),
   )
-  assert.ok(hovers.length > 0, 'Expected Code Beacon hover content')
+  assert.ok(hovers.length > 0, 'Expected AnnoPulse hover content')
   assert.match(hovers.map(hoverContentText).join('\n'), /Category: `todo`/u)
 
   const codeLenses = await vscode.commands.executeCommand(
@@ -114,13 +113,13 @@ module.exports.run = async function run() {
     () =>
       vscode.languages
         .getDiagnostics(document.uri)
-        .filter(diagnostic => diagnostic.source === 'Code Beacon').length <
+        .filter(diagnostic => diagnostic.source === 'AnnoPulse').length <
       diagnostics.length,
-    'Expected resolving a beacon to reduce diagnostics',
+    'Expected resolving an annotation to reduce diagnostics',
   )
 
-  await vscode.commands.executeCommand('code-beacon.scanWorkspace')
-  await vscode.commands.executeCommand('code-beacon.exportJson')
+  await vscode.commands.executeCommand('annopulse.scanWorkspace')
+  await vscode.commands.executeCommand('annopulse.exportJson')
   const exportDocument = vscode.window.activeTextEditor?.document
   assert.equal(exportDocument?.languageId, 'json')
   assert.match(exportDocument.getText(), /example\.py/u)

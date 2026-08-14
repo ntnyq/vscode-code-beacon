@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import { applyBeaconDecorations } from '../src/core/decorations/apply-decorations'
+import { applyAnnoPulseDecorations } from '../src/core/decorations/apply-decorations'
 import { EditorDecorationCaches } from '../src/core/decorations/editor-decoration-caches'
 import type {
-  BeaconAnnotation,
-  BeaconStyleConfig,
+  AnnoPulseAnnotation,
+  AnnoPulseStyleConfig,
 } from '../src/types/annotation'
 
 const { createTextEditorDecorationType, dispose } = vi.hoisted(() => {
@@ -60,7 +60,7 @@ const baseStyle = {
   color: '#ffffff',
   marker: 'keyword',
   overviewRulerColor: '#0969da',
-} satisfies Required<BeaconStyleConfig>
+} satisfies Required<AnnoPulseStyleConfig>
 
 function createEditor(): Vscode.TextEditor {
   return {
@@ -70,8 +70,8 @@ function createEditor(): Vscode.TextEditor {
 
 function createAnnotation(
   id: string,
-  style: Required<BeaconStyleConfig>,
-): BeaconAnnotation {
+  style: Required<AnnoPulseStyleConfig>,
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -104,12 +104,12 @@ describe(EditorDecorationCaches, () => {
     const firstStyle = { ...baseStyle, backgroundColor: '#9a6700' }
     const secondStyle = { ...baseStyle, backgroundColor: '#cf222e' }
 
-    applyBeaconDecorations(
+    applyAnnoPulseDecorations(
       firstEditor,
       [createAnnotation('a', firstStyle)],
       caches.get(firstEditor),
     )
-    applyBeaconDecorations(
+    applyAnnoPulseDecorations(
       secondEditor,
       [createAnnotation('b', secondStyle)],
       caches.get(secondEditor),

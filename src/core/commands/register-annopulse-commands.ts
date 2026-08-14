@@ -1,25 +1,25 @@
 import { commands } from '../../meta'
 import type {
-  BeaconCommandHandler,
-  BeaconCommandHandlers,
-} from './beacon-command-handlers'
+  AnnoPulseCommandHandler,
+  AnnoPulseCommandHandlers,
+} from './annopulse-command-handlers'
 
-export interface BeaconCommandRegistration {
+export interface AnnoPulseCommandRegistration {
   readonly dispose: () => void
 }
 
-export type RegisterBeaconCommand = (
+export type RegisterAnnoPulseCommand = (
   command: string,
-  handler: BeaconCommandHandler,
-) => BeaconCommandRegistration
+  handler: AnnoPulseCommandHandler,
+) => AnnoPulseCommandRegistration
 
 /**
  * Registers every contributed command against its business handler.
  */
-export function registerBeaconCommands(
-  registerCommand: RegisterBeaconCommand,
-  handlers: BeaconCommandHandlers,
-): readonly BeaconCommandRegistration[] {
+export function registerAnnoPulseCommands(
+  registerCommand: RegisterAnnoPulseCommand,
+  handlers: AnnoPulseCommandHandlers,
+): readonly AnnoPulseCommandRegistration[] {
   return [
     registerCommand(commands.enable, handlers.enable),
     registerCommand(commands.disable, handlers.disable),

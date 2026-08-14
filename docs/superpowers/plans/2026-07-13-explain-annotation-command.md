@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the opt-in, read-only `code-beacon.explain` command that streams a bounded one-annotation explanation from a VS Code language model.
+**Goal:** Add the opt-in, read-only `annopulse.explain` command that streams a bounded one-annotation explanation from a VS Code language model.
 
-**Architecture:** A pure AI-core module owns source-window clipping and prompt construction. `useBeaconCommands` validates the existing annotation command argument, opens only its document, calls the Language Model API within cancellable progress, and streams only text response parts to an OutputChannel. Manifest contributions make the command discoverable from the Explorer and update the existing AI opt-in copy.
+**Architecture:** A pure AI-core module owns source-window clipping and prompt construction. `useAnnoPulseCommands` validates the existing annotation command argument, opens only its document, calls the Language Model API within cancellable progress, and streams only text response parts to an OutputChannel. Manifest contributions make the command discoverable from the Explorer and update the existing AI opt-in copy.
 
 **Tech Stack:** TypeScript, VS Code Language Model API, reactive-vscode, Vitest, vscode-ext-gen, oxfmt.
 
 ## Global Constraints
 
-- `code-beacon.ai.enabled` remains false by default and must be checked before document/model access.
+- `annopulse.ai.enabled` remains false by default and must be checked before document/model access.
 - The command is user-triggered, read-only, and must not apply `WorkspaceEdit`, write files, mutate the annotation store, invoke commands, emit telemetry, inspect Git, or scan the workspace.
 - Open only `Uri.parse(annotation.uri)` and send only that document's 60-line-before/after window, capped to 12,000 UTF-16 code units with a visible truncation marker.
 - Select `lm.selectChatModels({ vendor: 'copilot' })` defensively after command invocation; do not pin a model family and do not call real models in tests.
@@ -65,18 +65,18 @@ Expected: FAIL because `src/core/ai/explain-annotation.ts` does not exist.
 Export these exact APIs:
 
 ```ts
-export const BEACON_EXPLANATION_CONTEXT_LINE_RADIUS = 60
-export const MAX_BEACON_EXPLANATION_CONTEXT_LENGTH = 12_000
+export const ANNOPULSE_EXPLANATION_CONTEXT_LINE_RADIUS = 60
+export const MAX_ANNOPULSE_EXPLANATION_CONTEXT_LENGTH = 12_000
 
 export function annotationSourceWindow(text: string, line: number): string
 
 export function annotationExplanationPrompt(
-  annotation: BeaconAnnotation,
+  annotation: AnnoPulseAnnotation,
   sourceWindow: string,
 ): readonly [LanguageModelChatMessageData, LanguageModelChatMessageData]
 ```
 
-Define `LanguageModelChatMessageData` locally as `{ readonly role: 'system' | 'user'; readonly content: string }`, so this module has no VS Code import. Clamp an out-of-range line to the nearest document line, number lines from one, and if the capped string is longer than the maximum replace its suffix with `\n[Code Beacon context truncated]`. Trim optional owner/due/expiry values before conditionally including them. Keep prompt wording deterministic and explicitly state that no code was changed.
+Define `LanguageModelChatMessageData` locally as `{ readonly role: 'system' | 'user'; readonly content: string }`, so this module has no VS Code import. Clamp an out-of-range line to the nearest document line, number lines from one, and if the capped string is longer than the maximum replace its suffix with `\n[AnnoPulse context truncated]`. Trim optional owner/due/expiry values before conditionally including them. Keep prompt wording deterministic and explicitly state that no code was changed.
 
 - [x] **Step 4: Run core tests and typecheck.**
 
@@ -95,13 +95,13 @@ rtk git commit -m "feat: build annotation explanation prompt"
 
 **Files:**
 
-- Modify: `src/composables/use-beacon-commands.ts`
-- Modify: `tests/beacon-commands.test.ts`
+- Modify: `src/composables/use-annotation-commands.ts`
+- Modify: `tests/annotation-commands.test.ts`
 
 **Interfaces:**
 
 - Consumes Task 1 prompt data and existing `issueAnnotation` validation.
-- Produces a handler registered under the private `BEACON_EXPLAIN_COMMAND = 'code-beacon.explain'` constant; Task 3 contributes the same ID and then generates `commands.explain` metadata.
+- Produces a handler registered under the private `ANNOPULSE_EXPLAIN_COMMAND = 'annopulse.explain'` constant; Task 3 contributes the same ID and then generates `commands.explain` metadata.
 
 - [x] **Step 1: Add failing command-adapter tests.**
 
@@ -110,7 +110,7 @@ Extend the VS Code mock with `lm`, `LanguageModelChatMessage`, `LanguageModelTex
 ```ts
 await registeredCommand(commands.explain)()
 expect(window.showWarningMessage).toHaveBeenCalledWith(
-  'Select a beacon in the Explorer to explain it.',
+  'Select an annotation in the Explorer to explain it.',
 )
 
 configState.aiEnabled = false
@@ -123,26 +123,26 @@ Also prove document-open failure skips model selection; no model emits an inform
 
 - [x] **Step 2: Verify focused command tests fail.**
 
-Run: `rtk pnpm vitest run tests/beacon-commands.test.ts`
+Run: `rtk pnpm vitest run tests/annotation-commands.test.ts`
 
 Expected: FAIL because `commands.explain` and its handler do not exist.
 
 - [x] **Step 3: Implement command registration and streaming.**
 
-Add private `BEACON_EXPLAIN_COMMAND = 'code-beacon.explain'` and a helper in `use-beacon-commands.ts` that validates `issueAnnotation`, gates `config.ai.enabled`, opens only `Uri.parse(annotation.uri)`, creates a source window/prompt, then selects the first Copilot model. Convert Task 1's data to `LanguageModelChatMessage.User` values; keep the system instruction as the first user message because the public API only exposes User/Assistant factory methods. Use `window.withProgress({ cancellable: true, location: ProgressLocation.Notification, title: 'Explaining Code Beacon annotation' }, async (_progress, token) => ...)` and pass `token` to `sendRequest`.
+Add private `ANNOPULSE_EXPLAIN_COMMAND = 'annopulse.explain'` and a helper in `use-annotation-commands.ts` that validates `issueAnnotation`, gates `config.ai.enabled`, opens only `Uri.parse(annotation.uri)`, creates a source window/prompt, then selects the first Copilot model. Convert Task 1's data to `LanguageModelChatMessage.User` values; keep the system instruction as the first user message because the public API only exposes User/Assistant factory methods. Use `window.withProgress({ cancellable: true, location: ProgressLocation.Notification, title: 'Explaining AnnoPulse annotation' }, async (_progress, token) => ...)` and pass `token` to `sendRequest`.
 
-Create a lazy `Code Beacon AI` OutputChannel; call `clear()`, append a heading containing URI and one-based location, append only `LanguageModelTextPart.value` chunks, and call `show(true)` on the first text chunk. Catch expected language-model errors, cancellation, unavailable models, and document errors with `showWarningMessage`/`showInformationMessage`; never expose a stack trace or retry automatically.
+Create a lazy `AnnoPulse AI` OutputChannel; call `clear()`, append a heading containing URI and one-based location, append only `LanguageModelTextPart.value` chunks, and call `show(true)` on the first text chunk. Catch expected language-model errors, cancellation, unavailable models, and document errors with `showWarningMessage`/`showInformationMessage`; never expose a stack trace or retry automatically.
 
 - [x] **Step 4: Run command and relevant regression tests.**
 
-Run: `rtk pnpm vitest run tests/beacon-commands.test.ts tests/ai-explain-annotation.test.ts tests/beacon-language-model-tools.test.ts && pnpm typecheck`
+Run: `rtk pnpm vitest run tests/annotation-commands.test.ts tests/ai-explain-annotation.test.ts tests/annotation-language-model-tools.test.ts && pnpm typecheck`
 
 Expected: PASS; existing create-issue and tool tests retain their behavior.
 
 - [x] **Step 5: Commit the command slice.**
 
 ```bash
-rtk git add src/composables/use-beacon-commands.ts tests/beacon-commands.test.ts
+rtk git add src/composables/use-annotation-commands.ts tests/annotation-commands.test.ts
 rtk git commit -m "feat: add explain annotation command"
 ```
 
@@ -159,20 +159,20 @@ rtk git commit -m "feat: add explain annotation command"
 **Interfaces:**
 
 - Consumes `commands.explain` from generated metadata and Task 2 registration.
-- Produces a discoverable `Explain Beacon` command and Explorer item menu entry.
+- Produces a discoverable `Explain Annotation` command and Explorer item menu entry.
 
 - [x] **Step 1: Write failing metadata tests.**
 
-Require `code-beacon.explain` immediately after `code-beacon.createIssue` in the generated command list, and require a context menu item:
+Require `annopulse.explain` immediately after `annopulse.createIssue` in the generated command list, and require a context menu item:
 
 ```ts
 expect(pkg.contributes.menus?.['view/item/context']).toContainEqual({
-  command: 'code-beacon.explain',
-  when: 'view == codeBeacon.annotations && viewItem =~ /^beacon/',
+  command: 'annopulse.explain',
+  when: 'view == annopulse.annotations && viewItem =~ /^annotation/',
 })
 ```
 
-Update the AI setting assertion to require copy that says it enables Code Beacon AI features and explains that direct commands send bounded annotation context only after a user action.
+Update the AI setting assertion to require copy that says it enables AnnoPulse AI features and explains that direct commands send bounded annotation context only after a user action.
 
 - [x] **Step 2: Verify metadata tests fail.**
 
@@ -182,10 +182,10 @@ Expected: FAIL because the command and menu contribution do not exist.
 
 - [x] **Step 3: Contribute metadata and regenerate outputs.**
 
-Add `code-beacon.explain` with title `Explain Beacon`, add its Explorer context menu entry, and replace the AI setting description with:
+Add `annopulse.explain` with title `Explain Annotation`, add its Explorer context menu entry, and replace the AI setting description with:
 
 ```text
-Enable Code Beacon AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.
+Enable AnnoPulse AI features. Read-only Language Model Tools share only already-indexed annotations after confirmation; user-triggered AI commands send only bounded context for the selected annotation.
 ```
 
 Run:
@@ -202,7 +202,7 @@ rtk git diff --exit-code -- src/meta.ts README.md
 Run:
 
 ```bash
-rtk pnpm vitest run tests/ai-explain-annotation.test.ts tests/beacon-commands.test.ts tests/beacon-language-model-tools.test.ts tests/package-metadata.test.ts tests/index.test.ts
+rtk pnpm vitest run tests/ai-explain-annotation.test.ts tests/annotation-commands.test.ts tests/annotation-language-model-tools.test.ts tests/package-metadata.test.ts tests/index.test.ts
 pnpm typecheck
 rtk pnpm test:unit
 rtk git diff --check

@@ -1,7 +1,10 @@
-import type { BeaconAnnotation, BeaconRuleConfig } from '../../types/annotation'
+import type {
+  AnnoPulseAnnotation,
+  AnnoPulseRuleConfig,
+} from '../../types/annotation'
 import { normalizeRules } from '../rules/normalize'
 import { scanDocument } from './scan-document'
-import type { BeaconScanResult } from './scan-document'
+import type { AnnoPulseScanResult } from './scan-document'
 
 /**
  * Configuration captured for a reusable document scanner.
@@ -10,7 +13,7 @@ export interface ConfiguredDocumentScannerOptions {
   readonly allowCustomRegex: boolean
   readonly commentOnly: boolean
   readonly maxFileSize: number
-  readonly rules: readonly BeaconRuleConfig[]
+  readonly rules: readonly AnnoPulseRuleConfig[]
   readonly warn: (message: string) => void
 }
 
@@ -19,7 +22,7 @@ export interface ConfiguredDocumentScannerOptions {
  */
 export interface ConfiguredDocumentScanInput {
   readonly languageId: string
-  readonly source: BeaconAnnotation['source']
+  readonly source: AnnoPulseAnnotation['source']
   readonly text: string
   readonly uri: string
 }
@@ -28,7 +31,7 @@ export interface ConfiguredDocumentScanInput {
  * Reusable scanner built from one trusted configuration snapshot.
  */
 export interface ConfiguredDocumentScanner {
-  readonly scan: (input: ConfiguredDocumentScanInput) => BeaconScanResult
+  readonly scan: (input: ConfiguredDocumentScanInput) => AnnoPulseScanResult
 }
 
 /**

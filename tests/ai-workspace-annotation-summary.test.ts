@@ -4,12 +4,12 @@ import {
   MAX_WORKSPACE_ANNOTATION_SUMMARY_PAYLOAD_LENGTH,
   workspaceAnnotationSummaryPrompt,
 } from '../src/core/ai/workspace-annotation-summary'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function annotation(
   id: string,
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,

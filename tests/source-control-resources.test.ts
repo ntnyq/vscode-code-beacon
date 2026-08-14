@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createBeaconSourceControlResources } from '../src/core/source-control/resources'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import { createAnnoPulseSourceControlResources } from '../src/core/source-control/resources'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function createAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 0,
@@ -50,10 +50,10 @@ const annotations = [
   }),
 ]
 
-describe(createBeaconSourceControlResources, () => {
+describe(createAnnoPulseSourceControlResources, () => {
   it('describes annotations for changed URIs, including resolved annotations', () => {
     expect(
-      createBeaconSourceControlResources(
+      createAnnoPulseSourceControlResources(
         new Set(['file:///workspace/b.ts', 'file:///workspace/a.ts']),
         annotations,
       ),
@@ -61,13 +61,13 @@ describe(createBeaconSourceControlResources, () => {
       {
         annotationCount: 3,
         categories: ['BUG', 'REVIEW', 'TODO'],
-        tooltip: '3 Code Beacon annotations (BUG, REVIEW, TODO)',
+        tooltip: '3 AnnoPulse annotations (BUG, REVIEW, TODO)',
         uri: 'file:///workspace/a.ts',
       },
       {
         annotationCount: 1,
         categories: ['NOTE'],
-        tooltip: '1 Code Beacon annotation (NOTE)',
+        tooltip: '1 AnnoPulse annotation (NOTE)',
         uri: 'file:///workspace/b.ts',
       },
     ])
@@ -75,10 +75,10 @@ describe(createBeaconSourceControlResources, () => {
 
   it('returns an empty list when no changed URI has an annotation', () => {
     expect(
-      createBeaconSourceControlResources(new Set(), annotations),
+      createAnnoPulseSourceControlResources(new Set(), annotations),
     ).toStrictEqual([])
     expect(
-      createBeaconSourceControlResources(
+      createAnnoPulseSourceControlResources(
         new Set(['file:///workspace/c.ts']),
         [],
       ),

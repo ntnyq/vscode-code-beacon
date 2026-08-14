@@ -1,34 +1,34 @@
 import type * as ReactiveVscode from 'reactive-vscode'
 import { describe, expect, it, vi } from 'vitest'
-import type * as BeaconCodeLens from '../src/composables/use-beacon-codelens'
-import type * as BeaconCommands from '../src/composables/use-beacon-commands'
-import type * as BeaconDiagnostics from '../src/composables/use-beacon-diagnostics'
-import type * as BeaconExplorer from '../src/composables/use-beacon-explorer'
-import type * as BeaconGit from '../src/composables/use-beacon-git'
-import type * as BeaconHighlight from '../src/composables/use-beacon-highlight'
-import type * as BeaconHover from '../src/composables/use-beacon-hover'
-import type * as BeaconLanguageModelTools from '../src/composables/use-beacon-language-model-tools'
-import type * as BeaconNotebook from '../src/composables/use-beacon-notebook'
-import type * as BeaconSourceControl from '../src/composables/use-beacon-source-control'
+import type * as AnnoPulseCodeLens from '../src/composables/use-annopulse-codelens'
+import type * as AnnoPulseCommands from '../src/composables/use-annopulse-commands'
+import type * as AnnoPulseDiagnostics from '../src/composables/use-annopulse-diagnostics'
+import type * as AnnoPulseExplorer from '../src/composables/use-annopulse-explorer'
+import type * as AnnoPulseGit from '../src/composables/use-annopulse-git'
+import type * as AnnoPulseHighlight from '../src/composables/use-annopulse-highlight'
+import type * as AnnoPulseHover from '../src/composables/use-annopulse-hover'
+import type * as AnnoPulseLanguageModelTools from '../src/composables/use-annopulse-language-model-tools'
+import type * as AnnoPulseNotebook from '../src/composables/use-annopulse-notebook'
+import type * as AnnoPulseSourceControl from '../src/composables/use-annopulse-source-control'
 import type * as WorkspaceScan from '../src/composables/use-workspace-scan'
 import type * as ChangedUriIndex from '../src/core/git/changed-uri-index'
 import type * as Logger from '../src/utils/logger'
 
 const {
-  beaconGit,
+  annopulseGit,
   changedUriIndex,
   createChangedUriIndex,
   defineExtension,
-  useBeaconCodeLens,
-  useBeaconCommands,
-  useBeaconDiagnostics,
-  useBeaconExplorer,
-  useBeaconGit,
-  useBeaconHighlight,
-  useBeaconHover,
-  useBeaconLanguageModelTools,
-  useBeaconNotebook,
-  useBeaconSourceControl,
+  useAnnoPulseCodeLens,
+  useAnnoPulseCommands,
+  useAnnoPulseDiagnostics,
+  useAnnoPulseExplorer,
+  useAnnoPulseGit,
+  useAnnoPulseHighlight,
+  useAnnoPulseHover,
+  useAnnoPulseLanguageModelTools,
+  useAnnoPulseNotebook,
+  useAnnoPulseSourceControl,
   useDisposable,
   useWorkspaceScan,
 } = vi.hoisted(() => {
@@ -46,7 +46,7 @@ const {
   const scan = vi.fn<() => void>()
 
   return {
-    beaconGit: git,
+    annopulseGit: git,
     changedUriIndex: index,
     createChangedUriIndex: vi.fn<(source: typeof git) => typeof index>(
       () => index,
@@ -60,19 +60,21 @@ const {
       activate: (context: { workspaceState: unknown }) => setup(context),
       deactivate: vi.fn<() => void>(),
     })),
-    useBeaconCodeLens: vi.fn<() => void>(),
-    useBeaconCommands: vi.fn<(workspaceState: unknown) => void>(),
-    useBeaconDiagnostics: vi.fn<() => void>(),
-    useBeaconExplorer:
+    useAnnoPulseCodeLens: vi.fn<() => void>(),
+    useAnnoPulseCommands: vi.fn<(workspaceState: unknown) => void>(),
+    useAnnoPulseDiagnostics: vi.fn<() => void>(),
+    useAnnoPulseExplorer:
       vi.fn<(adapter: typeof git, changedUris: typeof index) => void>(),
-    useBeaconGit: vi.fn<() => typeof git>(() => git),
-    useBeaconHighlight: vi.fn<() => { scanTextDocument: typeof scan }>(() => ({
-      scanTextDocument: scan,
-    })),
-    useBeaconHover: vi.fn<(getMetadata: typeof metadata) => void>(),
-    useBeaconLanguageModelTools: vi.fn<() => void>(),
-    useBeaconNotebook: vi.fn<(scanDocument: typeof scan) => void>(),
-    useBeaconSourceControl: vi.fn<(changedUris: typeof index) => void>(),
+    useAnnoPulseGit: vi.fn<() => typeof git>(() => git),
+    useAnnoPulseHighlight: vi.fn<() => { scanTextDocument: typeof scan }>(
+      () => ({
+        scanTextDocument: scan,
+      }),
+    ),
+    useAnnoPulseHover: vi.fn<(getMetadata: typeof metadata) => void>(),
+    useAnnoPulseLanguageModelTools: vi.fn<() => void>(),
+    useAnnoPulseNotebook: vi.fn<(scanDocument: typeof scan) => void>(),
+    useAnnoPulseSourceControl: vi.fn<(changedUris: typeof index) => void>(),
     useDisposable: vi.fn<(disposable: typeof index) => typeof index>(
       disposable => disposable,
     ),
@@ -90,71 +92,71 @@ vi.mock(
 )
 
 vi.mock(
-  import('../src/composables/use-beacon-codelens'),
+  import('../src/composables/use-annopulse-codelens'),
   () =>
     ({
-      useBeaconCodeLens,
-    }) as unknown as Partial<typeof BeaconCodeLens>,
+      useAnnoPulseCodeLens,
+    }) as unknown as Partial<typeof AnnoPulseCodeLens>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-commands'),
+  import('../src/composables/use-annopulse-commands'),
   () =>
     ({
-      useBeaconCommands,
-    }) as unknown as Partial<typeof BeaconCommands>,
+      useAnnoPulseCommands,
+    }) as unknown as Partial<typeof AnnoPulseCommands>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-diagnostics'),
+  import('../src/composables/use-annopulse-diagnostics'),
   () =>
     ({
-      useBeaconDiagnostics,
-    }) as unknown as Partial<typeof BeaconDiagnostics>,
+      useAnnoPulseDiagnostics,
+    }) as unknown as Partial<typeof AnnoPulseDiagnostics>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-explorer'),
+  import('../src/composables/use-annopulse-explorer'),
   () =>
     ({
-      useBeaconExplorer,
-    }) as unknown as Partial<typeof BeaconExplorer>,
+      useAnnoPulseExplorer,
+    }) as unknown as Partial<typeof AnnoPulseExplorer>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-git'),
-  () => ({ useBeaconGit }) as unknown as Partial<typeof BeaconGit>,
+  import('../src/composables/use-annopulse-git'),
+  () => ({ useAnnoPulseGit }) as unknown as Partial<typeof AnnoPulseGit>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-highlight'),
+  import('../src/composables/use-annopulse-highlight'),
   () =>
     ({
-      useBeaconHighlight,
-    }) as unknown as Partial<typeof BeaconHighlight>,
+      useAnnoPulseHighlight,
+    }) as unknown as Partial<typeof AnnoPulseHighlight>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-hover'),
+  import('../src/composables/use-annopulse-hover'),
   () =>
     ({
-      useBeaconHover,
-    }) as unknown as Partial<typeof BeaconHover>,
+      useAnnoPulseHover,
+    }) as unknown as Partial<typeof AnnoPulseHover>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-language-model-tools'),
+  import('../src/composables/use-annopulse-language-model-tools'),
   () =>
     ({
-      useBeaconLanguageModelTools,
-    }) as unknown as Partial<typeof BeaconLanguageModelTools>,
+      useAnnoPulseLanguageModelTools,
+    }) as unknown as Partial<typeof AnnoPulseLanguageModelTools>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-notebook'),
+  import('../src/composables/use-annopulse-notebook'),
   () =>
     ({
-      useBeaconNotebook,
-    }) as unknown as Partial<typeof BeaconNotebook>,
+      useAnnoPulseNotebook,
+    }) as unknown as Partial<typeof AnnoPulseNotebook>,
 )
 vi.mock(
-  import('../src/composables/use-beacon-source-control'),
+  import('../src/composables/use-annopulse-source-control'),
   () =>
     ({
-      useBeaconSourceControl,
-    }) as unknown as Partial<typeof BeaconSourceControl>,
+      useAnnoPulseSourceControl,
+    }) as unknown as Partial<typeof AnnoPulseSourceControl>,
 )
 vi.mock(
   import('../src/core/git/changed-uri-index'),
@@ -184,20 +186,22 @@ describe('extension activation', () => {
 
     activate({ workspaceState: {} } as never)
 
-    expect(useBeaconGit).toHaveBeenCalledExactlyOnceWith()
-    expect(createChangedUriIndex).toHaveBeenCalledExactlyOnceWith(beaconGit)
+    expect(useAnnoPulseGit).toHaveBeenCalledExactlyOnceWith()
+    expect(createChangedUriIndex).toHaveBeenCalledExactlyOnceWith(annopulseGit)
     expect(useDisposable).toHaveBeenCalledExactlyOnceWith(changedUriIndex)
-    expect(useBeaconExplorer).toHaveBeenCalledExactlyOnceWith(
-      beaconGit,
+    expect(useAnnoPulseExplorer).toHaveBeenCalledExactlyOnceWith(
+      annopulseGit,
       changedUriIndex,
     )
-    expect(useBeaconHover).toHaveBeenCalledExactlyOnceWith(
-      beaconGit.getMetadata,
+    expect(useAnnoPulseHover).toHaveBeenCalledExactlyOnceWith(
+      annopulseGit.getMetadata,
     )
-    expect(useBeaconSourceControl).toHaveBeenCalledExactlyOnceWith(
+    expect(useAnnoPulseSourceControl).toHaveBeenCalledExactlyOnceWith(
       changedUriIndex,
     )
-    expect(useBeaconLanguageModelTools).toHaveBeenCalledExactlyOnceWith()
-    expect(useBeaconLanguageModelTools).toHaveBeenCalledAfter(useBeaconCodeLens)
+    expect(useAnnoPulseLanguageModelTools).toHaveBeenCalledExactlyOnceWith()
+    expect(useAnnoPulseLanguageModelTools).toHaveBeenCalledAfter(
+      useAnnoPulseCodeLens,
+    )
   })
 })

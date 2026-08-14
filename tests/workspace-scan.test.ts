@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
 import { useWorkspaceScan } from '../src/composables/use-workspace-scan'
 import { config } from '../src/config'
-import type * as CodeBeaconConfig from '../src/config'
+import type * as AnnoPulseConfig from '../src/config'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
@@ -144,7 +144,7 @@ vi.mock(
           },
         ],
       },
-    }) as unknown as Partial<typeof CodeBeaconConfig>,
+    }) as unknown as Partial<typeof AnnoPulseConfig>,
 )
 
 vi.mock(
@@ -636,7 +636,7 @@ describe('workspace scan file events', () => {
       throw new Error('Expected a configuration listener')
     }
     listener({
-      affectsConfiguration: section => section === 'code-beacon.exclude',
+      affectsConfiguration: section => section === 'annopulse.exclude',
     })
 
     fullDocument.resolve({
@@ -762,7 +762,7 @@ describe('workspace scan file events', () => {
       throw new Error('Expected a configuration listener')
     }
     listener({
-      affectsConfiguration: section => section === 'code-beacon.include',
+      affectsConfiguration: section => section === 'annopulse.include',
     })
 
     expect(createFileSystemWatcher).toHaveBeenLastCalledWith('**/*.md')
@@ -785,7 +785,7 @@ describe('workspace scan file events', () => {
       throw new Error('Expected a configuration listener')
     }
     listener({
-      affectsConfiguration: section => section === 'code-beacon.exclude',
+      affectsConfiguration: section => section === 'annopulse.exclude',
     })
 
     expect(createFileSystemWatcher).toHaveBeenCalledTimes(2)
@@ -826,7 +826,7 @@ describe('workspace scan file events', () => {
       throw new Error('Expected a configuration listener')
     }
     listener({
-      affectsConfiguration: section => section === 'code-beacon.include',
+      affectsConfiguration: section => section === 'annopulse.include',
     })
 
     watcherDocument.resolve({
@@ -862,7 +862,7 @@ describe('workspace scan file events', () => {
       throw new Error('Expected a configuration listener')
     }
     listener({
-      affectsConfiguration: section => section === 'code-beacon.exclude',
+      affectsConfiguration: section => section === 'annopulse.exclude',
     })
 
     watcherDocument.resolve({

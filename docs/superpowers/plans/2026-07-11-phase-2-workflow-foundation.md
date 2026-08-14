@@ -13,7 +13,7 @@
 - Use VS Code workspace APIs and Memento only; do not introduce Node file APIs, shell commands, or a glob dependency.
 - Support desktop, web, remote, and virtual workspace hosts.
 - Persist only annotation IDs, never source text or workspace paths.
-- Preserve the current default Explorer behavior: unresolved, non-ignored beacons from every source remain visible.
+- Preserve the current default Explorer behavior: unresolved, non-ignored annotations from every source remain visible.
 - Every behavioral change starts with a failing Vitest test and ends with its focused suite passing.
 
 ---
@@ -24,16 +24,16 @@
 
 - Create: `src/core/store/annotation-state.ts`
 - Modify: `src/core/store/annotation-store.ts`
-- Modify: `src/composables/use-beacon-commands.ts`
+- Modify: `src/composables/use-annotation-commands.ts`
 - Modify: `src/index.ts`
 - Test: `tests/annotation-store.test.ts`
 - Test: `tests/annotation-state.test.ts`
 
 **Interfaces:**
 
-- Produces `BeaconAnnotationState`, `AnnotationStateStorage`, and `createMementoAnnotationStateStorage(memento)`.
+- Produces `AnnoPulseAnnotationState`, `AnnotationStateStorage`, and `createMementoAnnotationStateStorage(memento)`.
 - Adds `getState()` and `restoreState(state)` to `AnnotationStore`.
-- `useBeaconCommands(workspaceState)` restores state before registering commands and persists updates.
+- `useAnnoPulseCommands(workspaceState)` restores state before registering commands and persists updates.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -47,11 +47,11 @@ Expected: FAIL because the snapshot/restore and Memento adapter APIs do not exis
 
 - [ ] **Step 3: Implement the store state and Memento adapter**
 
-Define `BeaconAnnotationState` as readonly `resolvedIds` and `ignoredIds` arrays. Normalize stored arrays by retaining only strings and de-duplicating them. Add `getState()` with sorted IDs and `restoreState()` that replaces both sets, refreshes stored annotations, and notifies listeners. Store the payload under `code-beacon.annotationState` through `Memento.update`.
+Define `AnnoPulseAnnotationState` as readonly `resolvedIds` and `ignoredIds` arrays. Normalize stored arrays by retaining only strings and de-duplicating them. Add `getState()` with sorted IDs and `restoreState()` that replaces both sets, refreshes stored annotations, and notifies listeners. Store the payload under `annopulse.annotationState` through `Memento.update`.
 
 - [ ] **Step 4: Wire persistence into extension activation**
 
-Accept `workspaceState: Memento` in `useBeaconCommands`, restore the saved snapshot before command registration, and subscribe to store changes with `void storage.save(annotationStore.getState())`. Pass `context.workspaceState` from `defineExtension` in `src/index.ts`.
+Accept `workspaceState: Memento` in `useAnnoPulseCommands`, restore the saved snapshot before command registration, and subscribe to store changes with `void storage.save(annotationStore.getState())`. Pass `context.workspaceState` from `defineExtension` in `src/index.ts`.
 
 - [ ] **Step 5: Run focused tests and commit**
 
@@ -59,7 +59,7 @@ Run: `pnpm vitest tests/annotation-store.test.ts tests/annotation-state.test.ts`
 
 Expected: PASS.
 
-Commit: `feat: persist beacon workflow state`
+Commit: `feat: persist annotation workflow state`
 
 ### Task 2: Add deterministic Explorer filters
 
@@ -67,15 +67,15 @@ Commit: `feat: persist beacon workflow state`
 
 - Create: `src/core/explorer/filter.ts`
 - Modify: `src/core/explorer/tree-data-provider.ts`
-- Modify: `src/composables/use-beacon-explorer.ts`
+- Modify: `src/composables/use-annotation-explorer.ts`
 - Modify: `package.json`
 - Regenerate: `src/meta.ts`
-- Test: `tests/beacon-explorer-filter.test.ts`
+- Test: `tests/annotation-explorer-filter.test.ts`
 - Test: `tests/tree-data-provider.test.ts`
 
 **Interfaces:**
 
-- Produces `BeaconExplorerFilter` and `filterBeaconAnnotations(annotations, filter)`.
+- Produces `AnnoPulseExplorerFilter` and `filterAnnoPulseAnnotations(annotations, filter)`.
 - The filter has `scope`, category/severity/owner arrays, `query`, `includeResolved`, `includeIgnored`, `activeUri`, and `openUris`.
 - Tree provider receives the filtered list and orders leaves by URI, line, then column.
 
@@ -85,25 +85,25 @@ Write table-driven tests with annotations across two URIs, categories, severitie
 
 - [ ] **Step 2: Run the focused tests and verify RED**
 
-Run: `pnpm vitest tests/beacon-explorer-filter.test.ts tests/tree-data-provider.test.ts`
+Run: `pnpm vitest tests/annotation-explorer-filter.test.ts tests/tree-data-provider.test.ts`
 
 Expected: FAIL because the filter module and ordered leaves do not exist.
 
 - [ ] **Step 3: Implement pure filtering and ordering**
 
-Implement `filterBeaconAnnotations` without VS Code imports. Treat empty filter arrays as no constraint, hide resolved/ignored items unless their inclusion flag is true, and make `activeFile`/`openEditors` scope depend only on supplied URI values. Sort filtered annotations by `uri.localeCompare`, `line`, then `column` before grouping.
+Implement `filterAnnoPulseAnnotations` without VS Code imports. Treat empty filter arrays as no constraint, hide resolved/ignored items unless their inclusion flag is true, and make `activeFile`/`openEditors` scope depend only on supplied URI values. Sort filtered annotations by `uri.localeCompare`, `line`, then `column` before grouping.
 
 - [ ] **Step 4: Add Explorer settings and composition**
 
-Add settings under `code-beacon.explorer`: `scope` (`workspace`, `activeFile`, `openEditors`), `categories`, `severities`, `owners`, `query`, `includeResolved`, and `includeIgnored`. Run `pnpm generate:meta`. In `useBeaconExplorer`, compose these settings with `window.activeTextEditor` and `window.visibleTextEditors`, and refresh the provider when the active editor, visible editors, or Code Beacon configuration changes.
+Add settings under `annopulse.explorer`: `scope` (`workspace`, `activeFile`, `openEditors`), `categories`, `severities`, `owners`, `query`, `includeResolved`, and `includeIgnored`. Run `pnpm generate:meta`. In `useAnnoPulseExplorer`, compose these settings with `window.activeTextEditor` and `window.visibleTextEditors`, and refresh the provider when the active editor, visible editors, or AnnoPulse configuration changes.
 
 - [ ] **Step 5: Run focused tests and commit**
 
-Run: `pnpm vitest tests/beacon-explorer-filter.test.ts tests/tree-data-provider.test.ts`
+Run: `pnpm vitest tests/annotation-explorer-filter.test.ts tests/tree-data-provider.test.ts`
 
 Expected: PASS.
 
-Commit: `feat: filter Code Beacon explorer`
+Commit: `feat: filter AnnoPulse explorer`
 
 ### Task 3: Synchronize workspace scan annotations on file events
 
@@ -141,7 +141,7 @@ Run: `pnpm vitest tests/workspace-scan.test.ts`
 
 Expected: PASS.
 
-Commit: `feat: synchronize workspace beacon scans`
+Commit: `feat: synchronize workspace annotation scans`
 
 ### Task 4: Verify and document the completed Phase 2 increment
 

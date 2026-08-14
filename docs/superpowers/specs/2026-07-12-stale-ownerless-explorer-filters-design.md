@@ -2,12 +2,12 @@
 
 ## Goal
 
-Let users narrow Code Beacon Explorer results to annotations that are either stale according to Git blame age or ownerless according to the annotation's explicit owner syntax. The default Explorer remains unchanged and shows all annotations.
+Let users narrow AnnoPulse Explorer results to annotations that are either stale according to Git blame age or ownerless according to the annotation's explicit owner syntax. The default Explorer remains unchanged and shows all annotations.
 
 ## Scope
 
 - Add two opt-in Explorer settings: `onlyStale` and `onlyOwnerless`, both defaulting to `false`.
-- Add `code-beacon.git.staleDays`, a positive integer with a default of `90`.
+- Add `annopulse.git.staleDays`, a positive integer with a default of `90`.
 - Compute ownerlessness from `annotation.owner` only. Git authors are display metadata, not an implicit assignment.
 - Resolve Git metadata only while `onlyStale` is enabled, then refresh the Explorer as results arrive.
 - Use the built-in `vscode.git` API, retain all trusted/local/repository/path safeguards, and work without Node or shell Git.
@@ -32,9 +32,9 @@ The Explorer retains portable annotations. When stale filtering is enabled, an i
 
 ```jsonc
 {
-  "code-beacon.explorer.onlyStale": false,
-  "code-beacon.explorer.onlyOwnerless": false,
-  "code-beacon.git.staleDays": 90,
+  "annopulse.explorer.onlyStale": false,
+  "annopulse.explorer.onlyOwnerless": false,
+  "annopulse.git.staleDays": 90,
 }
 ```
 
@@ -66,7 +66,7 @@ annotationStore snapshot
 
 ### Git adapter
 
-`useBeaconGit()` adds `getMetadataForAnnotations(document, annotations)`. It reuses the trust, extension, repository, virtual-workspace, URI and repository-relative path gates of the existing one-line lookup. For a valid document it calls blame once, parses every requested line, returns metadata by annotation id, and calls `getCommit()` once per distinct hash. Existing `getMetadata()` delegates to the batch API for one annotation, so Hover behavior and cache semantics are unchanged.
+`useAnnoPulseGit()` adds `getMetadataForAnnotations(document, annotations)`. It reuses the trust, extension, repository, virtual-workspace, URI and repository-relative path gates of the existing one-line lookup. For a valid document it calls blame once, parses every requested line, returns metadata by annotation id, and calls `getCommit()` once per distinct hash. Existing `getMetadata()` delegates to the batch API for one annotation, so Hover behavior and cache semantics are unchanged.
 
 ### Explorer metadata index
 

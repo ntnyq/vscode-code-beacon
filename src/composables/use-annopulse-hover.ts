@@ -2,19 +2,19 @@ import { useDisposable } from 'reactive-vscode'
 import { Hover, MarkdownString, languages } from 'vscode'
 import type { Position, TextDocument } from 'vscode'
 import { config } from '../config'
-import type { BeaconGitMetadata } from '../core/git/blame'
-import { formatBeaconHoverMarkdown } from '../core/hover/format'
+import type { AnnoPulseGitMetadata } from '../core/git/blame'
+import { formatAnnoPulseHoverMarkdown } from '../core/hover/format'
 import { annotationStore } from '../core/store/annotation-store'
-import { beaconDocumentSelector } from '../core/workspace/documents'
-import type { BeaconAnnotation, SerializedRange } from '../types/annotation'
+import { annopulseDocumentSelector } from '../core/workspace/documents'
+import type { AnnoPulseAnnotation, SerializedRange } from '../types/annotation'
 
 /**
  * Resolves optional Git metadata for one hovered annotation.
  */
-export type BeaconGitMetadataLookup = (
+export type AnnoPulseGitMetadataLookup = (
   document: TextDocument,
-  annotation: BeaconAnnotation,
-) => Promise<BeaconGitMetadata | undefined>
+  annotation: AnnoPulseAnnotation,
+) => Promise<AnnoPulseGitMetadata | undefined>
 
 /**
  * Checks whether a VS Code position falls inside a serialized range.
@@ -36,20 +36,20 @@ function containsPosition(range: SerializedRange, position: Position): boolean {
  * Finds the first annotation that contains a hover position.
  */
 function annotationAtPosition(
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
   position: Position,
-): BeaconAnnotation | undefined {
+): AnnoPulseAnnotation | undefined {
   return annotations.find(annotation =>
     containsPosition(annotation.range, position),
   )
 }
 
 /**
- * Registers hover content for beacon annotations.
+ * Registers hover content for AnnoPulse annotations.
  */
-export function useBeaconHover(getMetadata?: BeaconGitMetadataLookup) {
+export function useAnnoPulseHover(getMetadata?: AnnoPulseGitMetadataLookup) {
   useDisposable(
-    languages.registerHoverProvider(beaconDocumentSelector, {
+    languages.registerHoverProvider(annopulseDocumentSelector, {
       async provideHover(document, position) {
         if (!config.enable || !config.hover.enabled) {
           return null
@@ -64,7 +64,7 @@ export function useBeaconHover(getMetadata?: BeaconGitMetadataLookup) {
           return null
         }
 
-        let metadata: BeaconGitMetadata | undefined
+        let metadata: AnnoPulseGitMetadata | undefined
         try {
           metadata = await getMetadata?.(document, annotation)
         } catch {
@@ -72,7 +72,9 @@ export function useBeaconHover(getMetadata?: BeaconGitMetadataLookup) {
         }
 
         return new Hover(
-          new MarkdownString(formatBeaconHoverMarkdown(annotation, metadata)),
+          new MarkdownString(
+            formatAnnoPulseHoverMarkdown(annotation, metadata),
+          ),
         )
       },
     }),

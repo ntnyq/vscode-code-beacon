@@ -1,20 +1,20 @@
 import type * as ReactiveVscode from 'reactive-vscode'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import { useBeaconExplorer } from '../src/composables/use-beacon-explorer'
-import type * as BeaconGit from '../src/composables/use-beacon-git'
-import type { BeaconGitAdapter } from '../src/composables/use-beacon-git'
+import { useAnnoPulseExplorer } from '../src/composables/use-annopulse-explorer'
+import type * as AnnoPulseGit from '../src/composables/use-annopulse-git'
+import type { AnnoPulseGitAdapter } from '../src/composables/use-annopulse-git'
 import { config } from '../src/config'
-import type * as CodeBeaconConfig from '../src/config'
+import type * as AnnoPulseConfig from '../src/config'
 import {
-  BeaconTreeDataProvider,
-  type BeaconLeafTreeElement,
+  AnnoPulseTreeDataProvider,
+  type AnnoPulseLeafTreeElement,
 } from '../src/core/explorer/tree-data-provider'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
 import { createChangedUriIndex } from '../src/core/git/changed-uri-index'
 import { annotationStore } from '../src/core/store/annotation-store'
 import { commands } from '../src/meta'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 import { seedAnnotationStore } from './fixtures/annotation-store'
 
 const {
@@ -79,9 +79,9 @@ const {
     getMetadataForAnnotations: vi.fn<
       (
         document: Vscode.TextDocument,
-        annotations: readonly BeaconAnnotation[],
-      ) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
-    >(() => Promise.resolve(new Map<string, BeaconGitMetadata>())),
+        annotations: readonly AnnoPulseAnnotation[],
+      ) => Promise<ReadonlyMap<string, AnnoPulseGitMetadata>>
+    >(() => Promise.resolve(new Map<string, AnnoPulseGitMetadata>())),
     gitChangedUrisListeners: changedUrisListeners,
     gitChangedUrisSubscriptions: changedUrisSubscriptions,
     openTextDocument: vi.fn<(uri: unknown) => Promise<{ uri: unknown }>>(uri =>
@@ -141,19 +141,19 @@ vi.mock(
           staleDays: 90,
         },
       },
-    }) as unknown as Partial<typeof CodeBeaconConfig>,
+    }) as unknown as Partial<typeof AnnoPulseConfig>,
 )
 
 vi.mock(
-  import('../src/composables/use-beacon-git'),
+  import('../src/composables/use-annopulse-git'),
   () =>
     ({
-      useBeaconGit: () => ({
+      useAnnoPulseGit: () => ({
         getChangedUris,
         getMetadataForAnnotations,
         subscribeToChangedUris,
       }),
-    }) as unknown as Partial<typeof BeaconGit>,
+    }) as unknown as Partial<typeof AnnoPulseGit>,
 )
 
 const git = {
@@ -161,7 +161,7 @@ const git = {
   getMetadataForAnnotations,
   subscribeToChangedUris,
 } satisfies Pick<
-  BeaconGitAdapter,
+  AnnoPulseGitAdapter,
   'getChangedUris' | 'getMetadataForAnnotations' | 'subscribeToChangedUris'
 >
 let changedUriIndex = createChangedUriIndex(git)
@@ -271,8 +271,8 @@ vi.mock(
 )
 
 function createAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -341,17 +341,17 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve }
 }
 
-function createdProvider(): BeaconTreeDataProvider {
+function createdProvider(): AnnoPulseTreeDataProvider {
   const provider = treeDataProviders.at(-1)
 
-  if (!(provider instanceof BeaconTreeDataProvider)) {
+  if (!(provider instanceof AnnoPulseTreeDataProvider)) {
     throw new Error('Expected the Explorer TreeView provider to be registered')
   }
 
   return provider
 }
 
-function providerAnnotationIds(provider: BeaconTreeDataProvider): string[] {
+function providerAnnotationIds(provider: AnnoPulseTreeDataProvider): string[] {
   const roots = provider.getChildren()
 
   if (!Array.isArray(roots)) {
@@ -396,10 +396,10 @@ function resetExplorerConfig() {
   })
 }
 
-function createLeaf(annotation: BeaconAnnotation): BeaconLeafTreeElement {
+function createLeaf(annotation: AnnoPulseAnnotation): AnnoPulseLeafTreeElement {
   return {
     annotation,
-    type: 'beacon',
+    type: 'annopulse',
   }
 }
 
@@ -413,7 +413,7 @@ function registeredCommand(command: string): (...args: unknown[]) => unknown {
   return handler
 }
 
-describe('beacon explorer commands', () => {
+describe('annopulse Explorer commands', () => {
   beforeEach(() => {
     changedUriIndex.dispose()
     annotationStore.clear()
@@ -429,7 +429,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockResolvedValue(new Set())
     getMetadataForAnnotations.mockReset()
     getMetadataForAnnotations.mockResolvedValue(
-      new Map<string, BeaconGitMetadata>(),
+      new Map<string, AnnoPulseGitMetadata>(),
     )
     openTextDocument.mockReset()
     openTextDocument.mockImplementation(uri => Promise.resolve({ uri }))
@@ -476,7 +476,7 @@ describe('beacon explorer commands', () => {
     seedAnnotationStore(annotationStore, open.uri, [open])
     seedAnnotationStore(annotationStore, workspace.uri, [workspace])
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -505,7 +505,7 @@ describe('beacon explorer commands', () => {
     latestListener<
       (event: { affectsConfiguration: (section: string) => boolean }) => void
     >(configurationListeners)({
-      affectsConfiguration: section => section === 'code-beacon',
+      affectsConfiguration: section => section === 'annopulse',
     })
 
     expect(providerAnnotationIds(provider)).toStrictEqual([
@@ -534,7 +534,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockResolvedValueOnce(new Set([first.uri]))
     getChangedUris.mockResolvedValueOnce(new Set([second.uri]))
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     expect(providerAnnotationIds(provider)).toStrictEqual([])
@@ -573,17 +573,17 @@ describe('beacon explorer commands', () => {
       getMetadataForAnnotations: vi.fn<
         (
           document: Vscode.TextDocument,
-          annotations: readonly BeaconAnnotation[],
-        ) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
-      >(() => Promise.resolve(new Map<string, BeaconGitMetadata>())),
+          annotations: readonly AnnoPulseAnnotation[],
+        ) => Promise<ReadonlyMap<string, AnnoPulseGitMetadata>>
+      >(() => Promise.resolve(new Map<string, AnnoPulseGitMetadata>())),
       subscribeToChangedUris: customSubscribeToChangedUris,
     } satisfies Pick<
-      BeaconGitAdapter,
+      AnnoPulseGitAdapter,
       'getChangedUris' | 'getMetadataForAnnotations' | 'subscribeToChangedUris'
     >
     const customChangedUriIndex = createChangedUriIndex(customGit)
 
-    useBeaconExplorer(customGit, customChangedUriIndex)
+    useAnnoPulseExplorer(customGit, customChangedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -613,7 +613,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockResolvedValueOnce(new Set([changed.uri]))
     getChangedUris.mockReturnValueOnce(nextSnapshot.promise)
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -625,7 +625,7 @@ describe('beacon explorer commands', () => {
     latestListener<
       (event: { affectsConfiguration: (section: string) => boolean }) => void
     >(configurationListeners)({
-      affectsConfiguration: section => section === 'code-beacon',
+      affectsConfiguration: section => section === 'annopulse',
     })
 
     expect(providerAnnotationIds(provider)).toStrictEqual([
@@ -640,7 +640,7 @@ describe('beacon explorer commands', () => {
     latestListener<
       (event: { affectsConfiguration: (section: string) => boolean }) => void
     >(configurationListeners)({
-      affectsConfiguration: section => section === 'code-beacon',
+      affectsConfiguration: section => section === 'annopulse',
     })
 
     expect(providerAnnotationIds(provider)).toStrictEqual([])
@@ -664,7 +664,7 @@ describe('beacon explorer commands', () => {
     getChangedUris.mockReturnValueOnce(initialSnapshot.promise)
     getChangedUris.mockReturnValueOnce(latestSnapshot.promise)
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -697,7 +697,7 @@ describe('beacon explorer commands', () => {
     workspaceState.isTrusted = false
     getChangedUris.mockResolvedValue(new Set())
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -713,7 +713,7 @@ describe('beacon explorer commands', () => {
     seedAnnotationStore(annotationStore, ownerless.uri, [ownerless, owned])
     Object.assign(config.explorer, { onlyOwnerless: true })
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     expect(providerAnnotationIds(createdProvider())).toStrictEqual([
       'ownerless',
@@ -728,7 +728,7 @@ describe('beacon explorer commands', () => {
     const annotation = createAnnotation()
     seedAnnotationStore(annotationStore, annotation.uri, [annotation])
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     await flushPromises()
 
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
@@ -743,7 +743,7 @@ describe('beacon explorer commands', () => {
       new Map([[annotation.id, metadata]]),
     )
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     await flushPromises()
 
     expect(getMetadataForAnnotations).toHaveBeenCalledExactlyOnceWith(
@@ -762,7 +762,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.git, { showMetadata: true })
     workspaceState.isTrusted = false
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     await flushPromises()
 
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
@@ -799,7 +799,7 @@ describe('beacon explorer commands', () => {
       ),
     )
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -843,7 +843,7 @@ describe('beacon explorer commands', () => {
       new Map([[candidate.id, recentMetadata]]),
     )
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -864,7 +864,7 @@ describe('beacon explorer commands', () => {
       new Map([[candidate.id, oldMetadata]]),
     )
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
     const refresh = vi.spyOn(provider, 'refresh')
 
@@ -890,7 +890,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     openTextDocument.mockReturnValueOnce(firstDocument.promise)
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     await vi.waitFor(() => {
       expect(openTextDocument).toHaveBeenCalledExactlyOnceWith({
@@ -902,7 +902,7 @@ describe('beacon explorer commands', () => {
     latestListener<
       (event: { affectsConfiguration: (section: string) => boolean }) => void
     >(configurationListeners)({
-      affectsConfiguration: section => section === 'code-beacon',
+      affectsConfiguration: section => section === 'annopulse',
     })
     firstDocument.resolve({ uri: { value: first.uri } })
     await Promise.resolve()
@@ -920,7 +920,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     workspaceState.isTrusted = false
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     expect(openTextDocument).not.toHaveBeenCalled()
     expect(getMetadataForAnnotations).not.toHaveBeenCalled()
@@ -932,7 +932,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     getMetadataForAnnotations.mockRejectedValue(new Error('Git unavailable'))
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -947,7 +947,7 @@ describe('beacon explorer commands', () => {
     latestListener<
       (event: { affectsConfiguration: (section: string) => boolean }) => void
     >(configurationListeners)({
-      affectsConfiguration: section => section === 'code-beacon',
+      affectsConfiguration: section => section === 'annopulse',
     })
 
     expect(providerAnnotationIds(provider)).toStrictEqual(['candidate'])
@@ -959,7 +959,7 @@ describe('beacon explorer commands', () => {
     Object.assign(config.explorer, { onlyStale: true })
     openTextDocument.mockRejectedValue(new Error('Cannot open document'))
 
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
     const provider = createdProvider()
 
     await vi.waitFor(() => {
@@ -974,15 +974,15 @@ describe('beacon explorer commands', () => {
     latestListener<
       (event: { affectsConfiguration: (section: string) => boolean }) => void
     >(configurationListeners)({
-      affectsConfiguration: section => section === 'code-beacon',
+      affectsConfiguration: section => section === 'annopulse',
     })
 
     expect(providerAnnotationIds(provider)).toStrictEqual(['candidate'])
   })
 
-  it('copies a beacon link when invoked from a tree context menu item', async () => {
+  it('copies an annotation link when invoked from a tree context menu item', async () => {
     const annotation = createAnnotation()
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.copyLink)(createLeaf(annotation))
 
@@ -991,10 +991,10 @@ describe('beacon explorer commands', () => {
     )
   })
 
-  it('copies the first stored beacon link when invoked without an argument', async () => {
+  it('copies the first stored annotation link when invoked without an argument', async () => {
     const annotation = createAnnotation()
     seedAnnotationStore(annotationStore, annotation.uri, [annotation])
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.copyLink)()
 
@@ -1003,9 +1003,9 @@ describe('beacon explorer commands', () => {
     )
   })
 
-  it('reveals a beacon when invoked from a tree context menu item', async () => {
+  it('reveals an annotation when invoked from a tree context menu item', async () => {
     const annotation = createAnnotation()
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.reveal)(createLeaf(annotation))
 
@@ -1016,10 +1016,10 @@ describe('beacon explorer commands', () => {
     expect(revealRange).toHaveBeenCalledTimes(1)
   })
 
-  it('reveals the first stored beacon when invoked without an argument', async () => {
+  it('reveals the first stored annopulse when invoked without an argument', async () => {
     const annotation = createAnnotation()
     seedAnnotationStore(annotationStore, annotation.uri, [annotation])
-    useBeaconExplorer(git, changedUriIndex)
+    useAnnoPulseExplorer(git, changedUriIndex)
 
     await registeredCommand(commands.reveal)()
 

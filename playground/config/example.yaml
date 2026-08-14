@@ -1,6 +1,6 @@
-name: code-beacon-playground
+name: annopulse-playground
 
-# TODO: try excluding this folder with code-beacon.exclude
+# TODO: try excluding this folder with annopulse.exclude
 features:
   # REVIEW: confirm YAML comments appear in TreeView grouping
   hover: true

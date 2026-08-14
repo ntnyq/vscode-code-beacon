@@ -13,15 +13,15 @@ import type {
   ChangedUriIndex,
   ChangedUriIndexDisposable,
 } from '../core/git/changed-uri-index'
-import { createBeaconSourceControlResources } from '../core/source-control/resources'
+import { createAnnoPulseSourceControlResources } from '../core/source-control/resources'
 import { annotationStore } from '../core/store/annotation-store'
 
-const SOURCE_CONTROL_ID = 'code-beacon'
-const SOURCE_CONTROL_LABEL = 'Code Beacon'
-const RESOURCE_GROUP_ID = 'changedBeacons'
-const RESOURCE_GROUP_LABEL = 'Changed Beacons'
+const SOURCE_CONTROL_ID = 'annopulse'
+const SOURCE_CONTROL_LABEL = 'AnnoPulse'
+const RESOURCE_GROUP_ID = 'changedAnnotations'
+const RESOURCE_GROUP_LABEL = 'Changed Annotations'
 
-export function useBeaconSourceControl(changedUriIndex: ChangedUriIndex) {
+export function useAnnoPulseSourceControl(changedUriIndex: ChangedUriIndex) {
   let changedUriSubscription: ChangedUriIndexDisposable | undefined
   let group: SourceControlResourceGroup | undefined
   let sourceControl: SourceControl | undefined
@@ -31,7 +31,7 @@ export function useBeaconSourceControl(changedUriIndex: ChangedUriIndex) {
       return
     }
     const states: SourceControlResourceState[] =
-      createBeaconSourceControlResources(
+      createAnnoPulseSourceControlResources(
         changedUriIndex.getAll(),
         annotationStore.getAll(),
       ).map(descriptor => {
@@ -40,9 +40,9 @@ export function useBeaconSourceControl(changedUriIndex: ChangedUriIndex) {
           command: {
             arguments: [resourceUri],
             command: 'vscode.open',
-            title: 'Open Beacon File',
+            title: 'Open AnnoPulse File',
           },
-          contextValue: 'codeBeaconChangedResource',
+          contextValue: 'annopulseChangedResource',
           decorations: {
             icon: new ThemeIcon('comment-discussion'),
             tooltip: descriptor.tooltip,
@@ -94,7 +94,7 @@ export function useBeaconSourceControl(changedUriIndex: ChangedUriIndex) {
   useDisposable({ dispose: annotationStore.subscribe(render) })
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('code-beacon.scm.enabled')) {
+      if (event.affectsConfiguration('annopulse.scm.enabled')) {
         synchronize()
       }
     }),

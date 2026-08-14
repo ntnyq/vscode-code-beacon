@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an opt-in, read-only `code_beacon_list_annotations` Language Model Tool that returns a bounded JSON projection of annotations Code Beacon has already indexed.
+**Goal:** Add an opt-in, read-only `annopulse_list_annotations` Language Model Tool that returns a bounded JSON projection of annotations AnnoPulse has already indexed.
 
 **Architecture:** A pure core selects, normalizes, sorts, bounds, and serializes annotation snapshots without VS Code APIs. A small composable registers the manifest-declared tool, prepares user-facing confirmation, checks the opt-in setting at invocation, and turns the pure JSON into a VS Code `LanguageModelToolResult`. Entry-point wiring and package contributions are tested separately.
 
@@ -10,9 +10,9 @@
 
 ## Global Constraints
 
-- Add `code-beacon.ai.enabled` as a boolean configuration with default `false`.
-- Contribute and register exactly one tool named `code_beacon_list_annotations`; use `toolReferenceName: "codeBeaconAnnotations"` and `when: "config.code-beacon.ai.enabled"`.
-- Add `onLanguageModelTool:code_beacon_list_annotations` while preserving `onStartupFinished` activation.
+- Add `annopulse.ai.enabled` as a boolean configuration with default `false`.
+- Contribute and register exactly one tool named `annopulse_list_annotations`; use `toolReferenceName: "annopulseAnnotations"` and `when: "config.annopulse.ai.enabled"`.
+- Add `onLanguageModelTool:annopulse_list_annotations` while preserving `onStartupFinished` activation.
 - The tool returns only annotations already in `annotationStore`; it never starts a scan, opens a document, reads a file, invokes Git, invokes a language model, writes a workspace, shells out, reaches the network, accesses credentials, or sends telemetry.
 - Input scope is `all`, `activeFile`, or `openEditors`; default is `all`. Limit default is `50`; only integers from `1` through `100` are accepted, all other values normalize to `50`.
 - Resolved and ignored annotations are excluded unless their own boolean inclusion flag is true. Results retain deterministic source-location order and include at most the normalized limit.
@@ -28,12 +28,12 @@
 ## File Structure
 
 - `src/core/ai/list-annotations.ts`: pure input normalization, scope/state filtering, ordering, projection, and JSON serialization.
-- `src/composables/use-beacon-language-model-tools.ts`: public VS Code tool registration, confirmation, configuration guard, and result adaptation.
+- `src/composables/use-annotation-language-model-tools.ts`: public VS Code tool registration, confirmation, configuration guard, and result adaptation.
 - `src/index.ts`: activates the tool composable with all existing features.
 - `package.json`: AI opt-in setting, Language Model Tool contribution, and activation event.
 - `src/meta.ts` and `README.md`: generated configuration output.
 - `tests/ai-list-annotations.test.ts`: pure selection and serialization contract.
-- `tests/beacon-language-model-tools.test.ts`: VS Code adapter lifecycle and invocation behavior.
+- `tests/annotation-language-model-tools.test.ts`: VS Code adapter lifecycle and invocation behavior.
 - `tests/index.test.ts`: entry-point activation wiring.
 - `tests/package-metadata.test.ts`: manifest/configuration contribution contract.
 
@@ -46,8 +46,8 @@
 
 **Interfaces:**
 
-- Consumes: `BeaconAnnotation`, `BeaconCategory`, `BeaconSeverity`, and `compareBeaconAnnotations`.
-- Produces: `BeaconListAnnotationsInput`, `NormalizedBeaconListAnnotationsInput`, `BeaconListAnnotationsContext`, `BeaconListAnnotationsResult`, `normalizeBeaconListAnnotationsInput`, `listBeaconAnnotations`, and `serializeBeaconListAnnotations`.
+- Consumes: `AnnoPulseAnnotation`, `AnnoPulseCategory`, `AnnoPulseSeverity`, and `compareAnnoPulseAnnotations`.
+- Produces: `AnnoPulseListAnnotationsInput`, `NormalizedAnnoPulseListAnnotationsInput`, `AnnoPulseListAnnotationsContext`, `AnnoPulseListAnnotationsResult`, `normalizeAnnoPulseListAnnotationsInput`, `listAnnoPulseAnnotations`, and `serializeAnnoPulseListAnnotations`.
 
 - [ ] **Step 1: Write the failing pure-core tests**
 
@@ -69,7 +69,7 @@ const annotations = [
 Assert default behavior exactly:
 
 ```ts
-expect(listBeaconAnnotations(annotations, {}, context)).toStrictEqual({
+expect(listAnnoPulseAnnotations(annotations, {}, context)).toStrictEqual({
   annotations: [
     expect.objectContaining({
       id: 'a-first',
@@ -105,49 +105,49 @@ Expected: failure because `src/core/ai/list-annotations.ts` does not exist.
 Create `src/core/ai/list-annotations.ts` with these exported declarations:
 
 ```ts
-export type BeaconAnnotationToolScope = 'all' | 'activeFile' | 'openEditors'
+export type AnnoPulseAnnotationToolScope = 'all' | 'activeFile' | 'openEditors'
 
-export interface BeaconListAnnotationsInput {
-  readonly scope?: BeaconAnnotationToolScope
+export interface AnnoPulseListAnnotationsInput {
+  readonly scope?: AnnoPulseAnnotationToolScope
   readonly limit?: number
   readonly includeResolved?: boolean
   readonly includeIgnored?: boolean
 }
 
-export interface BeaconListAnnotationsContext {
+export interface AnnoPulseListAnnotationsContext {
   readonly activeUri: string | undefined
   readonly openUris: readonly string[]
 }
 
-export interface NormalizedBeaconListAnnotationsInput {
-  readonly scope: BeaconAnnotationToolScope
+export interface NormalizedAnnoPulseListAnnotationsInput {
+  readonly scope: AnnoPulseAnnotationToolScope
   readonly limit: number
   readonly includeResolved: boolean
   readonly includeIgnored: boolean
 }
 
-export interface BeaconListAnnotationsResult {
+export interface AnnoPulseListAnnotationsResult {
   /* exact projected shape from the spec */
 }
 
-export function normalizeBeaconListAnnotationsInput(
-  input: BeaconListAnnotationsInput,
-): NormalizedBeaconListAnnotationsInput
+export function normalizeAnnoPulseListAnnotationsInput(
+  input: AnnoPulseListAnnotationsInput,
+): NormalizedAnnoPulseListAnnotationsInput
 
-export function listBeaconAnnotations(
-  annotations: readonly BeaconAnnotation[],
-  input: BeaconListAnnotationsInput,
-  context: BeaconListAnnotationsContext,
-): BeaconListAnnotationsResult
+export function listAnnoPulseAnnotations(
+  annotations: readonly AnnoPulseAnnotation[],
+  input: AnnoPulseListAnnotationsInput,
+  context: AnnoPulseListAnnotationsContext,
+): AnnoPulseListAnnotationsResult
 
-export function serializeBeaconListAnnotations(
-  result: BeaconListAnnotationsResult,
+export function serializeAnnoPulseListAnnotations(
+  result: AnnoPulseListAnnotationsResult,
 ): string
 ```
 
-Define `DEFAULT_BEACON_ANNOTATION_LIMIT = 50` and `MAX_BEACON_ANNOTATION_LIMIT = 100`. Normalize scope to `all` unless it equals one of the three literal values. Normalize inclusion flags with `=== true`. Normalize limit only when it is an integer within the inclusive range; otherwise use the default.
+Define `DEFAULT_ANNOPULSE_ANNOTATION_LIMIT = 50` and `MAX_ANNOPULSE_ANNOTATION_LIMIT = 100`. Normalize scope to `all` unless it equals one of the three literal values. Normalize inclusion flags with `=== true`. Normalize limit only when it is an integer within the inclusive range; otherwise use the default.
 
-Filter resolved and ignored states before scope, use a `Set` for open URIs, then call `.toSorted(compareBeaconAnnotations)`. Compute `total` before `.slice(0, limit)`. Project boolean flags with `annotation.resolved === true` and `annotation.ignored === true`; trim `annotation.owner` and omit it if empty. `serializeBeaconListAnnotations` is exactly `JSON.stringify(result)`.
+Filter resolved and ignored states before scope, use a `Set` for open URIs, then call `.toSorted(compareAnnoPulseAnnotations)`. Compute `total` before `.slice(0, limit)`. Project boolean flags with `annotation.resolved === true` and `annotation.ignored === true`; trim `annotation.owner` and omit it if empty. `serializeAnnoPulseListAnnotations` is exactly `JSON.stringify(result)`.
 
 - [ ] **Step 4: Run focused verification and commit**
 
@@ -168,25 +168,25 @@ Expected: pure tests prove filtering, scope, ordering, limit normalization/trunc
 
 **Files:**
 
-- Create: `src/composables/use-beacon-language-model-tools.ts`
-- Create: `tests/beacon-language-model-tools.test.ts`
+- Create: `src/composables/use-annotation-language-model-tools.ts`
+- Create: `tests/annotation-language-model-tools.test.ts`
 
 **Interfaces:**
 
 - Consumes: Task 1 pure functions, `annotationStore`, `config.ai.enabled`, `window`, `lm`, `LanguageModelTextPart`, `LanguageModelToolResult`, and `useDisposable`.
-- Produces: `BEACON_LIST_ANNOTATIONS_TOOL_NAME` and `useBeaconLanguageModelTools()`.
+- Produces: `ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME` and `useAnnoPulseLanguageModelTools()`.
 
 - [ ] **Step 1: Write adapter tests using only public VS Code contracts**
 
-Create `tests/beacon-language-model-tools.test.ts`. Mock `lm.registerTool`, `LanguageModelTextPart`, `LanguageModelToolResult`, `window.activeTextEditor`, `window.visibleTextEditors`, `config.ai.enabled`, and `useDisposable`. Capture the registered tool as `LanguageModelTool<BeaconListAnnotationsInput>`.
+Create `tests/annotation-language-model-tools.test.ts`. Mock `lm.registerTool`, `LanguageModelTextPart`, `LanguageModelToolResult`, `window.activeTextEditor`, `window.visibleTextEditors`, `config.ai.enabled`, and `useDisposable`. Capture the registered tool as `LanguageModelTool<AnnoPulseListAnnotationsInput>`.
 
 Add these tests:
 
 ```ts
 it('registers the manifest tool and disposes its registration', () => {
-  useBeaconLanguageModelTools()
+  useAnnoPulseLanguageModelTools()
   expect(registerTool).toHaveBeenCalledWith(
-    'code_beacon_list_annotations',
+    'annopulse_list_annotations',
     expect.objectContaining({
       invoke: expect.any(Function),
       prepareInvocation: expect.any(Function),
@@ -202,11 +202,11 @@ it('prepares a side-effect-free confirmation for the selected scope and limit', 
   )
   expect(prepared).toMatchObject({
     invocationMessage:
-      'Listing up to 2 Code Beacon annotations from the active file.',
+      'Listing up to 2 AnnoPulse annotations from the active file.',
     confirmationMessages: {
-      title: 'Share Code Beacon annotations',
+      title: 'Share AnnoPulse annotations',
       message:
-        'Share up to 2 already-indexed Code Beacon annotations from the active file with the agent?',
+        'Share up to 2 already-indexed AnnoPulse annotations from the active file with the agent?',
     },
   })
 })
@@ -215,7 +215,7 @@ it('rejects invocation while AI tools are disabled', async () => {
   await expect(
     registeredTool.invoke({ input: {} }, cancellationToken),
   ).rejects.toThrow(
-    'Code Beacon Language Model Tools are disabled. Enable code-beacon.ai.enabled to use them.',
+    'AnnoPulse Language Model Tools are disabled. Enable annopulse.ai.enabled to use them.',
   )
 })
 
@@ -238,20 +238,20 @@ Add active-file and open-editor invocations with different visible URI fixtures 
 Run:
 
 ```bash
-rtk pnpm vitest tests/beacon-language-model-tools.test.ts
+rtk pnpm vitest tests/annotation-language-model-tools.test.ts
 ```
 
 Expected: failure because the composable does not exist.
 
 - [ ] **Step 3: Implement registration, confirmation, and adaptation**
 
-Create `src/composables/use-beacon-language-model-tools.ts`:
+Create `src/composables/use-annotation-language-model-tools.ts`:
 
 ```ts
-export const BEACON_LIST_ANNOTATIONS_TOOL_NAME = 'code_beacon_list_annotations'
+export const ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME = 'annopulse_list_annotations'
 
-export function useBeaconLanguageModelTools() {
-  const tool: LanguageModelTool<BeaconListAnnotationsInput> = {
+export function useAnnoPulseLanguageModelTools() {
+  const tool: LanguageModelTool<AnnoPulseListAnnotationsInput> = {
     prepareInvocation(options) {
       // normalize input through the same pure selection contract; do not access store or mutate state
     },
@@ -260,24 +260,24 @@ export function useBeaconLanguageModelTools() {
     },
   }
 
-  useDisposable(lm.registerTool(BEACON_LIST_ANNOTATIONS_TOOL_NAME, tool))
+  useDisposable(lm.registerTool(ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME, tool))
 }
 ```
 
-Create a small local `toolScopeLabel` mapping: `all -> 'all indexed files'`, `activeFile -> 'the active file'`, and `openEditors -> 'open editors'`. For `prepareInvocation`, use a pure exported `normalizeBeaconListAnnotationsInput` from Task 1 to derive scope and limit without reading the store, and return the exact message shape in Step 1. It must not set confirmation text from annotation content.
+Create a small local `toolScopeLabel` mapping: `all -> 'all indexed files'`, `activeFile -> 'the active file'`, and `openEditors -> 'open editors'`. For `prepareInvocation`, use a pure exported `normalizeAnnoPulseListAnnotationsInput` from Task 1 to derive scope and limit without reading the store, and return the exact message shape in Step 1. It must not set confirmation text from annotation content.
 
-In `invoke`, throw the exact disabled-setting error from Step 1 before reading `annotationStore`. When enabled, call `listBeaconAnnotations(annotationStore.getAll(), options.input, { activeUri, openUris })`, serialize it, and return `new LanguageModelToolResult([new LanguageModelTextPart(serialized)])`. Use no `async` keyword unless awaiting is necessary.
+In `invoke`, throw the exact disabled-setting error from Step 1 before reading `annotationStore`. When enabled, call `listAnnoPulseAnnotations(annotationStore.getAll(), options.input, { activeUri, openUris })`, serialize it, and return `new LanguageModelToolResult([new LanguageModelTextPart(serialized)])`. Use no `async` keyword unless awaiting is necessary.
 
 - [ ] **Step 4: Verify adapter behavior and commit**
 
 Run:
 
 ```bash
-rtk pnpm vitest tests/beacon-language-model-tools.test.ts tests/ai-list-annotations.test.ts
+rtk pnpm vitest tests/annotation-language-model-tools.test.ts tests/ai-list-annotations.test.ts
 rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck
-rtk git add src/composables/use-beacon-language-model-tools.ts tests/beacon-language-model-tools.test.ts src/core/ai/list-annotations.ts tests/ai-list-annotations.test.ts
+rtk git add src/composables/use-annotation-language-model-tools.ts tests/annotation-language-model-tools.test.ts src/core/ai/list-annotations.ts tests/ai-list-annotations.test.ts
 rtk git commit -m "feat: register read-only annotation Language Model Tool"
 ```
 
@@ -296,22 +296,22 @@ Expected: adapter tests prove registration, confirmation, disabled rejection, an
 
 **Interfaces:**
 
-- Consumes: `useBeaconLanguageModelTools` and `BEACON_LIST_ANNOTATIONS_TOOL_NAME`.
+- Consumes: `useAnnoPulseLanguageModelTools` and `ANNOPULSE_LIST_ANNOTATIONS_TOOL_NAME`.
 - Produces: manifest-declared/reachable tool and default-off generated configuration.
 
 - [ ] **Step 1: Write failing package and entry-point tests**
 
-In `tests/package-metadata.test.ts`, insert `code-beacon.ai.enabled` after `code-beacon.git.showMetadata` in the strict configuration list. Add a test that asserts its exact default/type/description and generated `ConfigKeyTypeMap` type. Add a manifest test asserting:
+In `tests/package-metadata.test.ts`, insert `annopulse.ai.enabled` after `annopulse.git.showMetadata` in the strict configuration list. Add a test that asserts its exact default/type/description and generated `ConfigKeyTypeMap` type. Add a manifest test asserting:
 
 ```ts
 expect(pkg.activationEvents).toStrictEqual([
-  'onLanguageModelTool:code_beacon_list_annotations',
+  'onLanguageModelTool:annopulse_list_annotations',
   'onStartupFinished',
 ])
 expect(pkg.contributes.languageModelTools).toStrictEqual([
   {
     canBeReferencedInPrompt: true,
-    displayName: 'List Code Beacon Annotations',
+    displayName: 'List AnnoPulse Annotations',
     icon: '$(list-unordered)',
     inputSchema: {
       type: 'object',
@@ -327,16 +327,16 @@ expect(pkg.contributes.languageModelTools).toStrictEqual([
       },
     },
     modelDescription: expect.stringContaining('already-indexed'),
-    name: 'code_beacon_list_annotations',
-    tags: ['code-beacon', 'annotations', 'read-only'],
-    toolReferenceName: 'codeBeaconAnnotations',
+    name: 'annopulse_list_annotations',
+    tags: ['annopulse', 'annotations', 'read-only'],
+    toolReferenceName: 'annopulseAnnotations',
     userDescription: expect.stringContaining('already discovered'),
-    when: 'config.code-beacon.ai.enabled',
+    when: 'config.annopulse.ai.enabled',
   },
 ])
 ```
 
-Extend `tests/index.test.ts` with a mock for `useBeaconLanguageModelTools` and assert it is called exactly once on activation after existing feature setup.
+Extend `tests/index.test.ts` with a mock for `useAnnoPulseLanguageModelTools` and assert it is called exactly once on activation after existing feature setup.
 
 - [ ] **Step 2: Run package and entry tests and confirm failure**
 
@@ -350,20 +350,20 @@ Expected: failure because no AI setting/contribution/activation event or entry-p
 
 - [ ] **Step 3: Add manifest/configuration and generate docs**
 
-Add `code-beacon.ai.enabled` after `code-beacon.git.showMetadata` with the exact description from the design. Add this exact `contributes.languageModelTools` array alongside the existing contributions:
+Add `annopulse.ai.enabled` after `annopulse.git.showMetadata` with the exact description from the design. Add this exact `contributes.languageModelTools` array alongside the existing contributions:
 
 ```json
 [
   {
-    "name": "code_beacon_list_annotations",
-    "tags": ["code-beacon", "annotations", "read-only"],
-    "toolReferenceName": "codeBeaconAnnotations",
-    "displayName": "List Code Beacon Annotations",
-    "modelDescription": "Returns a bounded JSON list of annotations already-indexed in Code Beacon's in-memory store. Use it to inspect current annotation work; do not use it to search unscanned files or retrieve source code.",
-    "userDescription": "List annotations already discovered by Code Beacon.",
+    "name": "annopulse_list_annotations",
+    "tags": ["annopulse", "annotations", "read-only"],
+    "toolReferenceName": "annopulseAnnotations",
+    "displayName": "List AnnoPulse Annotations",
+    "modelDescription": "Returns a bounded JSON list of annotations already-indexed in AnnoPulse's in-memory store. Use it to inspect current annotation work; do not use it to search unscanned files or retrieve source code.",
+    "userDescription": "List annotations already discovered by AnnoPulse.",
     "canBeReferencedInPrompt": true,
     "icon": "$(list-unordered)",
-    "when": "config.code-beacon.ai.enabled",
+    "when": "config.annopulse.ai.enabled",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -386,7 +386,7 @@ Add `code-beacon.ai.enabled` after `code-beacon.git.showMetadata` with the exact
 ]
 ```
 
-Set activation events to the formatter-normalized order `['onLanguageModelTool:code_beacon_list_annotations', 'onStartupFinished']`. Generate and prove idempotence:
+Set activation events to the formatter-normalized order `['onLanguageModelTool:annopulse_list_annotations', 'onStartupFinished']`. Generate and prove idempotence:
 
 ```bash
 rtk pnpm generate:meta
@@ -397,14 +397,14 @@ rtk git diff --exit-code -- src/meta.ts README.md
 
 - [ ] **Step 4: Wire the extension activation**
 
-After generation exposes `config.ai.enabled`, remove the temporary local `config.ai` type assertion from `src/composables/use-beacon-language-model-tools.ts` and read `config.ai.enabled` directly. Import `useBeaconLanguageModelTools` in `src/index.ts` and call it after `useBeaconCodeLens()`. Do not alter existing initialization order; add the new call as the final feature registration before logging.
+After generation exposes `config.ai.enabled`, remove the temporary local `config.ai` type assertion from `src/composables/use-annotation-language-model-tools.ts` and read `config.ai.enabled` directly. Import `useAnnoPulseLanguageModelTools` in `src/index.ts` and call it after `useAnnoPulseCodeLens()`. Do not alter existing initialization order; add the new call as the final feature registration before logging.
 
 - [ ] **Step 5: Run full verification and commit**
 
 Run:
 
 ```bash
-rtk pnpm vitest tests/ai-list-annotations.test.ts tests/beacon-language-model-tools.test.ts tests/package-metadata.test.ts tests/index.test.ts
+rtk pnpm vitest tests/ai-list-annotations.test.ts tests/annotation-language-model-tools.test.ts tests/package-metadata.test.ts tests/index.test.ts
 rtk pnpm format:check
 rtk pnpm lint
 pnpm typecheck

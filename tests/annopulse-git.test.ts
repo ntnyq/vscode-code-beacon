@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type * as Vscode from 'vscode'
-import { useBeaconGit } from '../src/composables/use-beacon-git'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import { useAnnoPulseGit } from '../src/composables/use-annopulse-git'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 interface TestUri {
   readonly authority: string
@@ -129,8 +129,8 @@ function document(
   } as Vscode.TextDocument
 }
 
-function annotation(line = 4, id = `annotation-${line}`): BeaconAnnotation {
-  return { id, line } as BeaconAnnotation
+function annotation(line = 4, id = `annotation-${line}`): AnnoPulseAnnotation {
+  return { id, line } as AnnoPulseAnnotation
 }
 
 function repository(
@@ -155,7 +155,7 @@ function repository(
         authorEmail: 'ada@example.com',
         authorName: 'Ada Lovelace',
         hash: 'a1b2c3d4',
-        message: 'Add beacon metadata',
+        message: 'Add annopulse metadata',
       }),
     ),
     isUsingVirtualFileSystem: false,
@@ -200,7 +200,7 @@ function gitExtension(
   }
 }
 
-describe('beacon Git metadata', () => {
+describe('annopulse Git metadata', () => {
   beforeEach(() => {
     asRelativePath.mockReset()
     asRelativePath.mockReturnValue('src/example.ts')
@@ -214,7 +214,10 @@ describe('beacon Git metadata', () => {
     const testDocument = document()
     getExtension.mockReturnValue(extension)
 
-    const result = await useBeaconGit().getMetadata(testDocument, annotation())
+    const result = await useAnnoPulseGit().getMetadata(
+      testDocument,
+      annotation(),
+    )
 
     expect(getExtension).toHaveBeenCalledWith('vscode.git')
     expect(extension.activate).toHaveBeenCalledTimes(1)
@@ -228,7 +231,7 @@ describe('beacon Git metadata', () => {
       authorName: 'Ada Lovelace',
       commitDate: '2026-07-12T04:00:00.000Z',
       hash: 'a1b2c3d4',
-      summary: 'Add beacon metadata',
+      summary: 'Add annopulse metadata',
     })
   })
 
@@ -239,7 +242,7 @@ describe('beacon Git metadata', () => {
     asRelativePath.mockReturnValue('packages/foo/src/a.ts')
     getExtension.mockReturnValue(extension)
 
-    await useBeaconGit().getMetadata(testDocument, annotation())
+    await useAnnoPulseGit().getMetadata(testDocument, annotation())
 
     expect(asRelativePath).not.toHaveBeenCalled()
     expect(testRepository.blame).toHaveBeenCalledWith('src/a.ts')
@@ -249,7 +252,7 @@ describe('beacon Git metadata', () => {
     isTrusted = false
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(getExtension).not.toHaveBeenCalled()
@@ -263,7 +266,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue(extension)
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(testRepository.blame).not.toHaveBeenCalled()
@@ -273,7 +276,7 @@ describe('beacon Git metadata', () => {
 
   it('does not activate a missing Git extension', async () => {
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(asRelativePath).not.toHaveBeenCalled()
@@ -284,7 +287,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue({ activate })
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(activate).toHaveBeenCalledTimes(1)
@@ -309,7 +312,7 @@ describe('beacon Git metadata', () => {
       getExtension.mockReturnValue({ activate })
 
       await expect(
-        useBeaconGit().getMetadata(document(), annotation()),
+        useAnnoPulseGit().getMetadata(document(), annotation()),
       ).resolves.toBeUndefined()
 
       expect(getRepository).toHaveBeenCalledTimes(1)
@@ -327,7 +330,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue({ activate })
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(asRelativePath).not.toHaveBeenCalled()
@@ -340,7 +343,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue(extension)
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(testRepository.getCommit).not.toHaveBeenCalled()
@@ -353,7 +356,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue(extension)
 
     await expect(
-      useBeaconGit().getMetadata(testDocument, annotation()),
+      useAnnoPulseGit().getMetadata(testDocument, annotation()),
     ).resolves.toBeUndefined()
 
     expect(testRepository.blame).not.toHaveBeenCalled()
@@ -367,7 +370,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue({ activate })
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(asRelativePath).not.toHaveBeenCalled()
@@ -380,7 +383,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue(extension)
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
 
     expect(testRepository.getCommit).not.toHaveBeenCalled()
@@ -393,7 +396,7 @@ describe('beacon Git metadata', () => {
     getExtension.mockReturnValue(extension)
 
     await expect(
-      useBeaconGit().getMetadata(document(), annotation()),
+      useAnnoPulseGit().getMetadata(document(), annotation()),
     ).resolves.toBeUndefined()
   })
 
@@ -401,7 +404,7 @@ describe('beacon Git metadata', () => {
     const testRepository = repository()
     const extension = gitExtension(testRepository)
     getExtension.mockReturnValue(extension)
-    const git = useBeaconGit()
+    const git = useAnnoPulseGit()
     const sameDocument = document()
     const sameAnnotation = annotation()
 
@@ -428,7 +431,8 @@ describe('beacon Git metadata', () => {
           hash === 'a1b2c3d4' ? 'ada@example.com' : 'grace@example.com',
         authorName: hash === 'a1b2c3d4' ? 'Ada Lovelace' : 'Grace Hopper',
         hash,
-        message: hash === 'a1b2c3d4' ? 'Add beacon metadata' : 'Fix compiler',
+        message:
+          hash === 'a1b2c3d4' ? 'Add annopulse metadata' : 'Fix compiler',
       }),
     )
     const extension = gitExtension(testRepository)
@@ -440,7 +444,7 @@ describe('beacon Git metadata', () => {
     ]
     getExtension.mockReturnValue(extension)
 
-    const result = await useBeaconGit().getMetadataForAnnotations(
+    const result = await useAnnoPulseGit().getMetadataForAnnotations(
       testDocument,
       annotations,
     )
@@ -459,7 +463,7 @@ describe('beacon Git metadata', () => {
             authorName: 'Ada Lovelace',
             commitDate: '2026-07-12T04:00:00.000Z',
             hash: 'a1b2c3d4',
-            summary: 'Add beacon metadata',
+            summary: 'Add annopulse metadata',
           },
         ],
         [
@@ -469,7 +473,7 @@ describe('beacon Git metadata', () => {
             authorName: 'Ada Lovelace',
             commitDate: '2026-07-12T04:00:00.000Z',
             hash: 'a1b2c3d4',
-            summary: 'Add beacon metadata',
+            summary: 'Add annopulse metadata',
           },
         ],
         [
@@ -489,7 +493,7 @@ describe('beacon Git metadata', () => {
   it('returns same-version cached batch metadata without Git lookups', async () => {
     const testRepository = repository()
     const extension = gitExtension(testRepository)
-    const git = useBeaconGit()
+    const git = useAnnoPulseGit()
     const testDocument = document()
     const annotations = [annotation(0, 'first'), annotation(1, 'second')]
     getExtension.mockReturnValue(extension)
@@ -506,7 +510,7 @@ describe('beacon Git metadata', () => {
   it('retains cached batch metadata when a later blame lookup fails', async () => {
     const testRepository = repository()
     const extension = gitExtension(testRepository)
-    const git = useBeaconGit()
+    const git = useAnnoPulseGit()
     const testDocument = document()
     getExtension.mockReturnValue(extension)
 
@@ -527,7 +531,7 @@ describe('beacon Git metadata', () => {
             authorName: 'Ada Lovelace',
             commitDate: '2026-07-12T04:00:00.000Z',
             hash: 'a1b2c3d4',
-            summary: 'Add beacon metadata',
+            summary: 'Add annopulse metadata',
           },
         ],
       ]),
@@ -562,7 +566,7 @@ describe('changed Git URIs', () => {
     const extension = gitExtension(testRepository)
     getExtension.mockReturnValue(extension)
 
-    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+    await expect(useAnnoPulseGit().getChangedUris()).resolves.toStrictEqual(
       new Set([
         staged.toString(),
         renamed.toString(),
@@ -593,7 +597,7 @@ describe('changed Git URIs', () => {
     ])
     getExtension.mockReturnValue(extension)
 
-    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+    await expect(useAnnoPulseGit().getChangedUris()).resolves.toStrictEqual(
       new Set(['file:///workspace/local.ts']),
     )
   })
@@ -601,13 +605,13 @@ describe('changed Git URIs', () => {
   it('returns an empty changed URI set when Git is unavailable', async () => {
     isTrusted = false
 
-    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+    await expect(useAnnoPulseGit().getChangedUris()).resolves.toStrictEqual(
       new Set(),
     )
     expect(getExtension).not.toHaveBeenCalled()
 
     isTrusted = true
-    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+    await expect(useAnnoPulseGit().getChangedUris()).resolves.toStrictEqual(
       new Set(),
     )
 
@@ -620,7 +624,7 @@ describe('changed Git URIs', () => {
       ),
     })
 
-    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+    await expect(useAnnoPulseGit().getChangedUris()).resolves.toStrictEqual(
       new Set(),
     )
 
@@ -629,7 +633,7 @@ describe('changed Git URIs', () => {
     )
     getExtension.mockReturnValue({ activate })
 
-    await expect(useBeaconGit().getChangedUris()).resolves.toStrictEqual(
+    await expect(useAnnoPulseGit().getChangedUris()).resolves.toStrictEqual(
       new Set(),
     )
   })
@@ -641,7 +645,7 @@ describe('changed Git URIs', () => {
     const listener = vi.fn<() => void>()
     getExtension.mockReturnValue(extension)
 
-    const disposable = await useBeaconGit().subscribeToChangedUris(listener)
+    const disposable = await useAnnoPulseGit().subscribeToChangedUris(listener)
 
     state.signal.fire()
     expect(listener).toHaveBeenCalledTimes(1)
@@ -685,7 +689,7 @@ describe('changed Git URIs', () => {
     })
     getExtension.mockReturnValue(extension)
 
-    const disposable = await useBeaconGit().subscribeToChangedUris(vi.fn())
+    const disposable = await useAnnoPulseGit().subscribeToChangedUris(vi.fn())
 
     expect(extension.openRepository.listenerCount).toBe(0)
     disposable.dispose()

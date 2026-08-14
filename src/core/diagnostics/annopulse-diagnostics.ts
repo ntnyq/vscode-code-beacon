@@ -1,22 +1,25 @@
 import { Diagnostic, DiagnosticSeverity } from 'vscode'
-import type { BeaconAnnotation, BeaconSeverity } from '../../types/annotation'
+import type {
+  AnnoPulseAnnotation,
+  AnnoPulseSeverity,
+} from '../../types/annotation'
 import { toVscodeRange } from '../../utils/ranges'
 
 /**
- * Problems integration mode from Code Beacon configuration.
+ * Problems integration mode from AnnoPulse configuration.
  */
-export type BeaconDiagnosticsMode = 'off' | 'openFiles' | 'workspace'
+export type AnnoPulseDiagnosticsMode = 'off' | 'openFiles' | 'workspace'
 
 /**
  * Diagnostic source label shown in the VS Code Problems panel.
  */
-const DIAGNOSTIC_SOURCE = 'Code Beacon'
+const DIAGNOSTIC_SOURCE = 'AnnoPulse'
 
 /**
- * Maps Code Beacon severity values to VS Code diagnostic severities.
+ * Maps AnnoPulse severity values to VS Code diagnostic severities.
  */
-export function diagnosticSeverityForBeacon(
-  severity: BeaconSeverity,
+export function diagnosticSeverityForAnnoPulse(
+  severity: AnnoPulseSeverity,
 ): DiagnosticSeverity {
   const severities = {
     error: DiagnosticSeverity.Error,
@@ -32,9 +35,9 @@ export function diagnosticSeverityForBeacon(
  * Resolves the diagnostic severity for an annotation after per-rule overrides.
  */
 function diagnosticSeverityForAnnotation(
-  annotation: BeaconAnnotation,
+  annotation: AnnoPulseAnnotation,
 ): DiagnosticSeverity {
-  return diagnosticSeverityForBeacon(
+  return diagnosticSeverityForAnnoPulse(
     annotation.diagnostics?.severity ?? annotation.severity,
   )
 }
@@ -42,7 +45,7 @@ function diagnosticSeverityForAnnotation(
 /**
  * Checks whether an annotation should be published as a diagnostic.
  */
-function isDiagnosticEnabled(annotation: BeaconAnnotation): boolean {
+function isDiagnosticEnabled(annotation: AnnoPulseAnnotation): boolean {
   return (
     annotation.diagnostics?.enabled !== false &&
     !annotation.resolved &&
@@ -51,10 +54,10 @@ function isDiagnosticEnabled(annotation: BeaconAnnotation): boolean {
 }
 
 /**
- * Creates a VS Code diagnostic for one beacon annotation.
+ * Creates a VS Code diagnostic for one AnnoPulse annotation.
  */
-export function createBeaconDiagnostic(
-  annotation: BeaconAnnotation,
+export function createAnnoPulseDiagnostic(
+  annotation: AnnoPulseAnnotation,
 ): Diagnostic {
   const message = annotation.message
     ? `${annotation.keyword} ${annotation.message}`
@@ -74,8 +77,8 @@ export function createBeaconDiagnostic(
  * Groups diagnostics by URI while honoring the configured publication mode.
  */
 export function diagnosticsByUriForAnnotations(
-  annotations: readonly BeaconAnnotation[],
-  mode: BeaconDiagnosticsMode,
+  annotations: readonly AnnoPulseAnnotation[],
+  mode: AnnoPulseDiagnosticsMode,
   openUris: ReadonlySet<string> = new Set(),
 ): Map<string, Diagnostic[]> {
   const diagnosticsByUri = new Map<string, Diagnostic[]>()
@@ -95,7 +98,7 @@ export function diagnosticsByUriForAnnotations(
 
     diagnosticsByUri.set(annotation.uri, [
       ...(diagnosticsByUri.get(annotation.uri) ?? []),
-      createBeaconDiagnostic(annotation),
+      createAnnoPulseDiagnostic(annotation),
     ])
   }
 

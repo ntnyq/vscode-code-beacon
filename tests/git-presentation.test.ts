@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import type { BeaconGitMetadata } from '../src/core/git/blame'
+import type { AnnoPulseGitMetadata } from '../src/core/git/blame'
 import {
-  beaconDisplayOwner,
-  beaconDisplayState,
-  formatBeaconExplorerDescription,
-  formatBeaconExplorerTooltip,
-  formatBeaconGitAge,
+  annopulseDisplayOwner,
+  annopulseDisplayState,
+  formatAnnoPulseExplorerDescription,
+  formatAnnoPulseExplorerTooltip,
+  formatAnnoPulseGitAge,
 } from '../src/core/git/presentation'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function annotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -36,45 +36,47 @@ function annotation(
   }
 }
 
-const metadata: BeaconGitMetadata = {
+const metadata: AnnoPulseGitMetadata = {
   authorName: 'Grace Hopper',
   commitDate: '2026-07-11T12:00:00.000Z',
   hash: 'a1b2c3d4e5f6',
-  summary: 'Add beacon metadata',
+  summary: 'Add annopulse metadata',
 }
 
 describe('git presentation', () => {
   const now = new Date('2026-07-12T12:00:00.000Z')
 
   it('formats display owner and state', () => {
-    expect(beaconDisplayOwner(annotation({ owner: '  Ada  ' }))).toBe('Ada')
-    expect(beaconDisplayOwner(annotation({ owner: '   ' }))).toBeUndefined()
-    expect(beaconDisplayState(annotation())).toBe('active')
-    expect(beaconDisplayState(annotation({ resolved: true }))).toBe('resolved')
-    expect(beaconDisplayState(annotation({ ignored: true }))).toBe('ignored')
+    expect(annopulseDisplayOwner(annotation({ owner: '  Ada  ' }))).toBe('Ada')
+    expect(annopulseDisplayOwner(annotation({ owner: '   ' }))).toBeUndefined()
+    expect(annopulseDisplayState(annotation())).toBe('active')
+    expect(annopulseDisplayState(annotation({ resolved: true }))).toBe(
+      'resolved',
+    )
+    expect(annopulseDisplayState(annotation({ ignored: true }))).toBe('ignored')
     expect(
-      beaconDisplayState(annotation({ ignored: true, resolved: true })),
+      annopulseDisplayState(annotation({ ignored: true, resolved: true })),
     ).toBe('resolved, ignored')
   })
 
   it('formats deterministic git ages', () => {
     expect(
-      formatBeaconGitAge(
+      formatAnnoPulseGitAge(
         { ...metadata, commitDate: '2026-07-11T12:00:00.000Z' },
         now,
       ),
     ).toBe('1 day ago')
     expect(
-      formatBeaconGitAge(
+      formatAnnoPulseGitAge(
         { ...metadata, commitDate: '2026-07-09T12:00:00.000Z' },
         now,
       ),
     ).toBe('3 days ago')
     expect(
-      formatBeaconGitAge({ ...metadata, commitDate: 'not-a-date' }, now),
+      formatAnnoPulseGitAge({ ...metadata, commitDate: 'not-a-date' }, now),
     ).toBeUndefined()
     expect(
-      formatBeaconGitAge(
+      formatAnnoPulseGitAge(
         { ...metadata, commitDate: '2026-07-13T12:00:00.000Z' },
         now,
       ),
@@ -85,21 +87,21 @@ describe('git presentation', () => {
     const resolvedAnnotation = annotation({ owner: 'Ada', resolved: true })
 
     expect(
-      formatBeaconExplorerDescription(resolvedAnnotation, metadata, now),
+      formatAnnoPulseExplorerDescription(resolvedAnnotation, metadata, now),
     ).toBe('2:4 • @Ada • Grace Hopper • 1 day ago • resolved')
     expect(
-      formatBeaconExplorerTooltip(resolvedAnnotation, metadata, now),
+      formatAnnoPulseExplorerTooltip(resolvedAnnotation, metadata, now),
     ).toContain('Owner: @Ada')
     expect(
-      formatBeaconExplorerTooltip(resolvedAnnotation, metadata, now),
+      formatAnnoPulseExplorerTooltip(resolvedAnnotation, metadata, now),
     ).toContain('State: resolved')
     expect(
-      formatBeaconExplorerTooltip(resolvedAnnotation, metadata, now),
+      formatAnnoPulseExplorerTooltip(resolvedAnnotation, metadata, now),
     ).toContain('Commit: a1b2c3d')
   })
 
   it('formats an ownerless active tooltip without git content', () => {
-    const tooltip = formatBeaconExplorerTooltip(annotation(), undefined, now)
+    const tooltip = formatAnnoPulseExplorerTooltip(annotation(), undefined, now)
 
     expect(tooltip).toContain('Owner: Unassigned')
     expect(tooltip).toContain('State: active')

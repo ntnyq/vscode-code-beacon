@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createBeaconCodeLensCommands } from '../src/core/codelens/commands'
+import { createAnnoPulseCodeLensCommands } from '../src/core/codelens/commands'
 import { commands } from '../src/meta'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
-function createAnnotation(): BeaconAnnotation {
+function createAnnotation(): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -28,10 +28,10 @@ function createAnnotation(): BeaconAnnotation {
 }
 
 describe('codeLens issue command', () => {
-  it('offers Create Issue with the beacon annotation argument', () => {
+  it('offers Create Issue with the AnnoPulse annotation argument', () => {
     const annotation = createAnnotation()
 
-    expect(createBeaconCodeLensCommands(annotation)).toContainEqual({
+    expect(createAnnoPulseCodeLensCommands(annotation)).toContainEqual({
       arguments: [annotation],
       command: commands.createIssue,
       title: 'Create Issue',

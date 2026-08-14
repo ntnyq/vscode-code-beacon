@@ -1,10 +1,10 @@
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function isBeaconCategory(value: unknown): boolean {
+function isAnnoPulseCategory(value: unknown): boolean {
   return (
     value === 'todo' ||
     value === 'fixme' ||
@@ -19,7 +19,7 @@ function isBeaconCategory(value: unknown): boolean {
   )
 }
 
-function isBeaconSeverity(value: unknown): boolean {
+function isAnnoPulseSeverity(value: unknown): boolean {
   return (
     value === 'hint' ||
     value === 'information' ||
@@ -48,7 +48,7 @@ function isSerializedRange(value: unknown): boolean {
   )
 }
 
-function isBeaconStyle(value: unknown): boolean {
+function isAnnoPulseStyle(value: unknown): boolean {
   return (
     isRecord(value) &&
     (value.marker === 'keyword' ||
@@ -62,15 +62,15 @@ function isBeaconStyle(value: unknown): boolean {
   )
 }
 
-function isBeaconDiagnostics(value: unknown): boolean {
+function isAnnoPulseDiagnostics(value: unknown): boolean {
   return (
     isRecord(value) &&
     (!('enabled' in value) || typeof value.enabled === 'boolean') &&
-    (!('severity' in value) || isBeaconSeverity(value.severity))
+    (!('severity' in value) || isAnnoPulseSeverity(value.severity))
   )
 }
 
-function isBeaconSource(value: unknown): boolean {
+function isAnnoPulseSource(value: unknown): boolean {
   return (
     value === 'visibleEditor' ||
     value === 'openEditor' ||
@@ -91,8 +91,8 @@ function hasRequiredAnnotationFields(value: Record<string, unknown>): boolean {
   return (
     typeof value.id === 'string' &&
     typeof value.ruleId === 'string' &&
-    isBeaconCategory(value.category) &&
-    isBeaconSeverity(value.severity) &&
+    isAnnoPulseCategory(value.category) &&
+    isAnnoPulseSeverity(value.severity) &&
     typeof value.uri === 'string' &&
     typeof value.languageId === 'string' &&
     isSerializedRange(value.range) &&
@@ -105,7 +105,7 @@ function hasRequiredAnnotationFields(value: Record<string, unknown>): boolean {
     value.column >= 0 &&
     typeof value.keyword === 'string' &&
     typeof value.message === 'string' &&
-    isBeaconSource(value.source)
+    isAnnoPulseSource(value.source)
   )
 }
 
@@ -113,11 +113,11 @@ function hasValidOptionalAnnotationFields(
   value: Record<string, unknown>,
 ): boolean {
   return (
-    (value.style === undefined || isBeaconStyle(value.style)) &&
+    (value.style === undefined || isAnnoPulseStyle(value.style)) &&
     (value.messageRange === undefined ||
       isSerializedRange(value.messageRange)) &&
     (value.diagnostics === undefined ||
-      isBeaconDiagnostics(value.diagnostics)) &&
+      isAnnoPulseDiagnostics(value.diagnostics)) &&
     isOptionalString(value.owner) &&
     isOptionalString(value.dueDate) &&
     isOptionalString(value.expiresDate) &&
@@ -126,7 +126,7 @@ function hasValidOptionalAnnotationFields(
   )
 }
 
-function isBeaconAnnotation(value: unknown): value is BeaconAnnotation {
+function isAnnoPulseAnnotation(value: unknown): value is AnnoPulseAnnotation {
   return (
     isRecord(value) &&
     hasRequiredAnnotationFields(value) &&
@@ -139,15 +139,15 @@ function isBeaconAnnotation(value: unknown): value is BeaconAnnotation {
  */
 export function decodeAnnotationTarget(
   value: unknown,
-): BeaconAnnotation | undefined {
-  if (isBeaconAnnotation(value)) {
+): AnnoPulseAnnotation | undefined {
+  if (isAnnoPulseAnnotation(value)) {
     return value
   }
 
   if (
     isRecord(value) &&
-    value.type === 'beacon' &&
-    isBeaconAnnotation(value.annotation)
+    value.type === 'annopulse' &&
+    isAnnoPulseAnnotation(value.annotation)
   ) {
     return value.annotation
   }

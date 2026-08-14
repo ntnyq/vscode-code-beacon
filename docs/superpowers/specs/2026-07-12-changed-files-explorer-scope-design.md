@@ -6,7 +6,7 @@ Add an opt-in `changedFiles` Explorer scope that shows only annotations in files
 
 ## Scope
 
-- Add `changedFiles` to `code-beacon.explorer.scope`.
+- Add `changedFiles` to `annopulse.explorer.scope`.
 - Collect the current URI of every staged, unstaged, merge, and untracked Git change across non-virtual repositories.
 - Refresh changed-file results when a repository state changes.
 - Compose changed-file scope with existing category, severity, owner, text, resolved, ignored, stale, and ownerless filters.
@@ -42,22 +42,22 @@ VS Code Git API v1 exposes `workingTreeChanges`, `indexChanges`, `mergeChanges`,
 Repository.state arrays + onDidChange
              |
              v
-useBeaconGit.getChangedUris / subscribeToChangedUris
+useAnnoPulseGit.getChangedUris / subscribeToChangedUris
              |
              v
-useBeaconExplorer changed-uri snapshot + provider.refresh
+useAnnoPulseExplorer changed-uri snapshot + provider.refresh
              |
              v
-filterBeaconAnnotations(scope: changedFiles, changedUris)
+filterAnnoPulseAnnotations(scope: changedFiles, changedUris)
 ```
 
 ### Pure Explorer filter
 
-`BeaconExplorerScope` gains `changedFiles`; `BeaconExplorerFilter` gains `changedUris`. When scope is `changedFiles`, an annotation matches only when its URI string belongs to that set. This code remains VS Code-free and receives data/time explicitly for deterministic tests.
+`AnnoPulseExplorerScope` gains `changedFiles`; `AnnoPulseExplorerFilter` gains `changedUris`. When scope is `changedFiles`, an annotation matches only when its URI string belongs to that set. This code remains VS Code-free and receives data/time explicitly for deterministic tests.
 
 ### Guarded Git adapter
 
-`useBeaconGit()` adds:
+`useAnnoPulseGit()` adds:
 
 ```ts
 getChangedUris(): Promise<ReadonlySet<string>>
@@ -68,7 +68,7 @@ It reuses the existing workspace-trust, activation, API shape, and virtual-repos
 
 ### Explorer integration
 
-`useBeaconExplorer()` owns a `Set<string>` for the current changed URI snapshot and a monotonic refresh request. It calls Git only while scope is `changedFiles`; a result from an older request cannot replace a newer scope/snapshot. Git repository events schedule a fresh snapshot and provider refresh. Switching away clears the set and disposes the subscription. Explorer provider construction stays synchronous.
+`useAnnoPulseExplorer()` owns a `Set<string>` for the current changed URI snapshot and a monotonic refresh request. It calls Git only while scope is `changedFiles`; a result from an older request cannot replace a newer scope/snapshot. Git repository events schedule a fresh snapshot and provider refresh. Switching away clears the set and disposes the subscription. Explorer provider construction stays synchronous.
 
 ## Testing
 

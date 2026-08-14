@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { createBeaconCodeLensCommands } from '../src/core/codelens/commands'
-import type { BeaconAnnotation } from '../src/types/annotation'
+import { createAnnoPulseCodeLensCommands } from '../src/core/codelens/commands'
+import type { AnnoPulseAnnotation } from '../src/types/annotation'
 
 function createAnnotation(
-  overrides: Partial<BeaconAnnotation> = {},
-): BeaconAnnotation {
+  overrides: Partial<AnnoPulseAnnotation> = {},
+): AnnoPulseAnnotation {
   return {
     category: 'todo',
     column: 3,
@@ -33,16 +33,16 @@ describe('codelens commands', () => {
   it('offers resolve, ignore, copy, create issue, and reveal actions for active annotations', () => {
     const annotation = createAnnotation()
 
-    expect(createBeaconCodeLensCommands(annotation)).toMatchObject([
-      { command: 'code-beacon.resolve', title: 'Resolve' },
-      { command: 'code-beacon.ignore', title: 'Ignore' },
-      { command: 'code-beacon.copyLink', title: 'Copy Link' },
+    expect(createAnnoPulseCodeLensCommands(annotation)).toMatchObject([
+      { command: 'annopulse.resolve', title: 'Resolve' },
+      { command: 'annopulse.ignore', title: 'Ignore' },
+      { command: 'annopulse.copyLink', title: 'Copy Link' },
       {
         arguments: [annotation],
-        command: 'code-beacon.createIssue',
+        command: 'annopulse.createIssue',
         title: 'Create Issue',
       },
-      { command: 'code-beacon.reveal', title: 'Reveal' },
+      { command: 'annopulse.reveal', title: 'Reveal' },
     ])
   })
 
@@ -52,16 +52,16 @@ describe('codelens commands', () => {
       resolved: true,
     })
 
-    expect(createBeaconCodeLensCommands(annotation)).toMatchObject([
-      { command: 'code-beacon.unresolve', title: 'Reopen' },
-      { command: 'code-beacon.unignore', title: 'Unignore' },
-      { command: 'code-beacon.copyLink', title: 'Copy Link' },
+    expect(createAnnoPulseCodeLensCommands(annotation)).toMatchObject([
+      { command: 'annopulse.unresolve', title: 'Reopen' },
+      { command: 'annopulse.unignore', title: 'Unignore' },
+      { command: 'annopulse.copyLink', title: 'Copy Link' },
       {
         arguments: [annotation],
-        command: 'code-beacon.createIssue',
+        command: 'annopulse.createIssue',
         title: 'Create Issue',
       },
-      { command: 'code-beacon.reveal', title: 'Reveal' },
+      { command: 'annopulse.reveal', title: 'Reveal' },
     ])
   })
 })

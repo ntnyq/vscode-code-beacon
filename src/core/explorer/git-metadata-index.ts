@@ -1,27 +1,30 @@
-import type { BeaconAnnotation } from '../../types/annotation'
-import type { BeaconGitMetadata } from '../git/blame'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
+import type { AnnoPulseGitMetadata } from '../git/blame'
 
 /**
  * One document and the annotations whose metadata should be resolved together.
  */
-export interface BeaconExplorerMetadataTarget<TDocument> {
+export interface AnnoPulseExplorerMetadataTarget<TDocument> {
   readonly document: TDocument
-  readonly annotations: readonly BeaconAnnotation[]
+  readonly annotations: readonly AnnoPulseAnnotation[]
 }
 
 /**
  * Resolves Git metadata for all annotations in one document.
  */
-export type BeaconExplorerMetadataResolver<TDocument> = (
+export type AnnoPulseExplorerMetadataResolver<TDocument> = (
   document: TDocument,
-  annotations: readonly BeaconAnnotation[],
-) => Promise<ReadonlyMap<string, BeaconGitMetadata>>
+  annotations: readonly AnnoPulseAnnotation[],
+) => Promise<ReadonlyMap<string, AnnoPulseGitMetadata>>
 
 /**
  * Tracks Git metadata for the current Explorer snapshot.
  */
-export class BeaconExplorerGitMetadataIndex<TDocument> {
-  public readonly metadataByAnnotationId = new Map<string, BeaconGitMetadata>()
+export class AnnoPulseExplorerGitMetadataIndex<TDocument> {
+  public readonly metadataByAnnotationId = new Map<
+    string,
+    AnnoPulseGitMetadata
+  >()
 
   private generation = 0
 
@@ -37,8 +40,8 @@ export class BeaconExplorerGitMetadataIndex<TDocument> {
    * Hydrates targets in order and publishes only current-generation results.
    */
   public async hydrate(
-    targets: readonly BeaconExplorerMetadataTarget<TDocument>[],
-    resolve: BeaconExplorerMetadataResolver<TDocument>,
+    targets: readonly AnnoPulseExplorerMetadataTarget<TDocument>[],
+    resolve: AnnoPulseExplorerMetadataResolver<TDocument>,
     onUpdate: () => void,
   ): Promise<void> {
     const generation = this.generation + 1
@@ -50,7 +53,7 @@ export class BeaconExplorerGitMetadataIndex<TDocument> {
         return
       }
 
-      let metadata: ReadonlyMap<string, BeaconGitMetadata>
+      let metadata: ReadonlyMap<string, AnnoPulseGitMetadata>
       try {
         metadata = await resolve(target.document, target.annotations)
       } catch {

@@ -2,7 +2,7 @@ import { useDisposable } from 'reactive-vscode'
 import { commands as vscodeCommands, window, workspace } from 'vscode'
 import type { TextDocument, TextEditor } from 'vscode'
 import { config } from '../config'
-import { applyBeaconDecorations } from '../core/decorations/apply-decorations'
+import { applyAnnoPulseDecorations } from '../core/decorations/apply-decorations'
 import { EditorDecorationCaches } from '../core/decorations/editor-decoration-caches'
 import { createConfiguredDocumentScanner } from '../core/scanner/configured-document-scanner'
 import {
@@ -12,7 +12,10 @@ import {
 import { annotationStore } from '../core/store/annotation-store'
 import { isScannableTextDocument } from '../core/workspace/documents'
 import { commands } from '../meta'
-import type { BeaconAnnotation, BeaconRuleConfig } from '../types/annotation'
+import type {
+  AnnoPulseAnnotation,
+  AnnoPulseRuleConfig,
+} from '../types/annotation'
 import { logger } from '../utils/logger'
 
 /**
@@ -31,8 +34,8 @@ function visibleEditorForDocument(
  */
 function scanTextDocument(
   document: TextDocument,
-  source: BeaconAnnotation['source'],
-): readonly BeaconAnnotation[] {
+  source: AnnoPulseAnnotation['source'],
+): readonly AnnoPulseAnnotation[] {
   const uri = document.uri.toString()
 
   if (!config.enable || !isScannableTextDocument(document, config.languages)) {
@@ -44,7 +47,7 @@ function scanTextDocument(
     allowCustomRegex: workspace.isTrusted,
     commentOnly: config.commentOnly,
     maxFileSize: config.maxFileSize,
-    rules: config.rules as readonly BeaconRuleConfig[],
+    rules: config.rules as readonly AnnoPulseRuleConfig[],
     warn: message => logger.warn(message),
   })
   const result = scanner.scan({
@@ -62,7 +65,7 @@ function scanTextDocument(
 /**
  * Registers editor scanning, scan commands, and decoration updates.
  */
-export function useBeaconHighlight() {
+export function useAnnoPulseHighlight() {
   const decorationCaches = new EditorDecorationCaches()
 
   /**
@@ -77,7 +80,7 @@ export function useBeaconHighlight() {
         continue
       }
 
-      applyBeaconDecorations(
+      applyAnnoPulseDecorations(
         editor,
         annotationStore.getForUri(editor.document.uri.toString()),
         decorationCaches.get(editor),
@@ -90,7 +93,7 @@ export function useBeaconHighlight() {
    */
   const scanTextEditor = (
     editor: TextEditor,
-    source: BeaconAnnotation['source'] = 'visibleEditor',
+    source: AnnoPulseAnnotation['source'] = 'visibleEditor',
   ) => {
     scanTextDocument(editor.document, source)
   }
@@ -129,7 +132,7 @@ export function useBeaconHighlight() {
   }
 
   /**
-   * Runs the initial or refresh scan selected by code-beacon.scanMode.
+   * Runs the initial or refresh scan selected by annopulse.scanMode.
    */
   const scanByConfiguredMode = () => {
     const target = initialScanTarget(config.scanMode)
@@ -191,7 +194,7 @@ export function useBeaconHighlight() {
   )
   useDisposable(
     workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration('code-beacon')) {
+      if (event.affectsConfiguration('annopulse')) {
         scanByConfiguredMode()
         refreshVisibleDecorations()
       }

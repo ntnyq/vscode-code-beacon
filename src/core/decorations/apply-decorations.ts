@@ -1,19 +1,19 @@
 import type { TextEditor } from 'vscode'
 import { DEFAULT_STYLE } from '../../constants/defaults'
-import type { BeaconAnnotation } from '../../types/annotation'
+import type { AnnoPulseAnnotation } from '../../types/annotation'
 import { toVscodeRange } from '../../utils/ranges'
 import { decorationStyleKey } from './decoration-type-cache'
 import type { DecorationTypeCache } from './decoration-type-cache'
 
 /**
- * Applies grouped beacon decorations to a visible text editor.
+ * Applies grouped annopulse decorations to a visible text editor.
  */
-export function applyBeaconDecorations(
+export function applyAnnoPulseDecorations(
   editor: TextEditor,
-  annotations: readonly BeaconAnnotation[],
+  annotations: readonly AnnoPulseAnnotation[],
   cache: DecorationTypeCache,
 ) {
-  const annotationsByStyle = new Map<string, BeaconAnnotation[]>()
+  const annotationsByStyle = new Map<string, AnnoPulseAnnotation[]>()
 
   for (const annotation of annotations) {
     const style = annotation.style ?? DEFAULT_STYLE

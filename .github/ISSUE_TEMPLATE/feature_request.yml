@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a new workflow or improvement.
+title: 'feat: '
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What annotation workflow is difficult today, and who experiences it?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the user-visible behavior rather than only an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Explain current workarounds or related extensions when applicable.
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Primary environment
+      options:
+        - All environments
+        - Desktop
+        - VS Code Web / Virtual Workspace
+        - Remote development
+        - Notebook
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or mockups
+      description: Add sanitized examples, screenshots, or links that clarify the request.

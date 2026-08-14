@@ -1,0 +1,63 @@
+name: Performance issue
+description: Report slow scans, high memory use, or expensive Git integration.
+title: 'perf: '
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Affected operation
+      options:
+        - Extension activation
+        - Initial workspace scan
+        - Incremental document scan
+        - File watcher update
+        - Explorer filtering or grouping
+        - Git blame metadata
+        - Changed-files Source Control integration
+        - Notebook or Web scan
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include AnnoPulse, VS Code, OS, and local/remote/web versions.
+    validations:
+      required: true
+  - type: textarea
+    id: workspace
+    attributes:
+      label: Workspace profile
+      description: Estimate file count, repository count, primary languages, and workspace type without sharing private paths.
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Relevant configuration
+      render: jsonc
+    validations:
+      required: true
+  - type: textarea
+    id: measurements
+    attributes:
+      label: Measurements and reproduction
+      description: Include observed duration or memory use, whether it repeats, and exact reproduction steps.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or profile
+      description: Attach Output panel logs or a performance profile after removing private data.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this with the latest AnnoPulse version.
+          required: true
+        - label: I removed secrets, private paths, and source code from attached diagnostics.
+          required: true

@@ -1,0 +1,54 @@
+name: Annotation matching issue
+description: Report an annotation false positive, false negative, or parsing problem.
+title: 'fix(scanner): '
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Problem type
+      options:
+        - False positive
+        - False negative
+        - Incorrect keyword or message range
+        - Incorrect owner, due date, or expiry parsing
+        - Comment-only parsing problem
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: VS Code language ID
+      placeholder: typescript
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Minimal source example
+      description: Use the smallest sanitized example that demonstrates the problem.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Relevant rules and settings
+      description: Include custom rules, commentOnly, include/exclude, and scan mode when relevant.
+      render: jsonc
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Actual and expected result
+    validations:
+      required: true
+  - type: input
+    id: extension-version
+    attributes:
+      label: AnnoPulse version
+      placeholder: 0.1.0
+    validations:
+      required: true

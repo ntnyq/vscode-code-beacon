@@ -1,0 +1,72 @@
+name: Bug report
+description: Report behavior that is broken or inconsistent.
+title: 'bug: '
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve AnnoPulse. Please remove secrets and private source code from examples and logs.
+  - type: input
+    id: extension-version
+    attributes:
+      label: AnnoPulse version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code version
+      placeholder: 1.132.0
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Extension host
+      options:
+        - Desktop
+        - VS Code Web
+        - Remote SSH / Dev Container / WSL
+        - Virtual Workspace
+        - Notebook
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the actual and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Configure ...
+        3. Run ...
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Relevant configuration
+      description: Include only the annopulse settings needed to reproduce the problem.
+      render: jsonc
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Attach sanitized Output panel logs, screenshots, or a minimal repository when available.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this with the latest AnnoPulse version.
+          required: true
+        - label: I removed secrets and private source code from this report.
+          required: true

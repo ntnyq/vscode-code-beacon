@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Aligned the source repository, release documentation, and future release artifacts with the published AnnoPulse identity.
+- Refreshed the AnnoPulse icon used by the Marketplace and editor surfaces.
 
 ## 0.1.0 - 2026-08-14
 

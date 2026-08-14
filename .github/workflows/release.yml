@@ -11,14 +11,68 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: release
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      VSIX_PATH: annopulse-${{ github.ref_name }}.vsix
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+
       - uses: actions/setup-node@v7
         with:
           node-version: lts/*
+          cache: pnpm
 
-      - run: npx changelogithub
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package version
+        run: >-
+          node -e "const expected = 'v' + require('./package.json').version;
+          const actual = process.env.GITHUB_REF_NAME;
+          if (actual !== expected) {
+            console.error('Expected tag ' + expected + ', received ' + actual);
+            process.exit(1);
+          }"
+
+      - name: Run release checks
+        run: xvfb-run -a pnpm release:check
+
+      - name: Package VSIX
+        run: pnpm exec vsce package --no-dependencies --out "$VSIX_PATH"
+
+      - name: Generate checksum
+        run: sha256sum "$VSIX_PATH" > "$VSIX_PATH.sha256"
+
+      - name: Publish to Visual Studio Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        run: >-
+          pnpm exec vsce publish
+          --packagePath "$VSIX_PATH"
+          --skip-duplicate
+
+      - name: Report manual Marketplace fallback
+        if: ${{ env.VSCE_PAT == '' }}
+        run: >-
+          echo "::notice::VSCE_PAT is not configured; publish the attached VSIX
+          with local vsce credentials."
+
+      - name: Create GitHub Release
         env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --prerelease
+            gh release upload "$GITHUB_REF_NAME" "$VSIX_PATH" "$VSIX_PATH.sha256" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              "$VSIX_PATH" \
+              "$VSIX_PATH.sha256" \
+              --generate-notes \
+              --prerelease \
+              --title "$GITHUB_REF_NAME" \
+              --verify-tag
+          fi

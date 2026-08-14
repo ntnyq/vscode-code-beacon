@@ -4,7 +4,7 @@
 // Meta info
 export const publisher = "ntnyq"
 export const name = "vscode-code-beacon"
-export const version = "0.0.0"
+export const version = "0.1.0"
 export const displayName = "Code Beacon"
 export const description = "Highlight, list, diagnose, and export code annotations such as TODO, FIXME, BUG, NOTE, REVIEW, SECURITY, and PERF."
 export const extensionId = `${publisher}.${name}`
